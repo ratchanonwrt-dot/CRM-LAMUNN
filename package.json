@@ -1,0 +1,24 @@
+{
+  "name": "lamunn-crm-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "Lamunn-CRMAdmin",
+    "Lamunn-CRM"
+  ],
+  "scripts": {
+    "db:generate": "npm run generate -w @lamunn/db",
+    "db:migrate": "npm run migrate -w @lamunn/db",
+    "db:seed": "npm run seed -w @lamunn/db",
+    "dev:admin": "npm run dev -w lamunn-crm-admin",
+    "dev:customer": "npm run dev -w lamunn-crm"
+  },
+  "allowScripts": {
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "esbuild@0.28.1": true,
+    "prisma@5.22.0": true,
+    "unrs-resolver@1.12.2": true
+  }
+}

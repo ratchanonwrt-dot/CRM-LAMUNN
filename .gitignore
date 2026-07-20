@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+
+# next
+.next/
+out/
+build/
+
+# env (every app's .env — never commit real secrets)
+.env
+.env.local
+.env.*.local
+
+# misc
+.DS_Store
+*.log
+npm-debug.log*
+
+# prisma
+packages/db/prisma/dev.db
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# old pre-split app, kept locally as backup only — not part of the deployed repo
+crm-lamunn-old-backup/
+
+# Claude Code local session config
+.claude/

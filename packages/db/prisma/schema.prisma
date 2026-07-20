@@ -1,0 +1,226 @@
+// Prisma schema — CRM Lamunn (21-branch loyalty points system)
+// Run `npx prisma migrate dev --name init` after setting DATABASE_URL in .env
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Pooled connection (port 6543, via Supabase's pgbouncer) — used at runtime.
+  url       = env("DATABASE_URL")
+  // Direct connection (port 5432) — required for `prisma migrate` to work against Supabase.
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------- Enums ----------
+
+enum StaffRole {
+  SUPER_ADMIN // HQ, sees/manages all 21 branches
+  BRANCH_MANAGER // manages own branch: staff, reports, redemption approval
+  STAFF // front-of-store: lookup customers, manual point adjustments
+}
+
+enum TransactionType {
+  EARN // points earned from a purchase (QR scan)
+  REDEEM // points spent on a reward
+  ADJUST // manual correction by admin/staff (can be + or -)
+  VOID // reversal of a previous EARN (e.g. receipt refunded)
+}
+
+enum RedemptionStatus {
+  PENDING // customer requested, awaiting in-store fulfillment
+  COMPLETED
+  CANCELLED
+}
+
+enum ScanResult {
+  SUCCESS
+  DUPLICATE // receipt already redeemed
+  INVALID_SIGNATURE // HMAC signature from POS did not match
+  INVALID_BRANCH // branch code not found / inactive
+  EXPIRED // QR older than allowed window
+  ERROR
+}
+
+// ---------- Core models ----------
+
+model Branch {
+  id        String   @id @default(cuid())
+  code      String   @unique // matches the branch code POS embeds in the QR, e.g. "BKK01"
+  name      String
+  address   String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  staff        StaffUser[]
+  pointRules   PointRule[]
+  transactions PointTransaction[]
+  redemptions  Redemption[]
+  scanLogs     QrScanLog[]
+
+  @@map("branches")
+}
+
+model StaffUser {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  phone        String?
+  passwordHash String
+  role         StaffRole @default(STAFF)
+  branchId     String? // null when role = SUPER_ADMIN
+  branch       Branch?   @relation(fields: [branchId], references: [id])
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  processedTransactions PointTransaction[] @relation("ProcessedByStaff")
+  fulfilledRedemptions  Redemption[]       @relation("FulfilledByStaff")
+
+  @@index([branchId])
+  @@map("staff_users")
+}
+
+model Customer {
+  id            String    @id @default(cuid())
+  name          String?
+  phone         String?   @unique
+  lineUserId    String?   @unique
+  email         String?
+  dateOfBirth   DateTime?
+  pointsBalance Int       @default(0) // denormalized running balance, kept in sync in a DB transaction
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  otpCodes     OtpCode[]
+  transactions PointTransaction[]
+  redemptions  Redemption[]
+
+  @@map("customers")
+}
+
+model OtpCode {
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now())
+
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  customerId String?
+
+  @@index([phone])
+  @@map("otp_codes")
+}
+
+// Baht-to-point conversion rule. A null branchId means "default rule for all branches"
+// that don't have their own override. Multiple rules per branch are allowed for
+// time-boxed promotions (effectiveFrom/effectiveTo); the API picks the most specific
+// active rule at redemption time.
+model PointRule {
+  id            String    @id @default(cuid())
+  branchId      String?
+  branch        Branch?   @relation(fields: [branchId], references: [id])
+  name          String    @default("Default")
+  bahtPerPoint  Decimal   @db.Decimal(10, 2) // e.g. 25.00 => every 25 THB spent = 1 point
+  minAmount     Decimal   @default(0) @db.Decimal(10, 2)
+  isActive      Boolean   @default(true)
+  effectiveFrom DateTime  @default(now())
+  effectiveTo   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([branchId])
+  @@map("point_rules")
+}
+
+// Every earn/redeem/adjust/void is one row here — the ledger of truth.
+// (branchId, receiptNo) is unique so the same POS receipt can never be redeemed twice.
+// branchId is nullable because REDEEM/ADJUST rows aren't always tied to a specific
+// branch (e.g. a reward redeemed centrally); Postgres treats NULLs as distinct in a
+// unique index, so many null/null rows can coexist without colliding.
+model PointTransaction {
+  id                 String          @id @default(cuid())
+  customerId         String
+  customer           Customer        @relation(fields: [customerId], references: [id])
+  branchId           String?
+  branch             Branch?         @relation(fields: [branchId], references: [id])
+  type               TransactionType
+  points             Int // positive for EARN/ADJUST(+), negative for REDEEM/VOID/ADJUST(-)
+  amount             Decimal?        @db.Decimal(10, 2) // sale amount in THB, for EARN rows
+  receiptNo          String? // POS receipt number, required for EARN via QR
+  qrRawPayload       String? // raw string decoded from the QR, kept for audit
+  note               String?
+  processedByStaff   StaffUser?      @relation("ProcessedByStaff", fields: [processedByStaffId], references: [id])
+  processedByStaffId String?
+  createdAt          DateTime        @default(now())
+  expiresAt          DateTime? // set only on EARN rows: createdAt + 1 year
+  expired            Boolean         @default(false) // set once this EARN row has been auto-voided for expiry
+
+  @@unique([branchId, receiptNo])
+  @@index([customerId])
+  @@map("point_transactions")
+}
+
+model Reward {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  pointsCost  Int
+  stock       Int? // null = unlimited
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  redemptions Redemption[]
+
+  @@map("rewards")
+}
+
+model Redemption {
+  id                 String           @id @default(cuid())
+  customerId         String
+  customer           Customer         @relation(fields: [customerId], references: [id])
+  rewardId           String
+  reward             Reward           @relation(fields: [rewardId], references: [id])
+  pointsSpent        Int
+  status             RedemptionStatus @default(PENDING)
+  branchId           String?
+  branch             Branch?          @relation(fields: [branchId], references: [id])
+  fulfilledByStaff   StaffUser?       @relation("FulfilledByStaff", fields: [fulfilledByStaffId], references: [id])
+  fulfilledByStaffId String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([customerId])
+  @@map("redemptions")
+}
+
+// Audit trail of every QR scan attempt, success or not — used to spot forged/duplicate
+// QR abuse across the 21 branches.
+model QrScanLog {
+  id             String     @id @default(cuid())
+  rawPayload     String
+  branchCode     String?
+  branchId       String?
+  branch         Branch?    @relation(fields: [branchId], references: [id])
+  receiptNo      String?
+  amount         Decimal?   @db.Decimal(10, 2)
+  signatureValid Boolean
+  result         ScanResult
+  customerId     String?
+  ip             String?
+  userAgent      String?
+  createdAt      DateTime   @default(now())
+
+  @@index([branchId])
+  @@index([receiptNo])
+  @@map("qr_scan_logs")
+}
