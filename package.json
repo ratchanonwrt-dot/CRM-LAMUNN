@@ -8,6 +8,7 @@
     "Lamunn-CRM"
   ],
   "scripts": {
+    "postinstall": "npm run generate -w @lamunn/db",
     "db:generate": "npm run generate -w @lamunn/db",
     "db:migrate": "npm run migrate -w @lamunn/db",
     "db:seed": "npm run seed -w @lamunn/db",
