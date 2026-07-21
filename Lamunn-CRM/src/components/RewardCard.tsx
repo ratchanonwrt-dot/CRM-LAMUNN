@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Gift } from "lucide-react";
 import { useLocale } from "@/components/LanguageProvider";
 
 interface Reward {
@@ -42,9 +43,13 @@ export default function RewardCard({ reward, customerBalance }: { reward: Reward
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
       <div className="flex items-start gap-3">
-        {reward.imageUrl && (
+        {reward.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={reward.imageUrl} alt={reward.name} className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+        ) : (
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-300">
+            <Gift size={26} />
+          </div>
         )}
         <div className="flex-1">
           <h3 className="font-semibold text-gray-800">{reward.name}</h3>

@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import { prisma, expireOldPoints, getExpirySummary } from "@lamunn/db";
+import { prisma, expireOldPoints, getExpirySummary, getAppSettings } from "@lamunn/db";
 import HeroBanner from "@/components/HeroBanner";
 import GreetingPointsCard from "@/components/GreetingPointsCard";
 import BottomNav from "@/components/BottomNav";
@@ -21,15 +21,16 @@ export default async function RewardsPage() {
 
   await expireOldPoints(customerId);
 
-  const [rewards, customer, expirySummary] = await Promise.all([
+  const [rewards, customer, expirySummary, settings] = await Promise.all([
     prisma.reward.findMany({ where: { isActive: true }, orderBy: { pointsCost: "asc" } }),
     prisma.customer.findUnique({ where: { id: customerId } }),
     getExpirySummary(customerId),
+    getAppSettings(),
   ]);
 
   return (
     <>
-      <HeroBanner />
+      <HeroBanner imageUrl={settings.heroImageUrl} />
       <main className="mx-auto max-w-md px-4 pb-24 pt-0">
         <GreetingPointsCard locale={locale} balance={customer?.pointsBalance ?? 0} expirySummary={expirySummary} />
 

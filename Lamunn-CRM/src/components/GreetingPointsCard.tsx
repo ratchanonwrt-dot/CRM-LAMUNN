@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { Coins, Clock3 } from "lucide-react";
 import { translate, type Locale } from "@/lib/i18n";
 
 function getGreetingKey(hour: number): "greetingMorning" | "greetingAfternoon" | "greetingEvening" {
@@ -32,14 +33,17 @@ export default function GreetingPointsCard({
       </p>
 
       <div className="mt-3 flex items-center gap-2">
-        <span className="text-lg">🏅</span>
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-50 text-amber-500">
+          <Coins size={18} />
+        </div>
         <p className="text-sm font-medium text-gray-700">
           {t("pointsRemainingLabel")} <span className="text-xl font-bold text-brand-700">{balance}</span> {t("pointsUnit")}
         </p>
       </div>
 
       {expirySummary && (
-        <p className="mt-1 text-xs text-gray-400">
+        <p className="mt-2 flex items-center gap-1 text-xs text-gray-400">
+          <Clock3 size={12} />
           {t("expiresOnPrefix", { points: expirySummary.points, date: format(expirySummary.expiresAt, "d MMM yyyy") })}
         </p>
       )}

@@ -43,6 +43,16 @@ enum ScanResult {
   ERROR
 }
 
+// Single-row table (id is always "singleton") holding app-wide branding/config
+// that the customer app reads and the admin app writes.
+model AppSettings {
+  id           String   @id @default("singleton")
+  heroImageUrl String?
+  updatedAt    DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
 // ---------- Core models ----------
 
 model Branch {
