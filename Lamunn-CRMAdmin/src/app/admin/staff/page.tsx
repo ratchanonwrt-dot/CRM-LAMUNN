@@ -2,13 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@lamunn/db";
 import AddStaffForm from "@/components/AddStaffForm";
-import ToggleActiveButton from "@/components/ToggleActiveButton";
-
-const roleLabel: Record<string, string> = {
-  SUPER_ADMIN: "ผู้ดูแลระบบ",
-  BRANCH_MANAGER: "ผู้จัดการสาขา",
-  STAFF: "พนักงาน",
-};
+import StaffRow from "@/components/StaffRow";
 
 export default async function StaffPage() {
   const session = await getServerSession(authOptions);
@@ -43,19 +37,12 @@ export default async function StaffPage() {
               <th className="px-4 py-2">บทบาท</th>
               <th className="px-4 py-2">สาขา</th>
               <th className="px-4 py-2">สถานะ</th>
+              <th className="px-4 py-2"></th>
             </tr>
           </thead>
           <tbody>
             {staffList.map((s) => (
-              <tr key={s.id} className="border-t border-gray-100">
-                <td className="px-4 py-2">{s.name}</td>
-                <td className="px-4 py-2 text-gray-500">{s.email}</td>
-                <td className="px-4 py-2">{roleLabel[s.role]}</td>
-                <td className="px-4 py-2 text-gray-500">{s.branch ? `${s.branch.code} — ${s.branch.name}` : "ทุกสาขา"}</td>
-                <td className="px-4 py-2">
-                  <ToggleActiveButton endpoint={`/api/admin/staff/${s.id}`} isActive={s.isActive} />
-                </td>
-              </tr>
+              <StaffRow key={s.id} staff={s} branches={branches} canChooseRole={role === "SUPER_ADMIN"} />
             ))}
           </tbody>
         </table>

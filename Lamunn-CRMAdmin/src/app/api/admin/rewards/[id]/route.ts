@@ -3,7 +3,14 @@ import { z } from "zod";
 import { prisma } from "@lamunn/db";
 import { requireStaff } from "@/lib/requireStaff";
 
-const schema = z.object({ isActive: z.boolean() });
+const schema = z.object({
+  isActive: z.boolean().optional(),
+  name: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+  pointsCost: z.coerce.number().int().positive().optional(),
+  stock: z.coerce.number().int().min(0).nullable().optional(),
+  imageUrl: z.string().url().nullable().optional(),
+});
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const staff = await requireStaff(["SUPER_ADMIN"]);
@@ -11,9 +18,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
-  const reward = await prisma.reward.update({ where: { id: params.id }, data: { isActive: parsed.data.isActive } });
+  const reward = await prisma.reward.update({ where: { id: params.id }, data: parsed.data });
   return NextResponse.json({ ok: true, reward });
 }
 
