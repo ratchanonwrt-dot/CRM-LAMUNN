@@ -111,22 +111,40 @@ model StaffUser {
 }
 
 model Customer {
-  id            String    @id @default(cuid())
-  name          String?
-  phone         String?   @unique
-  lineUserId    String?   @unique
-  email         String?
-  dateOfBirth   DateTime?
-  pointsBalance Int       @default(0) // denormalized running balance, kept in sync in a DB transaction
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  name           String?
+  phone          String?   @unique
+  lineUserId     String?   @unique
+  email          String?
+  dateOfBirth    DateTime?
+  pointsBalance  Int       @default(0) // denormalized running balance, kept in sync in a DB transaction
+  // Cumulative points ever earned (EARN + positive ADJUST) — only ever increases,
+  // so redeeming rewards never demotes a customer's membership tier.
+  lifetimePoints Int       @default(0)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   otpCodes     OtpCode[]
   transactions PointTransaction[]
   redemptions  Redemption[]
 
   @@map("customers")
+}
+
+// Membership tiers (Silver/Gold/Platinum, ...) unlocked by lifetime points earned.
+// Editable via the back office: name, threshold, benefit text, and badge/card image.
+model MembershipTier {
+  id        String   @id @default(cuid())
+  name      String
+  minPoints Int
+  benefit   String?
+  imageUrl  String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("membership_tiers")
 }
 
 model OtpCode {

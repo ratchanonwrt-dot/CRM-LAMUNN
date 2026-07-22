@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
     prisma.pointTransaction.create({
       data: { customerId, branchId: branch.id, type: "EARN", points, amount, receiptNo, qrRawPayload: qr, expiresAt: computeExpiryDate() },
     }),
-    prisma.customer.update({ where: { id: customerId }, data: { pointsBalance: { increment: points } } }),
+    prisma.customer.update({ where: { id: customerId }, data: { pointsBalance: { increment: points }, lifetimePoints: { increment: points } } }),
     prisma.qrScanLog.create({ data: { ...logBase, branchId: branch.id, customerId, signatureValid: signed, result: "SUCCESS" } }),
   ]);
 

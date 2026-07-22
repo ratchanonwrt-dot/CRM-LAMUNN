@@ -1,0 +1,94 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Award, Pencil } from "lucide-react";
+import DeleteButton from "@/components/DeleteButton";
+import ImageUploadField from "@/components/ImageUploadField";
+
+interface Tier {
+  id: string;
+  name: string;
+  minPoints: number;
+  benefit: string | null;
+  imageUrl: string | null;
+}
+
+export default function TierRow({ tier }: { tier: Tier }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(tier.name);
+  const [minPoints, setMinPoints] = useState(String(tier.minPoints));
+  const [benefit, setBenefit] = useState(tier.benefit ?? "");
+  const [imageUrl, setImageUrl] = useState<string | null>(tier.imageUrl);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const res = await fetch(`/api/admin/tiers/${tier.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, minPoints, benefit: benefit || null, imageUrl }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (!res.ok) {
+      setError(data.error ?? "บันทึกไม่สำเร็จ");
+      return;
+    }
+    setEditing(false);
+    router.refresh();
+  }
+
+  return (
+    <>
+      <tr className="border-t border-gray-100">
+        <td className="px-4 py-2">
+          {tier.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={tier.imageUrl} alt={tier.name} className="h-10 w-10 rounded-xl object-cover" />
+          ) : (
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-400">
+              <Award size={18} strokeWidth={2.2} />
+            </div>
+          )}
+        </td>
+        <td className="px-4 py-2 font-medium text-gray-800">{tier.name}</td>
+        <td className="px-4 py-2 text-gray-500">{tier.minPoints} แต้มขึ้นไป</td>
+        <td className="px-4 py-2 text-gray-500">{tier.benefit || "-"}</td>
+        <td className="px-4 py-2">
+          <button onClick={() => setEditing((v) => !v)} className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+            <Pencil size={12} />
+            {editing ? "ยกเลิก" : "แก้ไข"}
+          </button>
+        </td>
+        <td className="px-4 py-2">
+          <DeleteButton endpoint={`/api/admin/tiers/${tier.id}`} confirmMessage={`ลบระดับ "${tier.name}" ใช่ไหม?`} />
+        </td>
+      </tr>
+      {editing && (
+        <tr className="border-t border-gray-100 bg-gray-50">
+          <td colSpan={6} className="px-4 py-3">
+            <form onSubmit={handleSave} className="flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                <input required placeholder="ชื่อระดับ" value={name} onChange={(e) => setName(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                <input required type="number" min="0" placeholder="แต้มขั้นต่ำ" value={minPoints} onChange={(e) => setMinPoints(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                <input placeholder="สิทธิประโยชน์ (Benefit)" value={benefit} onChange={(e) => setBenefit(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+              </div>
+              <ImageUploadField value={imageUrl} onChange={setImageUrl} />
+              <div>
+                <button type="submit" disabled={loading} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+                  {loading ? "กำลังบันทึก..." : "บันทึก"}
+                </button>
+              </div>
+              {error && <p className="text-xs text-red-600">{error}</p>}
+            </form>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}

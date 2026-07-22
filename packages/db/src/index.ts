@@ -3,4 +3,5 @@ export * from "./points";
 export * from "./qr";
 export * from "./expiry";
 export * from "./settings";
+export * from "./tiers";
 export * from "@prisma/client";

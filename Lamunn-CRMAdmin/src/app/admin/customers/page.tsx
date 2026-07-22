@@ -1,5 +1,5 @@
 import { prisma } from "@lamunn/db";
-import { format } from "date-fns";
+import CustomerRow from "@/components/CustomerRow";
 
 export default async function CustomersPage() {
   const [customers, purchaseStats] = await Promise.all([
@@ -29,12 +29,13 @@ export default async function CustomersPage() {
               <th className="px-4 py-2">แต้มสะสม</th>
               <th className="px-4 py-2">จำนวนครั้งที่ซื้อ</th>
               <th className="px-4 py-2">ซื้อล่าสุด</th>
+              <th className="px-4 py-2"></th>
             </tr>
           </thead>
           <tbody>
             {customers.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-gray-400">
                   ยังไม่มีลูกค้าในระบบ
                 </td>
               </tr>
@@ -42,16 +43,12 @@ export default async function CustomersPage() {
             {customers.map((c) => {
               const stats = statsByCustomer.get(c.id);
               return (
-                <tr key={c.id} className="border-t border-gray-100">
-                  <td className="px-4 py-2">{c.name ?? "-"}</td>
-                  <td className="px-4 py-2 text-gray-500">{c.phone ?? "-"}</td>
-                  <td className="px-4 py-2 text-gray-500">{c.dateOfBirth ? format(c.dateOfBirth, "d MMM yyyy") : "-"}</td>
-                  <td className="px-4 py-2 font-medium text-brand-700">{c.pointsBalance}</td>
-                  <td className="px-4 py-2 text-gray-500">{stats?._count ?? 0}</td>
-                  <td className="px-4 py-2 text-gray-500">
-                    {stats?._max.createdAt ? format(stats._max.createdAt, "d MMM yyyy") : "-"}
-                  </td>
-                </tr>
+                <CustomerRow
+                  key={c.id}
+                  customer={{ id: c.id, name: c.name, phone: c.phone, dateOfBirth: c.dateOfBirth, pointsBalance: c.pointsBalance }}
+                  purchaseCount={stats?._count ?? 0}
+                  lastPurchase={stats?._max.createdAt ?? null}
+                />
               );
             })}
           </tbody>
