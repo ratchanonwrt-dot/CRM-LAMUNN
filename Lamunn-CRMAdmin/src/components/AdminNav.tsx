@@ -25,16 +25,16 @@ const roleLabel: Record<string, string> = {
 };
 
 const allLinks = [
-  { href: "/admin", label: "ภาพรวม", icon: LayoutDashboard, color: "bg-sky-100 text-sky-500", roles: ["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF"] },
-  { href: "/admin/branches", label: "สาขา", icon: Building2, color: "bg-violet-100 text-violet-500", roles: ["SUPER_ADMIN"] },
-  { href: "/admin/staff", label: "พนักงาน", icon: Users, color: "bg-indigo-100 text-indigo-500", roles: ["SUPER_ADMIN", "BRANCH_MANAGER"] },
-  { href: "/admin/customers", label: "ลูกค้า", icon: UserRound, color: "bg-pink-100 text-pink-500", roles: ["SUPER_ADMIN", "BRANCH_MANAGER"] },
-  { href: "/admin/point-rules", label: "กติกาสะสมแต้ม", icon: Percent, color: "bg-orange-100 text-orange-500", roles: ["SUPER_ADMIN", "BRANCH_MANAGER"] },
-  { href: "/admin/rewards", label: "รางวัล", icon: Gift, color: "bg-emerald-100 text-emerald-500", roles: ["SUPER_ADMIN"] },
-  { href: "/admin/redemptions", label: "ยืนยันแลกรางวัล", icon: QrCode, color: "bg-teal-100 text-teal-500", roles: ["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF"] },
-  { href: "/admin/reports", label: "รายงาน", icon: BarChart3, color: "bg-cyan-100 text-cyan-500", roles: ["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF"] },
-  { href: "/admin/settings", label: "ตั้งค่าหน้าตาแอป", icon: Palette, color: "bg-rose-100 text-rose-500", roles: ["SUPER_ADMIN"] },
-  { href: "/admin/qr-simulator", label: "จำลอง QR (ทดสอบ)", icon: ScanLine, color: "bg-amber-100 text-amber-500", roles: ["SUPER_ADMIN"] },
+  { href: "/admin", label: "ภาพรวม", icon: LayoutDashboard, color: "bg-sky-100 text-sky-400", roles: ["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF"] },
+  { href: "/admin/branches", label: "สาขา", icon: Building2, color: "bg-violet-100 text-violet-400", roles: ["SUPER_ADMIN"] },
+  { href: "/admin/staff", label: "พนักงาน", icon: Users, color: "bg-indigo-100 text-indigo-400", roles: ["SUPER_ADMIN", "BRANCH_MANAGER"] },
+  { href: "/admin/customers", label: "ลูกค้า", icon: UserRound, color: "bg-pink-100 text-pink-400", roles: ["SUPER_ADMIN", "BRANCH_MANAGER"] },
+  { href: "/admin/point-rules", label: "กติกาสะสมแต้ม", icon: Percent, color: "bg-orange-100 text-orange-400", roles: ["SUPER_ADMIN", "BRANCH_MANAGER"] },
+  { href: "/admin/rewards", label: "รางวัล", icon: Gift, color: "bg-emerald-100 text-emerald-400", roles: ["SUPER_ADMIN"] },
+  { href: "/admin/redemptions", label: "ยืนยันแลกรางวัล", icon: QrCode, color: "bg-teal-100 text-teal-400", roles: ["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF"] },
+  { href: "/admin/reports", label: "รายงาน", icon: BarChart3, color: "bg-cyan-100 text-cyan-400", roles: ["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF"] },
+  { href: "/admin/settings", label: "ตั้งค่าหน้าตาแอป", icon: Palette, color: "bg-rose-100 text-rose-400", roles: ["SUPER_ADMIN"] },
+  { href: "/admin/qr-simulator", label: "จำลอง QR (ทดสอบ)", icon: ScanLine, color: "bg-amber-100 text-amber-400", roles: ["SUPER_ADMIN"] },
 ];
 
 export default function AdminNav({ role, name }: { role: string; name: string }) {

@@ -18,11 +18,11 @@ interface Reward {
 }
 
 const PLACEHOLDER_COLORS = [
-  "bg-emerald-50 text-emerald-400",
-  "bg-pink-50 text-pink-400",
-  "bg-amber-50 text-amber-400",
-  "bg-sky-50 text-sky-400",
-  "bg-violet-50 text-violet-400",
+  "bg-emerald-100 text-emerald-400",
+  "bg-pink-100 text-pink-400",
+  "bg-amber-100 text-amber-400",
+  "bg-sky-100 text-sky-400",
+  "bg-violet-100 text-violet-400",
 ];
 
 function placeholderColor(id: string) {

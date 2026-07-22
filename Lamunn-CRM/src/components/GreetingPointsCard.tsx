@@ -33,7 +33,7 @@ export default function GreetingPointsCard({
       </p>
 
       <div className="mt-3 flex items-center gap-2.5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-200 to-amber-400 text-white shadow-sm">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-400">
           <Coins size={20} strokeWidth={2.2} />
         </div>
         <p className="text-sm font-medium text-gray-700">
