@@ -48,7 +48,23 @@ enum ScanResult {
 model AppSettings {
   id           String   @id @default("singleton")
   heroImageUrl String?
-  updatedAt    DateTime @updatedAt
+
+  // Editable customer-app copy — null means "use the built-in default text".
+  appName             String?
+  taglineTh           String?
+  taglineEn           String?
+  greetingMorningTh   String?
+  greetingMorningEn   String?
+  greetingAfternoonTh String?
+  greetingAfternoonEn String?
+  greetingEveningTh   String?
+  greetingEveningEn   String?
+  navHomeTh           String?
+  navHomeEn           String?
+  navRedeemTh         String?
+  navRedeemEn         String?
+
+  updatedAt DateTime @updatedAt
 
   @@map("app_settings")
 }

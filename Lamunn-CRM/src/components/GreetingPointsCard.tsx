@@ -1,6 +1,8 @@
 import { format } from "date-fns";
 import { Coins, Clock3 } from "lucide-react";
+import type { AppSettings } from "@lamunn/db";
 import { translate, type Locale } from "@/lib/i18n";
+import { resolveText } from "@/lib/content";
 
 function getGreetingKey(hour: number): "greetingMorning" | "greetingAfternoon" | "greetingEvening" {
   if (hour >= 5 && hour < 11) return "greetingMorning";
@@ -16,20 +18,23 @@ const greetingEmoji = {
 
 export default function GreetingPointsCard({
   locale,
+  settings,
   balance,
   expirySummary,
 }: {
   locale: Locale;
+  settings: AppSettings;
   balance: number;
   expirySummary: { points: number; expiresAt: Date } | null;
 }) {
   const t = (key: Parameters<typeof translate>[1], vars?: Record<string, string | number>) => translate(locale, key, vars);
   const greetingKey = getGreetingKey(new Date().getHours());
+  const greetingText = resolveText(settings, locale, greetingKey);
 
   return (
     <div className="-mt-6 mx-4 rounded-2xl bg-white p-5 shadow-md">
       <p className="text-sm text-gray-500">
-        {greetingEmoji[greetingKey]} {t(greetingKey)} {t("welcomeSuffix")}
+        {greetingEmoji[greetingKey]} {greetingText} {t("welcomeSuffix")}
       </p>
 
       <div className="mt-3 flex items-center gap-2.5">

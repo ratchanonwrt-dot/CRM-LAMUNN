@@ -2,11 +2,19 @@
 
 import { SessionProvider } from "next-auth/react";
 import { LanguageProvider } from "@/components/LanguageProvider";
-import type { Locale } from "@/lib/i18n";
+import type { Locale, TranslationKey } from "@/lib/i18n";
 
-export default function Providers({ initialLocale, children }: { initialLocale: Locale; children: React.ReactNode }) {
+export default function Providers({
+  initialLocale,
+  navOverrides,
+  children,
+}: {
+  initialLocale: Locale;
+  navOverrides?: Partial<Record<Locale, Partial<Record<TranslationKey, string>>>>;
+  children: React.ReactNode;
+}) {
   return (
-    <LanguageProvider initialLocale={initialLocale}>
+    <LanguageProvider initialLocale={initialLocale} overrides={navOverrides}>
       <SessionProvider>{children}</SessionProvider>
     </LanguageProvider>
   );

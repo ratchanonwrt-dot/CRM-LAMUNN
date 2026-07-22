@@ -12,7 +12,15 @@ interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-export function LanguageProvider({ initialLocale, children }: { initialLocale: Locale; children: React.ReactNode }) {
+export function LanguageProvider({
+  initialLocale,
+  overrides,
+  children,
+}: {
+  initialLocale: Locale;
+  overrides?: Partial<Record<Locale, Partial<Record<TranslationKey, string>>>>;
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
 
@@ -25,7 +33,10 @@ export function LanguageProvider({ initialLocale, children }: { initialLocale: L
     [router]
   );
 
-  const t = useCallback((key: TranslationKey, vars?: Record<string, string | number>) => translate(locale, key, vars), [locale]);
+  const t = useCallback(
+    (key: TranslationKey, vars?: Record<string, string | number>) => overrides?.[locale]?.[key] ?? translate(locale, key, vars),
+    [locale, overrides]
+  );
 
   return <LanguageContext.Provider value={{ locale, setLocale, t }}>{children}</LanguageContext.Provider>;
 }
