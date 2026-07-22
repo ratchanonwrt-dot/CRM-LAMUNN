@@ -46,10 +46,9 @@ export const translations = {
     navMyPoints: "แต้มของฉัน",
     navHome: "หน้าหลัก",
     navRedeem: "แลกรางวัล",
-    navCard: "บัตรสมาชิก",
+    navHistory: "ประวัติแต้ม",
     signOut: "ออกจากระบบ",
 
-    membershipCardTitle: "บัตรสมาชิก",
     currentTierLabel: "ระดับปัจจุบัน",
     noTierYet: "ยังไม่ถึงระดับสมาชิก",
     pointsToNextTierPrefix: "อีก {points} แต้ม สู่ระดับ {tier}",
@@ -135,10 +134,9 @@ export const translations = {
     navMyPoints: "My Points",
     navHome: "Home",
     navRedeem: "Redeem Rewards",
-    navCard: "Member Card",
+    navHistory: "Points History",
     signOut: "Sign Out",
 
-    membershipCardTitle: "Membership Card",
     currentTierLabel: "Current Tier",
     noTierYet: "Not yet at a membership tier",
     pointsToNextTierPrefix: "{points} pts to {tier}",

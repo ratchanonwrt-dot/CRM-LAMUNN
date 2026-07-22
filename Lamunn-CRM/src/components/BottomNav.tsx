@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import clsx from "clsx";
-import { Home, Gift, Award, Languages, LogOut } from "lucide-react";
+import { Home, Gift, History, Languages, LogOut } from "lucide-react";
 import { useLocale } from "@/components/LanguageProvider";
 
 export default function BottomNav() {
@@ -13,7 +13,7 @@ export default function BottomNav() {
   const tabs = [
     { href: "/dashboard", label: t("navHome"), icon: Home },
     { href: "/rewards", label: t("navRedeem"), icon: Gift },
-    { href: "/card", label: t("navCard"), icon: Award },
+    { href: "/history", label: t("navHistory"), icon: History },
   ];
 
   return (
