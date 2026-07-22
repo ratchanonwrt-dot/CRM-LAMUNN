@@ -132,7 +132,11 @@ model Customer {
 model OtpCode {
   id         String    @id @default(cuid())
   phone      String
-  codeHash   String
+  // Exactly one of these is set: codeHash for the local console-log dev
+  // fallback (no SMS_API_KEY configured), token for the real Thaibulksms
+  // OTP Console flow (they generate/verify the pin, we just hold their token).
+  codeHash   String?
+  token      String?
   expiresAt  DateTime
   consumedAt DateTime?
   attempts   Int       @default(0)

@@ -13,6 +13,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
   }
 
-  const { expiresAt } = await requestOtp(parsed.data.phone);
-  return NextResponse.json({ ok: true, expiresAt });
+  try {
+    const { expiresAt } = await requestOtp(parsed.data.phone);
+    return NextResponse.json({ ok: true, expiresAt });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "ส่ง OTP ไม่สำเร็จ" }, { status: 502 });
+  }
 }

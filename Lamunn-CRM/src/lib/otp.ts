@@ -4,6 +4,7 @@ import { prisma } from "@lamunn/db";
 
 const OTP_TTL_MINUTES = Number(process.env.OTP_TTL_MINUTES ?? 5);
 const MAX_ATTEMPTS = 5;
+const THAIBULKSMS_BASE = "https://otp.thaibulksms.com/v1/otp";
 
 function generateNumericCode(length = 6) {
   const max = 10 ** length;
@@ -11,36 +12,51 @@ function generateNumericCode(length = 6) {
   return n.toString().padStart(length, "0");
 }
 
-/**
- * Sends an OTP SMS. This is the single place to wire up a real provider
- * (Thsms, Twilio, AWS SNS, etc.) — swap the body for an HTTP call using
- * process.env.SMS_PROVIDER_API_KEY. Left as a console.log stub so the rest
- * of the login flow can be developed/tested without a live SMS account.
- */
-async function sendOtpSms(phone: string, code: string) {
-  if (!process.env.SMS_PROVIDER_API_KEY) {
-    console.warn(`[otp] SMS_PROVIDER_API_KEY not set — OTP for ${phone} is: ${code}`);
-    return;
-  }
-  // TODO: replace with a real provider call, e.g.:
-  // await fetch("https://api.your-sms-provider.com/send", {
-  //   method: "POST",
-  //   headers: { Authorization: `Bearer ${process.env.SMS_PROVIDER_API_KEY}` },
-  //   body: JSON.stringify({ to: phone, sender: process.env.SMS_PROVIDER_SENDER_NAME, text: `รหัส OTP ของคุณคือ ${code}` }),
-  // });
-  console.warn(`[otp] TODO: send real SMS to ${phone}: ${code}`);
+function thaibulksmsConfigured() {
+  return Boolean(process.env.SMS_API_KEY && process.env.SMS_API_SECRET);
+}
+
+async function thaibulksmsRequest(msisdn: string): Promise<{ token: string }> {
+  const res = await fetch(`${THAIBULKSMS_BASE}/request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: process.env.SMS_API_KEY, secret: process.env.SMS_API_SECRET, msisdn }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message ?? "ส่ง OTP ไม่สำเร็จ");
+  return { token: data.data.token };
+}
+
+async function thaibulksmsVerify(token: string, pin: string): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(`${THAIBULKSMS_BASE}/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: process.env.SMS_API_KEY, secret: process.env.SMS_API_SECRET, token, pin }),
+  });
+  const data = await res.json();
+  if (res.ok) return { ok: true };
+
+  const message: string = data?.error?.message ?? "";
+  if (message.toLowerCase().includes("expire")) return { ok: false, reason: "EXPIRED" };
+  if (message.toLowerCase().includes("invalid")) return { ok: false, reason: "INCORRECT" };
+  return { ok: false, reason: "INCORRECT" };
 }
 
 export async function requestOtp(phone: string) {
-  const code = generateNumericCode();
-  const codeHash = await bcrypt.hash(code, 10);
   const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
 
-  await prisma.otpCode.create({
-    data: { phone, codeHash, expiresAt },
-  });
+  if (thaibulksmsConfigured()) {
+    const { token } = await thaibulksmsRequest(phone);
+    await prisma.otpCode.create({ data: { phone, token, expiresAt } });
+    return { expiresAt };
+  }
 
-  await sendOtpSms(phone, code);
+  // Dev/local fallback: no SMS_API_KEY/SMS_API_SECRET configured — generate
+  // our own code, log it to the server console instead of sending a real SMS.
+  const code = generateNumericCode();
+  const codeHash = await bcrypt.hash(code, 10);
+  await prisma.otpCode.create({ data: { phone, codeHash, expiresAt } });
+  console.warn(`[otp] SMS_API_KEY not set — OTP for ${phone} is: ${code}`);
   return { expiresAt };
 }
 
@@ -54,7 +70,17 @@ export async function verifyOtp(phone: string, code: string): Promise<{ ok: bool
   if (record.expiresAt < new Date()) return { ok: false, reason: "EXPIRED" };
   if (record.attempts >= MAX_ATTEMPTS) return { ok: false, reason: "TOO_MANY_ATTEMPTS" };
 
-  const match = await bcrypt.compare(code, record.codeHash);
+  if (record.token) {
+    const result = await thaibulksmsVerify(record.token, code);
+    if (!result.ok) {
+      await prisma.otpCode.update({ where: { id: record.id }, data: { attempts: { increment: 1 } } });
+      return result;
+    }
+    await prisma.otpCode.update({ where: { id: record.id }, data: { consumedAt: new Date() } });
+    return { ok: true };
+  }
+
+  const match = record.codeHash ? await bcrypt.compare(code, record.codeHash) : false;
   if (!match) {
     await prisma.otpCode.update({ where: { id: record.id }, data: { attempts: { increment: 1 } } });
     return { ok: false, reason: "INCORRECT" };
