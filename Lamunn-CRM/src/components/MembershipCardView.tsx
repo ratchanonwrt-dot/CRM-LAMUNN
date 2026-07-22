@@ -2,6 +2,31 @@ import { Award, Coins, Lock, CheckCircle2 } from "lucide-react";
 import type { MembershipTier } from "@lamunn/db";
 import { translate, type Locale } from "@/lib/i18n";
 
+// Temporary placeholder colors per tier name, used until real card images are uploaded.
+const TIER_CARD_GRADIENTS: Record<string, string> = {
+  bronze: "from-amber-700 via-amber-800 to-amber-950",
+  silver: "from-slate-300 via-slate-400 to-slate-600",
+  gold: "from-yellow-400 via-amber-400 to-amber-600",
+  diamond: "from-sky-300 via-cyan-400 to-blue-600",
+};
+const DEFAULT_CARD_GRADIENT = "from-brand-500 to-brand-800";
+
+const TIER_ICON_COLORS: Record<string, string> = {
+  bronze: "bg-amber-100 text-amber-700",
+  silver: "bg-slate-200 text-slate-500",
+  gold: "bg-yellow-100 text-yellow-600",
+  diamond: "bg-sky-100 text-sky-500",
+};
+const DEFAULT_ICON_COLOR = "bg-amber-100 text-amber-500";
+
+function getTierCardGradient(name?: string | null) {
+  return TIER_CARD_GRADIENTS[name?.trim().toLowerCase() ?? ""] ?? DEFAULT_CARD_GRADIENT;
+}
+
+function getTierIconColor(name?: string | null) {
+  return TIER_ICON_COLORS[name?.trim().toLowerCase() ?? ""] ?? DEFAULT_ICON_COLOR;
+}
+
 export default function MembershipCardView({
   locale,
   tiers,
@@ -29,7 +54,9 @@ export default function MembershipCardView({
             : undefined
         }
       >
-        {!currentTier?.imageUrl && <div className="absolute inset-0 bg-gradient-to-br from-brand-500 to-brand-800" />}
+        {!currentTier?.imageUrl && (
+          <div className={`absolute inset-0 bg-gradient-to-br ${getTierCardGradient(currentTier?.name)}`} />
+        )}
         {currentTier?.imageUrl && <div className="absolute inset-0 bg-black/30" />}
 
         <div className="relative flex items-start justify-between">
@@ -77,7 +104,7 @@ export default function MembershipCardView({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={tier.imageUrl} alt={tier.name} className="h-10 w-10 rounded-lg object-cover" />
                   ) : (
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${achieved ? "bg-amber-100 text-amber-500" : "bg-gray-100 text-gray-300"}`}>
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${achieved ? getTierIconColor(tier.name) : "bg-gray-100 text-gray-300"}`}>
                       <Award size={18} />
                     </div>
                   )}
