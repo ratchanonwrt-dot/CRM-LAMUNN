@@ -14,6 +14,19 @@ interface Reward {
   imageUrl: string | null;
 }
 
+const PLACEHOLDER_COLORS = [
+  "bg-brand-50 text-brand-300",
+  "bg-pink-50 text-pink-300",
+  "bg-amber-50 text-amber-400",
+  "bg-sky-50 text-sky-300",
+  "bg-violet-50 text-violet-300",
+];
+
+function placeholderColor(id: string) {
+  const sum = id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return PLACEHOLDER_COLORS[sum % PLACEHOLDER_COLORS.length];
+}
+
 export default function RewardCard({ reward, customerBalance }: { reward: Reward; customerBalance: number }) {
   const { t } = useLocale();
   const router = useRouter();
@@ -45,10 +58,10 @@ export default function RewardCard({ reward, customerBalance }: { reward: Reward
       <div className="flex items-start gap-3">
         {reward.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={reward.imageUrl} alt={reward.name} className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+          <img src={reward.imageUrl} alt={reward.name} className="h-16 w-16 shrink-0 rounded-2xl object-cover" />
         ) : (
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-300">
-            <Gift size={26} />
+          <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl ${placeholderColor(reward.id)}`}>
+            <Gift size={26} strokeWidth={2.2} />
           </div>
         )}
         <div className="flex-1">

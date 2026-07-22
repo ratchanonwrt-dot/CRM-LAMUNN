@@ -17,6 +17,19 @@ interface Reward {
   isActive: boolean;
 }
 
+const PLACEHOLDER_COLORS = [
+  "bg-emerald-50 text-emerald-400",
+  "bg-pink-50 text-pink-400",
+  "bg-amber-50 text-amber-400",
+  "bg-sky-50 text-sky-400",
+  "bg-violet-50 text-violet-400",
+];
+
+function placeholderColor(id: string) {
+  const sum = id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return PLACEHOLDER_COLORS[sum % PLACEHOLDER_COLORS.length];
+}
+
 export default function RewardRow({ reward }: { reward: Reward }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -59,10 +72,10 @@ export default function RewardRow({ reward }: { reward: Reward }) {
         <td className="px-4 py-2">
           {reward.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={reward.imageUrl} alt={reward.name} className="h-10 w-10 rounded-lg object-cover" />
+            <img src={reward.imageUrl} alt={reward.name} className="h-10 w-10 rounded-xl object-cover" />
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 text-gray-300">
-              <Gift size={18} />
+            <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${placeholderColor(reward.id)}`}>
+              <Gift size={18} strokeWidth={2.2} />
             </div>
           )}
         </td>

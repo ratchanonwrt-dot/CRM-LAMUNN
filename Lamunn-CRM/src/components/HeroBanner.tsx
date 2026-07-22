@@ -11,7 +11,8 @@ export default function HeroBanner({ imageUrl }: { imageUrl?: string | null }) {
       <div className="absolute left-4 top-4 flex h-12 w-12 items-center justify-center rounded-full bg-white text-lg font-bold text-brand-700 shadow">
         L
       </div>
-      <Sparkles size={16} className="absolute right-5 top-5 text-white/70" />
+      <Sparkles size={18} className="absolute right-6 top-6 text-white/80" />
+      <Sparkles size={10} className="absolute right-12 top-14 text-white/50" />
       <h1 className="relative text-2xl font-bold tracking-wide">Lamunn</h1>
     </div>
   );
