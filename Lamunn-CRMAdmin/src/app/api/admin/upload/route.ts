@@ -6,7 +6,7 @@ const MAX_SIZE_BYTES = 4 * 1024 * 1024; // 4MB
 const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
 export async function POST(req: NextRequest) {
-  const staff = await requireStaff(["SUPER_ADMIN"]);
+  const staff = await requireStaff(["SUPER_ADMIN", "MARKETING"]);
   if (!staff) return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
 
   const form = await req.formData().catch(() => null);

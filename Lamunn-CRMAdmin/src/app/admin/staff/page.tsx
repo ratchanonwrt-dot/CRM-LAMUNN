@@ -1,13 +1,12 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@lamunn/db";
 import AddStaffForm from "@/components/AddStaffForm";
 import StaffRow from "@/components/StaffRow";
+import { requirePageRole } from "@/lib/requirePageRole";
 
 export default async function StaffPage() {
-  const session = await getServerSession(authOptions);
-  const role = session!.user.role!;
-  const myBranchId = session!.user.branchId;
+  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER"]);
+  const role = user.role!;
+  const myBranchId = user.branchId;
 
   const [staffList, branches] = await Promise.all([
     prisma.staffUser.findMany({

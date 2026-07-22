@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@lamunn/db";
+import { prisma, logAudit } from "@lamunn/db";
 import { requireStaff } from "@/lib/requireStaff";
 
 const schema = z.object({
@@ -12,7 +12,7 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const staff = await requireStaff(["SUPER_ADMIN"]);
+  const staff = await requireStaff(["SUPER_ADMIN", "MARKETING"]);
   if (!staff) return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
 
   const body = await req.json().catch(() => null);
@@ -28,5 +28,16 @@ export async function POST(req: NextRequest) {
       imageUrl: parsed.data.imageUrl,
     },
   });
+
+  await logAudit({
+    staffId: staff.staffId,
+    staffName: staff.staffName,
+    staffRole: staff.role,
+    action: "CREATE",
+    entityType: "Reward",
+    entityId: reward.id,
+    summary: `สร้างรางวัลใหม่ "${reward.name}" (${reward.pointsCost} แต้ม)`,
+  });
+
   return NextResponse.json({ ok: true, reward });
 }

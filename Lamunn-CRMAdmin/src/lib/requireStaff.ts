@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-type StaffRole = "SUPER_ADMIN" | "BRANCH_MANAGER" | "STAFF";
+type StaffRole = "SUPER_ADMIN" | "BRANCH_MANAGER" | "STAFF" | "MARKETING";
 
 /** Server-side guard for API routes: returns the staff session info, or null if the
  * caller isn't logged in as staff / doesn't have one of the allowed roles. */
@@ -11,6 +11,7 @@ export async function requireStaff(allowedRoles?: StaffRole[]) {
   if (allowedRoles && !allowedRoles.includes(session.user.role as StaffRole)) return null;
   return {
     staffId: session.user.staffId!,
+    staffName: session.user.name ?? "",
     role: session.user.role as StaffRole,
     branchId: session.user.branchId ?? null,
   };

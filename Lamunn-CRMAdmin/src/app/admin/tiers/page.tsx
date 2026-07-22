@@ -1,8 +1,10 @@
 import { getMembershipTiers } from "@lamunn/db";
 import AddTierForm from "@/components/AddTierForm";
 import TierRow from "@/components/TierRow";
+import { requirePageRole } from "@/lib/requirePageRole";
 
 export default async function TiersPage() {
+  await requirePageRole(["SUPER_ADMIN"]);
   const tiers = await getMembershipTiers();
 
   return (

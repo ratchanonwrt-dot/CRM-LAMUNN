@@ -9,7 +9,7 @@ const schema = z.object({
   name: z.string().min(1).optional(),
   email: z.string().email().optional(),
   password: z.string().min(8).optional(),
-  role: z.enum(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF"]).optional(),
+  role: z.enum(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"]).optional(),
   branchId: z.string().optional(),
 });
 
@@ -38,7 +38,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const role = parsed.data.role ?? target.role;
-  if (role !== "SUPER_ADMIN" && !parsed.data.branchId && !target.branchId) {
+  const isHqRole = role === "SUPER_ADMIN" || role === "MARKETING";
+  if (!isHqRole && !parsed.data.branchId && !target.branchId) {
     return NextResponse.json({ error: "กรุณาเลือกสาขา" }, { status: 400 });
   }
 
@@ -49,7 +50,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (parsed.data.password) data.passwordHash = await bcrypt.hash(parsed.data.password, 10);
   if (parsed.data.role !== undefined) {
     data.role = parsed.data.role;
-    data.branchId = parsed.data.role === "SUPER_ADMIN" ? null : (parsed.data.branchId ?? target.branchId);
+    data.branchId = isHqRole ? null : (parsed.data.branchId ?? target.branchId);
   } else if (parsed.data.branchId !== undefined) {
     data.branchId = parsed.data.branchId;
   }

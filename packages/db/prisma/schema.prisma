@@ -19,6 +19,7 @@ enum StaffRole {
   SUPER_ADMIN // HQ, sees/manages all 21 branches
   BRANCH_MANAGER // manages own branch: staff, reports, redemption approval
   STAFF // front-of-store: lookup customers, manual point adjustments
+  MARKETING // HQ, campaign content only: rewards + app settings (hero/tier images/copy)
 }
 
 enum TransactionType {
@@ -105,9 +106,30 @@ model StaffUser {
 
   processedTransactions PointTransaction[] @relation("ProcessedByStaff")
   fulfilledRedemptions  Redemption[]       @relation("FulfilledByStaff")
+  auditLogs             AuditLog[]
 
   @@index([branchId])
   @@map("staff_users")
+}
+
+// Tracks who changed what across campaign-editable entities (rewards, membership
+// tiers, app settings) so SUPER_ADMIN can review Marketing-team edits after the fact.
+model AuditLog {
+  id         String    @id @default(cuid())
+  staffId    String
+  staff      StaffUser @relation(fields: [staffId], references: [id])
+  staffName  String
+  staffRole  StaffRole
+  action     String // "CREATE" | "UPDATE" | "DELETE"
+  entityType String // "Reward" | "MembershipTier" | "AppSettings"
+  entityId   String?
+  summary    String
+  changes    Json?
+  createdAt  DateTime  @default(now())
+
+  @@index([entityType, entityId])
+  @@index([staffId])
+  @@map("audit_logs")
 }
 
 model Customer {

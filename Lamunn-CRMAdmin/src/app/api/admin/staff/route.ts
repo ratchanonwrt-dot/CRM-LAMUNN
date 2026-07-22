@@ -8,7 +8,7 @@ const schema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(8),
-  role: z.enum(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF"]),
+  role: z.enum(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"]),
   branchId: z.string().optional(),
 });
 
@@ -27,7 +27,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (parsed.data.role !== "SUPER_ADMIN" && !parsed.data.branchId) {
+  const isHqRole = parsed.data.role === "SUPER_ADMIN" || parsed.data.role === "MARKETING";
+  if (!isHqRole && !parsed.data.branchId) {
     return NextResponse.json({ error: "กรุณาเลือกสาขา" }, { status: 400 });
   }
 
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
         email: parsed.data.email,
         passwordHash,
         role: parsed.data.role,
-        branchId: parsed.data.role === "SUPER_ADMIN" ? null : parsed.data.branchId,
+        branchId: isHqRole ? null : parsed.data.branchId,
       },
     });
     return NextResponse.json({ ok: true, staffId: created.id });

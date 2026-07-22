@@ -7,7 +7,8 @@ export default async function AdminDashboardPage() {
   const role = session!.user.role!;
   const branchId = session!.user.branchId;
 
-  const branchFilter = role === "SUPER_ADMIN" ? {} : { branchId: branchId ?? undefined };
+  const isHqRole = role === "SUPER_ADMIN" || role === "MARKETING";
+  const branchFilter = isHqRole ? {} : { branchId: branchId ?? undefined };
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
@@ -24,7 +25,7 @@ export default async function AdminDashboardPage() {
       where: { type: "EARN", ...branchFilter },
     }),
     prisma.branch.findMany({
-      where: role === "SUPER_ADMIN" ? { isActive: true } : { id: branchId ?? undefined },
+      where: isHqRole ? { isActive: true } : { id: branchId ?? undefined },
       select: {
         id: true,
         name: true,

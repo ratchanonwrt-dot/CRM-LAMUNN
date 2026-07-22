@@ -22,7 +22,7 @@ export default function AddStaffForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"SUPER_ADMIN" | "BRANCH_MANAGER" | "STAFF">("STAFF");
+  const [role, setRole] = useState<"SUPER_ADMIN" | "BRANCH_MANAGER" | "STAFF" | "MARKETING">("STAFF");
   const [branchId, setBranchId] = useState(fixedBranchId ?? branches[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,7 +34,13 @@ export default function AddStaffForm({
     const res = await fetch("/api/admin/staff", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, role, branchId: role === "SUPER_ADMIN" ? undefined : branchId }),
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        role,
+        branchId: role === "SUPER_ADMIN" || role === "MARKETING" ? undefined : branchId,
+      }),
     });
     const data = await res.json();
     setLoading(false);
@@ -58,11 +64,12 @@ export default function AddStaffForm({
           <option value="STAFF">พนักงาน</option>
           <option value="BRANCH_MANAGER">ผู้จัดการสาขา</option>
           <option value="SUPER_ADMIN">ผู้ดูแลระบบ</option>
+          <option value="MARKETING">ทีมการตลาด (HQ)</option>
         </select>
       ) : (
         <input disabled value="พนักงาน" className="rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-500" />
       )}
-      {role !== "SUPER_ADMIN" && (
+      {role !== "SUPER_ADMIN" && role !== "MARKETING" && (
         <select value={branchId} onChange={(e) => setBranchId(e.target.value)} disabled={!!fixedBranchId} className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100">
           {branches.map((b) => (
             <option key={b.id} value={b.id}>

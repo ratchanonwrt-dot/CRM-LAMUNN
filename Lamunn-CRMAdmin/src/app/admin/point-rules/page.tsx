@@ -1,13 +1,12 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@lamunn/db";
 import AddPointRuleForm from "@/components/AddPointRuleForm";
 import DeleteButton from "@/components/DeleteButton";
+import { requirePageRole } from "@/lib/requirePageRole";
 
 export default async function PointRulesPage() {
-  const session = await getServerSession(authOptions);
-  const role = session!.user.role!;
-  const myBranchId = session!.user.branchId;
+  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER"]);
+  const role = user.role!;
+  const myBranchId = user.branchId;
 
   const [rules, branches] = await Promise.all([
     prisma.pointRule.findMany({

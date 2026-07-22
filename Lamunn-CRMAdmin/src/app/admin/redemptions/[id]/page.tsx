@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@lamunn/db";
 import ConfirmRedemptionButton from "@/components/ConfirmRedemptionButton";
+import { requirePageRole } from "@/lib/requirePageRole";
 
 const statusLabel: Record<string, string> = {
   PENDING: "รอยืนยัน",
@@ -9,6 +10,7 @@ const statusLabel: Record<string, string> = {
 };
 
 export default async function RedemptionConfirmPage({ params }: { params: { id: string } }) {
+  await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF"]);
   const redemption = await prisma.redemption.findUnique({
     where: { id: params.id },
     include: { reward: true, customer: true, branch: true },

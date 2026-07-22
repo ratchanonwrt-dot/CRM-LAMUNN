@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { setSiteContent } from "@lamunn/db";
+import { setSiteContent, logAudit } from "@lamunn/db";
 import { requireStaff } from "@/lib/requireStaff";
 
 const nullableString = z.string().trim().min(1).nullable();
@@ -22,7 +22,7 @@ const schema = z.object({
 });
 
 export async function PATCH(req: NextRequest) {
-  const staff = await requireStaff(["SUPER_ADMIN"]);
+  const staff = await requireStaff(["SUPER_ADMIN", "MARKETING"]);
   if (!staff) return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
 
   const body = await req.json().catch(() => null);
@@ -30,5 +30,16 @@ export async function PATCH(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
   const settings = await setSiteContent(parsed.data);
+
+  await logAudit({
+    staffId: staff.staffId,
+    staffName: staff.staffName,
+    staffRole: staff.role,
+    action: "UPDATE",
+    entityType: "AppSettings",
+    summary: `แก้ไขเนื้อหาหน้าแรก (${Object.keys(parsed.data).join(", ") || "ไม่มีการเปลี่ยนแปลง"})`,
+    changes: parsed.data,
+  });
+
   return NextResponse.json({ ok: true, settings });
 }

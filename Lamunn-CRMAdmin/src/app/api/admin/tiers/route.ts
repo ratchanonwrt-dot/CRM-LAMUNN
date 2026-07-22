@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@lamunn/db";
+import { prisma, logAudit } from "@lamunn/db";
 import { requireStaff } from "@/lib/requireStaff";
 
 const schema = z.object({
@@ -28,5 +28,16 @@ export async function POST(req: NextRequest) {
       sortOrder: parsed.data.sortOrder ?? parsed.data.minPoints,
     },
   });
+
+  await logAudit({
+    staffId: staff.staffId,
+    staffName: staff.staffName,
+    staffRole: staff.role,
+    action: "CREATE",
+    entityType: "MembershipTier",
+    entityId: tier.id,
+    summary: `สร้างระดับสมาชิกใหม่ "${tier.name}" (${tier.minPoints} แต้ม)`,
+  });
+
   return NextResponse.json({ ok: true, tier });
 }

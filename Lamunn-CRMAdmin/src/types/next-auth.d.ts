@@ -10,7 +10,7 @@ declare module "next-auth" {
       userType?: "customer" | "staff";
       customerId?: string;
       staffId?: string;
-      role?: "SUPER_ADMIN" | "BRANCH_MANAGER" | "STAFF";
+      role?: "SUPER_ADMIN" | "BRANCH_MANAGER" | "STAFF" | "MARKETING";
       branchId?: string | null;
     };
   }
@@ -18,7 +18,7 @@ declare module "next-auth" {
   // Extra fields returned by the staff-credentials authorize() callback so the
   // jwt() callback in src/lib/auth.ts can read them without a type cast.
   interface User {
-    role?: "SUPER_ADMIN" | "BRANCH_MANAGER" | "STAFF";
+    role?: "SUPER_ADMIN" | "BRANCH_MANAGER" | "STAFF" | "MARKETING";
     branchId?: string | null;
   }
 }
@@ -28,7 +28,7 @@ declare module "next-auth/jwt" {
     userType?: "customer" | "staff";
     customerId?: string;
     staffId?: string;
-    role?: "SUPER_ADMIN" | "BRANCH_MANAGER" | "STAFF";
+    role?: "SUPER_ADMIN" | "BRANCH_MANAGER" | "STAFF" | "MARKETING";
     branchId?: string | null;
   }
 }

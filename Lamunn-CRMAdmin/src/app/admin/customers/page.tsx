@@ -1,7 +1,9 @@
 import { prisma } from "@lamunn/db";
 import CustomerRow from "@/components/CustomerRow";
+import { requirePageRole } from "@/lib/requirePageRole";
 
 export default async function CustomersPage() {
+  await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER"]);
   const [customers, purchaseStats] = await Promise.all([
     prisma.customer.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.pointTransaction.groupBy({

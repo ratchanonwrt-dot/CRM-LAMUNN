@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@lamunn/db";
 import { format } from "date-fns";
+import { requirePageRole } from "@/lib/requirePageRole";
 
 const typeLabel: Record<string, string> = {
   EARN: "รับแต้ม",
@@ -11,9 +10,9 @@ const typeLabel: Record<string, string> = {
 };
 
 export default async function ReportsPage({ searchParams }: { searchParams: { branchId?: string } }) {
-  const session = await getServerSession(authOptions);
-  const role = session!.user.role!;
-  const myBranchId = session!.user.branchId;
+  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF"]);
+  const role = user.role!;
+  const myBranchId = user.branchId;
 
   const effectiveBranchId = role === "SUPER_ADMIN" ? searchParams.branchId : myBranchId ?? undefined;
 
