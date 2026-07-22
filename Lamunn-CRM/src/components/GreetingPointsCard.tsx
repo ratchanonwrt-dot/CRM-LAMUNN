@@ -32,7 +32,7 @@ export default function GreetingPointsCard({
   const greetingText = resolveText(settings, locale, greetingKey);
 
   return (
-    <div className="-mt-6 mx-4 rounded-2xl bg-white p-5 shadow-md">
+    <div className="mx-4 mt-5 rounded-2xl bg-white p-5 shadow-md">
       <p className="text-sm text-gray-500">
         {greetingEmoji[greetingKey]} {greetingText} {t("welcomeSuffix")}
       </p>
