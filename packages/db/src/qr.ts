@@ -26,6 +26,11 @@ export interface ParsedQrPayload {
   branchCode: string;
   receiptNo: string;
   amount: number;
+  /** Exact string as it appeared in the `a` query param (e.g. "278.00") — the
+   * signature is computed over this, not the parsed number, so that a POS
+   * signing "278.00" verifies correctly (Number("278.00").toString() would
+   * otherwise collapse to "278" and break the signature). */
+  amountRaw: string;
   timestampSec: number;
   signature: string | null;
   raw: string;
@@ -60,6 +65,7 @@ export function parseQrPayload(rawUrlOrQuery: string): ParsedQrPayload | null {
       branchCode: branchCode.trim().toUpperCase(),
       receiptNo: receiptNo.trim(),
       amount,
+      amountRaw: amountStr.trim(),
       timestampSec,
       signature: signature || null,
       raw: rawUrlOrQuery,
@@ -69,8 +75,8 @@ export function parseQrPayload(rawUrlOrQuery: string): ParsedQrPayload | null {
   }
 }
 
-function computeSignature(payload: Pick<ParsedQrPayload, "branchCode" | "receiptNo" | "amount" | "timestampSec">, secret: string) {
-  const message = `${payload.branchCode}|${payload.receiptNo}|${payload.amount}|${payload.timestampSec}`;
+function computeSignature(payload: Pick<ParsedQrPayload, "branchCode" | "receiptNo" | "amountRaw" | "timestampSec">, secret: string) {
+  const message = `${payload.branchCode}|${payload.receiptNo}|${payload.amountRaw}|${payload.timestampSec}`;
   return crypto.createHmac("sha256", secret).update(message).digest("base64url");
 }
 
@@ -108,16 +114,19 @@ export function verifyQrPayload(
 /** Helper for generating a matching QR content string, e.g. for testing or for a POS
  * simulator page. Not used by the scan flow itself. */
 export function buildSignedQrContent(
-  base: { scanBaseUrl: string; branchCode: string; receiptNo: string; amount: number; timestampSec?: number },
+  base: { scanBaseUrl: string; branchCode: string; receiptNo: string; amount: number | string; timestampSec?: number },
   secret: string
 ) {
   const timestampSec = base.timestampSec ?? Math.floor(Date.now() / 1000);
-  const payload = { branchCode: base.branchCode, receiptNo: base.receiptNo, amount: base.amount, timestampSec };
+  // Sign the exact string that goes in the URL — matches whatever the caller passes
+  // (e.g. "278.00"), so it stays consistent with real POS-formatted amounts.
+  const amountRaw = String(base.amount);
+  const payload = { branchCode: base.branchCode, receiptNo: base.receiptNo, amountRaw, timestampSec };
   const signature = computeSignature(payload, secret);
   const params = new URLSearchParams({
     b: payload.branchCode,
     r: payload.receiptNo,
-    a: String(payload.amount),
+    a: amountRaw,
     t: String(payload.timestampSec),
     s: signature,
   });
