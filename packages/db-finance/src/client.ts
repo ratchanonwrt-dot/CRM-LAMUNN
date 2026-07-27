@@ -1,4 +1,4 @@
-import { PrismaClient } from "./generated/client";
+import { PrismaClient } from ".prisma/client-finance";
 
 // Standard Next.js singleton pattern so hot-reload in dev doesn't exhaust DB connections.
 const globalForPrisma = globalThis as unknown as { prismaFinance?: PrismaClient };

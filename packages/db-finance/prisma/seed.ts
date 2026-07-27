@@ -1,4 +1,4 @@
-import { PrismaClient, BranchType, RentType } from "../src/generated/client";
+import { PrismaClient, BranchType, RentType } from ".prisma/client-finance";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();

@@ -1,3 +1,3 @@
 export { prisma } from "./client";
 export * from "./creditTerm";
-export * from "./generated/client";
+export * from ".prisma/client-finance";

@@ -8,8 +8,12 @@ generator client {
   provider = "prisma-client-js"
   // Own output path — keeps this schema's generated client separate from
   // @lamunn/db's (both packages would otherwise fight over the same hoisted
-  // node_modules/@prisma/client and silently clobber each other).
-  output   = "../src/generated/client"
+  // node_modules/@prisma/client and silently clobber each other). Using a
+  // node_modules/.prisma/* convention path (rather than a src/ folder) so
+  // Next.js's serverless file tracing discovers the query engine binary
+  // automatically — a src/ location required brittle manual tracing config
+  // that didn't reliably survive Vercel's build.
+  output   = "../node_modules/.prisma/client-finance"
   // "native" covers local dev (Windows); "rhel-openssl-3.0.x" is Vercel's
   // serverless function runtime — without it the deployed app can't find the
   // query engine binary (only surfaces at runtime, not at build time).
