@@ -11,7 +11,7 @@ const nextConfig = {
   experimental: {
     outputFileTracingRoot: path.join(__dirname, ".."),
     outputFileTracingIncludes: {
-      "/**/*": ["../packages/db-finance/src/generated/client/**/*"],
+      "/**": ["../packages/db-finance/src/generated/client/**"],
     },
   },
   eslint: {
