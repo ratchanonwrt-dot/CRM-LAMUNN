@@ -5,15 +5,20 @@
   "workspaces": [
     "packages/*",
     "Lamunn-CRMAdmin",
-    "Lamunn-CRM"
+    "Lamunn-CRM",
+    "Lamunn-Finance"
   ],
   "scripts": {
-    "postinstall": "npm run generate -w @lamunn/db",
+    "postinstall": "npm run generate -w @lamunn/db-finance && npm run generate -w @lamunn/db",
     "db:generate": "npm run generate -w @lamunn/db",
     "db:migrate": "npm run migrate -w @lamunn/db",
     "db:seed": "npm run seed -w @lamunn/db",
+    "finance:generate": "npm run generate -w @lamunn/db-finance",
+    "finance:migrate": "npm run migrate -w @lamunn/db-finance",
+    "finance:seed": "npm run seed -w @lamunn/db-finance",
     "dev:admin": "npm run dev -w lamunn-crm-admin",
-    "dev:customer": "npm run dev -w lamunn-crm"
+    "dev:customer": "npm run dev -w lamunn-crm",
+    "dev:finance": "npm run dev -w lamunn-finance"
   },
   "allowScripts": {
     "@prisma/client@5.22.0": true,

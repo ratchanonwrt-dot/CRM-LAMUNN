@@ -1,0 +1,228 @@
+// Prisma schema — Lamunn Finance (daily revenue recording across 23 branches)
+// Lives in its own Postgres schema ("lamunn_finance") inside the same Supabase
+// project used by Lamunn-CRM — kept separate on purpose so this app's tables
+// never mix with the CRM/loyalty tables.
+// Run `npx prisma migrate dev --name init` (with DATABASE_URL set) after editing.
+
+generator client {
+  provider = "prisma-client-js"
+  // Own output path — keeps this schema's generated client separate from
+  // @lamunn/db's (both packages would otherwise fight over the same hoisted
+  // node_modules/@prisma/client and silently clobber each other).
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum BranchType {
+  CASH // เงินสด — storefront entry splits into POS cash / counted cash / bank transfer
+  CREDIT_TERM // ห้างหัก GP แล้วโอนทีหลัง — storefront entry is a single combined cash+transfer figure
+}
+
+enum RentType {
+  FIX_RATE // ค่าเช่าคงที่ต่อเดือน
+  GP // ค่าเช่า = ยอดขาย x GP%
+}
+
+enum PaymentStatus {
+  PENDING // รอชำระ
+  PAID // ชำระแล้ว
+}
+
+enum StaffRole {
+  ADMIN // เห็น/แก้ไขได้ทุกอย่าง ทุกสาขา
+  STAFF // กรอกยอดขายรายวันเท่านั้น
+}
+
+model StaffUser {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         StaffRole @default(STAFF)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("staff_users")
+}
+
+model Branch {
+  id        String     @id @default(cuid())
+  code      String     @unique // "01".."23" matches the original spreadsheet numbering
+  name      String
+  type      BranchType
+  isActive  Boolean    @default(true)
+  sortOrder Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  rentConfig       RentConfig?
+  creditTermConfig CreditTermCycleConfig?
+  dailySales       DailySales[]
+  creditTermPayments CreditTermPayment[]
+
+  @@map("branches")
+}
+
+// ตารางค่าเช่า — GP% and/or fixed monthly rent per branch.
+model RentConfig {
+  id                   String   @id @default(cuid())
+  branchId             String   @unique
+  branch               Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  rentType             RentType @default(GP)
+  gpPercentStorefront  Float    @default(0) // e.g. 0.25 = 25%
+  gpPercentDelivery    Float    @default(0) // GP% applied to Grab+Lineman sales
+  fixRateAmount        Float? // baht/month, used when rentType = FIX_RATE
+  minAmount            Float? // ยอดค่าเช่าขั้นต่ำ/เดือน (Minimum Guarantee) — rent = max(minAmount, GP calc) when rentType = GP
+  vendorFeeMonthly     Float    @default(0) // e.g. Central Embassy's 3,000 THB vendor-opening fee per period
+  note                 String?
+  updatedAt            DateTime @updatedAt
+
+  @@map("rent_configs")
+}
+
+// กติการอบจ่ายเงินของสาขา Credit Term (ห้างหักแล้วโอนทีหลัง)
+model CreditTermCycleConfig {
+  id                     String   @id @default(cuid())
+  branchId               String   @unique
+  branch                 Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  splitMonth             Boolean  @default(true) // true = แบ่ง 2 รอบ (1-15 / 16-สิ้นเดือน), false = เต็มเดือน
+  period1PayDay          Int? // วันที่จ่ายของรอบ 1-15 (day-of-month)
+  period1PayMonthOffset  Int      @default(0) // 0 = เดือนเดียวกัน, 1 = เดือนถัดไป
+  period2PayDay          Int? // วันที่จ่ายของรอบ 16-สิ้นเดือน
+  period2PayMonthOffset  Int      @default(1)
+  fullMonthPayDay        Int? // ใช้เมื่อ splitMonth = false
+  fullMonthPayMonthOffset Int     @default(1)
+  deductDeliveryGp       Boolean  @default(true) // บางห้าง (เช่น Central Embassy) ไม่หัก GP Delivery
+  updatedAt              DateTime @updatedAt
+
+  @@map("credit_term_cycle_configs")
+}
+
+// ยอดขายรายวันต่อสาขา — กรอกโดยพนักงานหน้างาน
+model DailySales {
+  id     String   @id @default(cuid())
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  date     DateTime @db.Date
+
+  // CASH branches only
+  cashPos     Float? // เงินสด POS
+  cashCounted Float? // เงินสดนับ (จำนวนที่ส่งกลับครัวกลางจริง)
+  transfer    Float? // เงินโอน
+
+  // CREDIT_TERM branches only — cash and transfer are not split
+  cashTransferCombined Float?
+
+  // Both branch types
+  grab    Float @default(0)
+  lineman Float @default(0)
+
+  posCheckTotal Float? // ยอดรวม POS ไว้เช็คยอด (optional)
+  note          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([branchId, date])
+  @@map("daily_sales")
+}
+
+// ยอดขายรายวัน (รวมทั้งบริษัท) — ช่องทาง E-commerce กลางที่ไม่ได้แยกรายสาขา
+model CompanyChannelDaily {
+  id   String   @id @default(cuid())
+  date DateTime @unique @db.Date
+
+  tiktok   Float @default(0)
+  fbLine   Float @default(0)
+  pickup   Float @default(0) // รับหน้าร้าน (สั่งออนไลน์มารับเอง)
+  catering Float @default(0)
+
+  depositGrab       Float? // ยอดเข้าบัญชี Grab
+  depositLineman    Float? // ยอดเข้าบัญชี Lineman
+  depositStorefront Float? // ยอดเข้าบัญชีหน้าร้าน
+  depositEcom       Float? // ยอดเข้าบัญชี E-commerce
+
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("company_channel_daily")
+}
+
+// รอบรับเงินจากห้าง (Credit Term) — สร้างขึ้นเมื่อกดปิดรอบ, แก้สถานะเป็นชำระแล้วได้
+model CreditTermPayment {
+  id       String  @id @default(cuid())
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  label       String? // ใช้กับรายการยอดยกมา/manual ที่ไม่ผูกกับรอบที่คำนวณอัตโนมัติ
+  periodStart DateTime? @db.Date
+  periodEnd   DateTime? @db.Date
+
+  grossStorefront    Float @default(0)
+  grossDelivery      Float @default(0)
+  gpDeductStorefront Float @default(0)
+  gpDeductDelivery   Float @default(0)
+  vendorFeeDeduct    Float @default(0)
+  netAmount          Float
+
+  dueDate DateTime      @db.Date
+  status  PaymentStatus @default(PENDING)
+  paidAt  DateTime?
+  note    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("credit_term_payments")
+}
+
+// งานอีเวนต์/บูธชั่วคราว — ไม่รวมเข้ายอดขายบริษัทหลัก
+model EventSale {
+  id        String   @id @default(cuid())
+  name      String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  location  String?
+
+  storefront Float @default(0)
+  grab       Float @default(0)
+  lineman    Float @default(0)
+  note       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("event_sales")
+}
+
+// รายการปรับปรุงเงินสดสะสมด้วยมือ เช่น จ่ายปันผลให้กรรมการ, แก้ไขยอดผิดพลาด
+// บวกเข้ายอดสะสม = แก้ยอดเพิ่ม (เช่น พบเงินสดเกิน), ลบ = จ่ายออก (เช่น ปันผล)
+model CashAdjustment {
+  id     String   @id @default(cuid())
+  date   DateTime @db.Date
+  amount Float // + เพิ่มยอดสะสม, - จ่ายออก/ปันผล
+  label  String // เช่น "ปันผลกรรมการ ก.ค. 2569"
+  note   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cash_adjustments")
+}
+
+// ค่าคงที่ทั้งระบบ เช่น Grab Fee %, Lineman Fee %, ยอดเงินสดยกมาก่อนเริ่มระบบ
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
