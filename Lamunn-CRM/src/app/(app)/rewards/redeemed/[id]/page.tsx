@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@lamunn/db";
-import BottomNav from "@/components/BottomNav";
 import { getLocale } from "@/lib/i18n-server";
 import { translate } from "@/lib/i18n";
 
@@ -58,7 +57,6 @@ export default async function RedeemedPage({ params }: { params: { id: string } 
           <p className="text-sm text-gray-400">{t("showQrHint")}</p>
         )}
       </main>
-      <BottomNav />
     </>
   );
 }

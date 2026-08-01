@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Sparkles } from "lucide-react";
 
 export default function HeroBanner({
@@ -12,11 +13,13 @@ export default function HeroBanner({
   const name = appName?.trim() || "Lamunn";
 
   return (
-    <div
-      className="relative flex flex-col items-center justify-center gap-1 overflow-hidden bg-gradient-to-br from-brand-500 to-brand-800 px-6 py-10 text-center text-white"
-      style={imageUrl ? { backgroundImage: `url(${imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
-    >
-      {imageUrl && <div className="absolute inset-0 bg-black/35" />}
+    <div className="relative flex flex-col items-center justify-center gap-1 overflow-hidden bg-gradient-to-br from-brand-500 to-brand-800 px-6 py-10 text-center text-white">
+      {imageUrl && (
+        <>
+          <Image src={imageUrl} alt="" fill priority sizes="100vw" className="object-cover" />
+          <div className="absolute inset-0 bg-black/35" />
+        </>
+      )}
 
       <div className="absolute left-4 top-4 flex h-12 w-12 items-center justify-center rounded-full bg-white text-lg font-bold text-brand-700 shadow">
         {name.slice(0, 1)}

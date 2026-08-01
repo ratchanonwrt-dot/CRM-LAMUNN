@@ -11,9 +11,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col md:flex-row">
       <AdminNav role={session.user.role!} name={session.user.name ?? ""} />
-      <div className="flex-1 bg-gray-50 p-6">{children}</div>
+      <div className="flex-1 bg-gray-50 p-4 md:p-6">{children}</div>
     </div>
   );
 }

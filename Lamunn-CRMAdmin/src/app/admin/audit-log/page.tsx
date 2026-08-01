@@ -30,7 +30,7 @@ export default async function AuditLogPage() {
       <h1 className="mb-2 text-xl font-bold text-gray-800">ประวัติการแก้ไข</h1>
       <p className="mb-6 text-sm text-gray-500">บันทึกย้อนหลังว่า account ไหนแก้อะไรไปบ้าง (รางวัล, ระดับสมาชิก, ตั้งค่าหน้าตาแอป) — ล่าสุด {logs.length} รายการ</p>
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-gray-500">
             <tr>

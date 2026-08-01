@@ -1,5 +1,6 @@
 import { getAppSettings, getMembershipTiers } from "@lamunn/db";
 import HeroImageSettingsForm from "@/components/HeroImageSettingsForm";
+import LogoImageSettingsForm from "@/components/LogoImageSettingsForm";
 import SiteContentForm from "@/components/SiteContentForm";
 import TierImagesSettingsForm from "@/components/TierImagesSettingsForm";
 
@@ -9,7 +10,10 @@ export default async function AdminSettingsPage() {
   return (
     <div>
       <h1 className="mb-6 text-xl font-bold text-gray-800">ตั้งค่าหน้าตาแอป</h1>
-      <HeroImageSettingsForm initialImageUrl={settings.heroImageUrl} />
+      <LogoImageSettingsForm initialImageUrl={settings.logoImageUrl} />
+      <div className="mt-4">
+        <HeroImageSettingsForm initialImageUrl={settings.heroImageUrl} />
+      </div>
       <div className="mt-4">
         <TierImagesSettingsForm tiers={tiers.map((t) => ({ id: t.id, name: t.name, imageUrl: t.imageUrl }))} />
       </div>

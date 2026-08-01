@@ -21,7 +21,7 @@ export default async function CustomersPage() {
       <h1 className="mb-2 text-xl font-bold text-gray-800">ลูกค้า</h1>
       <p className="mb-6 text-sm text-gray-500">รายชื่อลูกค้าทั้งหมด {customers.length} คน</p>
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-gray-500">
             <tr>

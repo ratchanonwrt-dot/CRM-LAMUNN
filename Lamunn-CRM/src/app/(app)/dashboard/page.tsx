@@ -5,7 +5,6 @@ import { prisma, expireOldPoints, getExpirySummary, getAppSettings, getMembershi
 import HeroBanner from "@/components/HeroBanner";
 import GreetingPointsCard from "@/components/GreetingPointsCard";
 import MembershipCardView from "@/components/MembershipCardView";
-import BottomNav from "@/components/BottomNav";
 import { getLocale } from "@/lib/i18n-server";
 import { resolveText } from "@/lib/content";
 
@@ -15,10 +14,11 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   const customerId = session!.user.customerId!;
 
-  const customerCheck = await prisma.customer.findUnique({ where: { id: customerId } });
+  const [customerCheck] = await Promise.all([
+    prisma.customer.findUnique({ where: { id: customerId } }),
+    expireOldPoints(customerId),
+  ]);
   if (!customerCheck?.name || !customerCheck.dateOfBirth) redirect("/onboarding?callbackUrl=/dashboard");
-
-  await expireOldPoints(customerId);
 
   const [customer, expirySummary, settings, tiers] = await Promise.all([
     prisma.customer.findUnique({ where: { id: customerId } }),
@@ -48,7 +48,6 @@ export default async function DashboardPage() {
           />
         </div>
       </main>
-      <BottomNav />
     </>
   );
 }

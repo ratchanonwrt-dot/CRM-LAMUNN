@@ -57,7 +57,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       <h2 className="mb-3 text-lg font-semibold text-gray-800">รายการตามสาขา</h2>
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-gray-500">
             <tr>

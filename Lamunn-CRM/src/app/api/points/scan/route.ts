@@ -4,6 +4,7 @@ import { prisma } from "@lamunn/db";
 import { verifyQrPayload } from "@lamunn/db";
 import { resolvePointRule, calculatePoints } from "@lamunn/db";
 import { computeExpiryDate } from "@lamunn/db";
+import { lookupPosBill } from "@lamunn/db";
 
 // No login required: the customer just scans the receipt QR and types their phone
 // number. Low friction by design — see prisma/schema.prisma / project plan for the
@@ -77,6 +78,26 @@ export async function POST(req: NextRequest) {
   if (!branch || !branch.isActive) {
     await prisma.qrScanLog.create({ data: { ...logBase, signatureValid: signed, result: "INVALID_BRANCH" } });
     return NextResponse.json({ error: "ไม่พบสาขานี้ในระบบ", code: "INVALID_BRANCH" }, { status: 400 });
+  }
+
+  // Cross-check against the POS's own bill record — catches the case where a receipt
+  // was printed (and QR signed) but the sale was voided in the POS before the customer
+  // got to scan it. A void that happens *after* a successful scan is caught separately
+  // by the periodic reconcileVoidedBills() job, since it can't be known at scan time.
+  // Fails open on lookup errors (infra hiccup) so a POS-side outage doesn't block every
+  // legitimate customer — only an explicit "void" status or a missing bill blocks the scan.
+  try {
+    const bill = await lookupPosBill(branchCode, receiptNo);
+    if (bill?.status === "void") {
+      await prisma.qrScanLog.create({ data: { ...logBase, branchId: branch.id, signatureValid: signed, result: "BILL_VOIDED" } });
+      return NextResponse.json({ error: "ใบเสร็จนี้ถูกยกเลิกในระบบร้านแล้ว ไม่สามารถสะสมแต้มได้", code: "BILL_VOIDED" }, { status: 400 });
+    }
+    if (!bill) {
+      await prisma.qrScanLog.create({ data: { ...logBase, branchId: branch.id, signatureValid: signed, result: "BILL_NOT_FOUND" } });
+      return NextResponse.json({ error: "ไม่พบข้อมูลใบเสร็จนี้ในระบบร้าน กรุณาติดต่อพนักงาน", code: "BILL_NOT_FOUND" }, { status: 400 });
+    }
+  } catch (e) {
+    console.error("lookupPosBill failed, allowing scan to proceed:", e);
   }
 
   // Duplicate check up front so we don't ask for a name/DOB unnecessarily on a

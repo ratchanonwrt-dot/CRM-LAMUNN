@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Award, Coins, Lock, CheckCircle2 } from "lucide-react";
 import type { MembershipTier } from "@lamunn/db";
 import { translate, type Locale } from "@/lib/i18n";
@@ -101,8 +102,7 @@ export default function MembershipCardView({
                   }`}
                 >
                   {tier.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={tier.imageUrl} alt={tier.name} className="h-10 w-10 rounded-lg object-cover" />
+                    <Image src={tier.imageUrl} alt={tier.name} width={40} height={40} className="h-10 w-10 rounded-lg object-cover" />
                   ) : (
                     <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${achieved ? getTierIconColor(tier.name) : "bg-gray-100 text-gray-300"}`}>
                       <Award size={18} />

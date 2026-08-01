@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/reconcile-voided-bills",
+      "schedule": "0 21 * * *"
+    }
+  ]
+}

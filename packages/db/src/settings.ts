@@ -19,6 +19,14 @@ export async function setHeroImageUrl(heroImageUrl: string | null) {
   });
 }
 
+export async function setLogoImageUrl(logoImageUrl: string | null) {
+  return prisma.appSettings.upsert({
+    where: { id: SETTINGS_ID },
+    update: { logoImageUrl },
+    create: { id: SETTINGS_ID, logoImageUrl },
+  });
+}
+
 export type SiteContentInput = Pick<
   Prisma.AppSettingsUncheckedCreateInput,
   | "appName"

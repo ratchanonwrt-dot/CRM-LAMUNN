@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma, expireOldPoints, getAppSettings } from "@lamunn/db";
 import HeroBanner from "@/components/HeroBanner";
-import BottomNav from "@/components/BottomNav";
 import { format } from "date-fns";
 import { History, PlusCircle, Gift, SlidersHorizontal, XCircle, Inbox } from "lucide-react";
 import { getLocale } from "@/lib/i18n-server";
@@ -30,10 +29,11 @@ export default async function HistoryPage() {
   const session = await getServerSession(authOptions);
   const customerId = session!.user.customerId!;
 
-  const customerCheck = await prisma.customer.findUnique({ where: { id: customerId } });
+  const [customerCheck] = await Promise.all([
+    prisma.customer.findUnique({ where: { id: customerId } }),
+    expireOldPoints(customerId),
+  ]);
   if (!customerCheck?.name || !customerCheck.dateOfBirth) redirect("/onboarding?callbackUrl=/history");
-
-  await expireOldPoints(customerId);
 
   const [transactions, settings] = await Promise.all([
     prisma.pointTransaction.findMany({
@@ -84,7 +84,6 @@ export default async function HistoryPage() {
           </ul>
         )}
       </main>
-      <BottomNav />
     </>
   );
 }

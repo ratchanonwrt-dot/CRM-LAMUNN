@@ -41,6 +41,8 @@ enum ScanResult {
   INVALID_SIGNATURE // HMAC signature from POS did not match
   INVALID_BRANCH // branch code not found / inactive
   EXPIRED // QR older than allowed window
+  BILL_VOIDED // matching POS bill exists but is already void
+  BILL_NOT_FOUND // no matching bill in the POS at all — signature was valid but POS has no record
   ERROR
 }
 
@@ -49,6 +51,7 @@ enum ScanResult {
 model AppSettings {
   id           String   @id @default("singleton")
   heroImageUrl String?
+  logoImageUrl String? // shown on the customer app's landing page + login page; falls back to the bundled default logo when null
 
   // Editable customer-app copy — null means "use the built-in default text".
   appName             String?
@@ -232,6 +235,7 @@ model PointTransaction {
   createdAt          DateTime        @default(now())
   expiresAt          DateTime? // set only on EARN rows: createdAt + 1 year
   expired            Boolean         @default(false) // set once this EARN row has been auto-voided for expiry
+  voidedInPos        Boolean         @default(false) // set once this EARN row has been auto-reversed because the POS bill was voided after the scan
 
   @@unique([branchId, receiptNo])
   @@index([customerId])

@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth";
 import { prisma, expireOldPoints, getExpirySummary, getAppSettings } from "@lamunn/db";
 import HeroBanner from "@/components/HeroBanner";
 import GreetingPointsCard from "@/components/GreetingPointsCard";
-import BottomNav from "@/components/BottomNav";
 import RewardCard from "@/components/RewardCard";
 import { Gift, PackageOpen } from "lucide-react";
 import { getLocale } from "@/lib/i18n-server";
@@ -18,10 +17,11 @@ export default async function RewardsPage() {
   const session = await getServerSession(authOptions);
   const customerId = session!.user.customerId!;
 
-  const customerCheck = await prisma.customer.findUnique({ where: { id: customerId } });
+  const [customerCheck] = await Promise.all([
+    prisma.customer.findUnique({ where: { id: customerId } }),
+    expireOldPoints(customerId),
+  ]);
   if (!customerCheck?.name || !customerCheck.dateOfBirth) redirect("/onboarding?callbackUrl=/rewards");
-
-  await expireOldPoints(customerId);
 
   const [rewards, customer, expirySummary, settings] = await Promise.all([
     prisma.reward.findMany({ where: { isActive: true }, orderBy: { pointsCost: "asc" } }),
@@ -66,7 +66,6 @@ export default async function RewardsPage() {
           </div>
         )}
       </main>
-      <BottomNav />
     </>
   );
 }

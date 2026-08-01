@@ -10,6 +10,27 @@ export default function QrSimulatorClient() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [reconcileResult, setReconcileResult] = useState<{
+    voidedBills: { checked: number; reversed: number };
+    branches: { created: string[]; activated: string[]; deactivated: string[] };
+  } | null>(null);
+  const [reconcileError, setReconcileError] = useState<string | null>(null);
+  const [reconciling, setReconciling] = useState(false);
+
+  async function handleReconcile() {
+    setReconcileError(null);
+    setReconcileResult(null);
+    setReconciling(true);
+    const res = await fetch("/api/admin/reconcile-voided-bills", { method: "POST" });
+    const data = await res.json();
+    setReconciling(false);
+    if (!res.ok) {
+      setReconcileError(data.error ?? "ตรวจสอบไม่สำเร็จ");
+      return;
+    }
+    setReconcileResult(data);
+  }
+
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -53,6 +74,39 @@ export default function QrSimulatorClient() {
           <p className="max-w-md break-all text-center text-xs text-gray-400">{result.content}</p>
         </div>
       )}
+
+      <div className="mt-8 rounded-xl border border-gray-200 bg-white p-4">
+        <h2 className="mb-1 text-base font-semibold text-gray-800">ซิงค์ข้อมูลกับ POS</h2>
+        <p className="mb-3 text-sm text-gray-500">
+          เช็ค 2 อย่างพร้อมกัน: (1) แต้มที่ให้ไปใน 14 วันล่าสุด เทียบกับสถานะบิลจริง — ถ้าบิลไหนถูก void ทีหลัง หักแต้มคืนอัตโนมัติ
+          (2) สาขาในระบบ CRM เทียบกับสาขาที่ POS เปิด/ปิดจริง — สาขาไหน POS เพิ่งเปิดจะสร้าง/เปิดให้อัตโนมัติ สาขาไหน POS ปิดจะปิดให้อัตโนมัติ
+          (รันอัตโนมัติทุกวันอยู่แล้ว ปุ่มนี้ไว้เช็คด่วนได้ทันที)
+        </p>
+        <button
+          onClick={handleReconcile}
+          disabled={reconciling}
+          className="rounded-lg bg-gray-800 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {reconciling ? "กำลังตรวจสอบ..." : "ตรวจสอบตอนนี้"}
+        </button>
+        {reconcileError && <p className="mt-2 text-sm text-red-600">{reconcileError}</p>}
+        {reconcileResult && (
+          <div className="mt-2 space-y-1 text-sm text-gray-600">
+            <p>
+              ใบเสร็จที่ถูก void: ตรวจแล้ว {reconcileResult.voidedBills.checked} รายการ — หักแต้มคืน{" "}
+              {reconcileResult.voidedBills.reversed} รายการ
+            </p>
+            <p>
+              สาขา: สร้างใหม่ {reconcileResult.branches.created.length || 0}
+              {reconcileResult.branches.created.length > 0 && ` (${reconcileResult.branches.created.join(", ")})`}
+              {" — "}เปิดใช้งาน {reconcileResult.branches.activated.length || 0}
+              {reconcileResult.branches.activated.length > 0 && ` (${reconcileResult.branches.activated.join(", ")})`}
+              {" — "}ปิดใช้งาน {reconcileResult.branches.deactivated.length || 0}
+              {reconcileResult.branches.deactivated.length > 0 && ` (${reconcileResult.branches.deactivated.join(", ")})`}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
