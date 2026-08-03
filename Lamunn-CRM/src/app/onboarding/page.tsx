@@ -13,17 +13,23 @@ export default function OnboardingPage() {
 
   const [name, setName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
+  const [gender, setGender] = useState("");
+  const [consented, setConsented] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!consented) {
+      setError(t("pdpaConsentRequiredError"));
+      return;
+    }
     setError(null);
     setLoading(true);
     const res = await fetch("/api/customer/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, dateOfBirth }),
+      body: JSON.stringify({ name, dateOfBirth, gender: gender || undefined, consented }),
     });
     const data = await res.json();
     setLoading(false);
@@ -66,6 +72,33 @@ export default function OnboardingPage() {
             className="w-full rounded-lg border border-gray-300 px-4 py-3"
           />
         </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">{t("genderLabel")}</label>
+          <select
+            required
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-4 py-3"
+          >
+            <option value="" disabled>
+              —
+            </option>
+            <option value="FEMALE">{t("genderFemale")}</option>
+            <option value="MALE">{t("genderMale")}</option>
+            <option value="LGBTQ">{t("genderLgbtq")}</option>
+            <option value="UNSPECIFIED">{t("genderUnspecified")}</option>
+          </select>
+        </div>
+
+        <label className="flex items-start gap-2 text-xs text-gray-500">
+          <input
+            type="checkbox"
+            checked={consented}
+            onChange={(e) => setConsented(e.target.checked)}
+            className="mt-0.5 shrink-0"
+          />
+          {t("pdpaConsentText")}
+        </label>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

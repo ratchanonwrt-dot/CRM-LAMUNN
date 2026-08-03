@@ -44,6 +44,15 @@ export const translations = {
     savingText: "กำลังบันทึก...",
     startButton: "เริ่มใช้งาน",
 
+    genderLabel: "เพศ",
+    genderFemale: "หญิง",
+    genderMale: "ชาย",
+    genderLgbtq: "LGBTQ+",
+    genderUnspecified: "ไม่ระบุ",
+    pdpaConsentText:
+      "ข้าพเจ้ายินยอมให้ Lamunn เก็บและใช้ข้อมูลส่วนบุคคลของข้าพเจ้า (ชื่อ เบอร์โทรศัพท์ วันเกิด เพศ และประวัติการซื้อ) เพื่อพัฒนาระบบการขายและบริการให้มีประสิทธิภาพมากยิ่งขึ้น ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562",
+    pdpaConsentRequiredError: "กรุณายอมรับเงื่อนไขการใช้ข้อมูลก่อนสมัครสมาชิก",
+
     navMyPoints: "แต้มของฉัน",
     navHome: "หน้าหลัก",
     navRedeem: "แลกรางวัล",
@@ -132,6 +141,15 @@ export const translations = {
     saveFailedError: "Failed to save",
     savingText: "Saving...",
     startButton: "Get Started",
+
+    genderLabel: "Gender",
+    genderFemale: "Female",
+    genderMale: "Male",
+    genderLgbtq: "LGBTQ+",
+    genderUnspecified: "Prefer not to say",
+    pdpaConsentText:
+      "I consent to Lamunn collecting and using my personal data (name, phone number, date of birth, gender, and purchase history) to improve its sales system and services, in accordance with the Personal Data Protection Act B.E. 2562.",
+    pdpaConsentRequiredError: "Please accept the data usage consent before signing up",
 
     navMyPoints: "My Points",
     navHome: "Home",

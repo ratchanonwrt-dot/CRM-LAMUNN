@@ -9,7 +9,7 @@ export default async function BranchesPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-bold text-gray-800">จัดการสาขา ({branches.length}/21)</h1>
+      <h1 className="mb-6 text-xl font-bold text-gray-800">จัดการสาขา ({branches.length} สาขา)</h1>
 
       <AddBranchForm />
 

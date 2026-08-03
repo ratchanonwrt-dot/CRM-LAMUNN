@@ -22,6 +22,13 @@ enum StaffRole {
   MARKETING // HQ, campaign content only: rewards + app settings (hero/tier images/copy)
 }
 
+enum Gender {
+  FEMALE
+  MALE
+  LGBTQ
+  UNSPECIFIED
+}
+
 enum TransactionType {
   EARN // points earned from a purchase (QR scan)
   REDEEM // points spent on a reward
@@ -142,6 +149,8 @@ model Customer {
   lineUserId     String?   @unique
   email          String?
   dateOfBirth    DateTime?
+  gender         Gender?
+  pdpaConsentedAt DateTime? // when the customer accepted the data-usage consent notice at signup
   pointsBalance  Int       @default(0) // denormalized running balance, kept in sync in a DB transaction
   // Cumulative points ever earned (EARN + positive ADJUST) — only ever increases,
   // so redeeming rewards never demotes a customer's membership tier.

@@ -22,9 +22,12 @@ export default function ScanClient({ logoUrl }: { logoUrl: string }) {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
+  const [gender, setGender] = useState("");
+  const [consented, setConsented] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [state, setState] = useState<ScanState>({ status: "form" });
 
-  async function submit(extra?: { name: string; dateOfBirth: string }) {
+  async function submit(extra?: { name: string; dateOfBirth: string; gender: string; consented: boolean }) {
     setStep("submitting");
     const res = await fetch("/api/points/scan", {
       method: "POST",
@@ -50,7 +53,12 @@ export default function ScanClient({ logoUrl }: { logoUrl: string }) {
 
   function handleProfileSubmit(e: React.FormEvent) {
     e.preventDefault();
-    submit({ name, dateOfBirth });
+    if (!consented) {
+      setProfileError(t("pdpaConsentRequiredError"));
+      return;
+    }
+    setProfileError(null);
+    submit({ name, dateOfBirth, gender, consented });
   }
 
   return (
@@ -103,6 +111,33 @@ export default function ScanClient({ logoUrl }: { logoUrl: string }) {
             onChange={(e) => setDateOfBirth(e.target.value)}
             className="rounded-lg border border-gray-300 px-4 py-3 text-center"
           />
+          <select
+            required
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+            className="rounded-lg border border-gray-300 px-4 py-3 text-center"
+          >
+            <option value="" disabled>
+              {t("genderLabel")}
+            </option>
+            <option value="FEMALE">{t("genderFemale")}</option>
+            <option value="MALE">{t("genderMale")}</option>
+            <option value="LGBTQ">{t("genderLgbtq")}</option>
+            <option value="UNSPECIFIED">{t("genderUnspecified")}</option>
+          </select>
+
+          <label className="flex items-start gap-2 text-left text-xs text-gray-500">
+            <input
+              type="checkbox"
+              checked={consented}
+              onChange={(e) => setConsented(e.target.checked)}
+              className="mt-0.5 shrink-0"
+            />
+            {t("pdpaConsentText")}
+          </label>
+
+          {profileError && <p className="text-sm text-red-600">{profileError}</p>}
+
           <button type="submit" className="rounded-lg bg-brand-600 px-6 py-3 font-medium text-white">
             {t("signupAndEarnButton")}
           </button>

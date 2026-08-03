@@ -7,6 +7,8 @@ import { prisma } from "@lamunn/db";
 const schema = z.object({
   name: z.string().min(1),
   dateOfBirth: z.string().min(1),
+  gender: z.enum(["FEMALE", "MALE", "LGBTQ", "UNSPECIFIED"]).optional(),
+  consented: z.literal(true),
 });
 
 export async function PATCH(req: NextRequest) {
@@ -26,7 +28,7 @@ export async function PATCH(req: NextRequest) {
 
   await prisma.customer.update({
     where: { id: session.user.customerId },
-    data: { name: parsed.data.name, dateOfBirth },
+    data: { name: parsed.data.name, dateOfBirth, gender: parsed.data.gender, pdpaConsentedAt: new Date() },
   });
 
   return NextResponse.json({ ok: true });
