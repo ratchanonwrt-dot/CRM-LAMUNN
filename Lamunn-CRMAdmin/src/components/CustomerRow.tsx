@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Coins } from "lucide-react";
+import { Coins, ReceiptText } from "lucide-react";
 
 interface Customer {
   id: string;
@@ -13,6 +13,13 @@ interface Customer {
   pointsBalance: number;
 }
 
+interface Branch {
+  id: string;
+  name: string;
+}
+
+type Mode = "none" | "adjust" | "manual";
+
 export default function CustomerRow({
   customer,
   age,
@@ -20,6 +27,7 @@ export default function CustomerRow({
   purchaseCount,
   avgOrderValue,
   lastPurchase,
+  branches,
 }: {
   customer: Customer;
   age: number | null;
@@ -27,13 +35,28 @@ export default function CustomerRow({
   purchaseCount: number;
   avgOrderValue: number;
   lastPurchase: Date | null;
+  branches: Branch[];
 }) {
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
+  const [mode, setMode] = useState<Mode>("none");
+
   const [points, setPoints] = useState("");
-  const [note, setNote] = useState("");
+  const [adjustNote, setAdjustNote] = useState("");
+
+  const [amount, setAmount] = useState("");
+  const [branchId, setBranchId] = useState(branches[0]?.id ?? "");
+  const [receiptNo, setReceiptNo] = useState("");
+  const [manualNote, setManualNote] = useState("");
+  const [manualResult, setManualResult] = useState<string | null>(null);
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function toggle(next: Mode) {
+    setMode((current) => (current === next ? "none" : next));
+    setError(null);
+    setManualResult(null);
+  }
 
   async function handleAdjust(e: React.FormEvent) {
     e.preventDefault();
@@ -42,7 +65,7 @@ export default function CustomerRow({
     const res = await fetch(`/api/admin/customers/${customer.id}/adjust-points`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ points, note: note || undefined }),
+      body: JSON.stringify({ points, note: adjustNote || undefined }),
     });
     const data = await res.json();
     setLoading(false);
@@ -50,9 +73,31 @@ export default function CustomerRow({
       setError(data.error ?? "ปรับแต้มไม่สำเร็จ");
       return;
     }
-    setEditing(false);
+    setMode("none");
     setPoints("");
-    setNote("");
+    setAdjustNote("");
+    router.refresh();
+  }
+
+  async function handleManualEarn(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const res = await fetch(`/api/admin/customers/${customer.id}/manual-earn`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount, branchId: branchId || undefined, receiptNo: receiptNo || undefined, note: manualNote || undefined }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (!res.ok) {
+      setError(data.error ?? "บันทึกไม่สำเร็จ");
+      return;
+    }
+    setManualResult(`ให้แต้มแล้ว +${data.pointsEarned} แต้ม`);
+    setAmount("");
+    setReceiptNo("");
+    setManualNote("");
     router.refresh();
   }
 
@@ -69,16 +114,88 @@ export default function CustomerRow({
         <td className="px-4 py-2 text-gray-500">{avgOrderValue > 0 ? avgOrderValue.toLocaleString("th-TH", { maximumFractionDigits: 0 }) : "-"}</td>
         <td className="px-4 py-2 text-gray-500">{lastPurchase ? format(lastPurchase, "d MMM yyyy") : "-"}</td>
         <td className="px-4 py-2">
-          <button
-            onClick={() => setEditing((v) => !v)}
-            className="flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-600"
-          >
-            <Coins size={12} />
-            {editing ? "ยกเลิก" : "ปรับแต้ม"}
-          </button>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => toggle("manual")}
+              className="flex items-center gap-1 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700"
+            >
+              <ReceiptText size={12} />
+              {mode === "manual" ? "ยกเลิก" : "กรอกยอดซื้อ"}
+            </button>
+            <button
+              onClick={() => toggle("adjust")}
+              className="flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-600"
+            >
+              <Coins size={12} />
+              {mode === "adjust" ? "ยกเลิก" : "ปรับแต้ม"}
+            </button>
+          </div>
         </td>
       </tr>
-      {editing && (
+
+      {mode === "manual" && (
+        <tr className="border-t border-gray-100 bg-gray-50">
+          <td colSpan={10} className="px-4 py-3">
+            <form onSubmit={handleManualEarn} className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="mb-1 block text-xs text-gray-500">ยอดซื้อ (บาท)</label>
+                <input
+                  required
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="เช่น 350"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-32 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              {branches.length > 0 && (
+                <div>
+                  <label className="mb-1 block text-xs text-gray-500">สาขา</label>
+                  <select
+                    required
+                    value={branchId}
+                    onChange={(e) => setBranchId(e.target.value)}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className="mb-1 block text-xs text-gray-500">เลขที่ใบเสร็จ (ไม่บังคับ)</label>
+                <input
+                  placeholder="ถ้ามี"
+                  value={receiptNo}
+                  onChange={(e) => setReceiptNo(e.target.value)}
+                  className="w-36 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="mb-1 block text-xs text-gray-500">หมายเหตุ (ไม่บังคับ)</label>
+                <input
+                  placeholder="เช่น เครื่องพิมพ์ใบเสร็จเสีย"
+                  value={manualNote}
+                  onChange={(e) => setManualNote(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <button type="submit" disabled={loading} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+                {loading ? "กำลังบันทึก..." : "ให้แต้ม"}
+              </button>
+              {error && <p className="w-full text-xs text-red-600">{error}</p>}
+              {manualResult && <p className="w-full text-xs text-brand-700">{manualResult}</p>}
+            </form>
+          </td>
+        </tr>
+      )}
+
+      {mode === "adjust" && (
         <tr className="border-t border-gray-100 bg-gray-50">
           <td colSpan={10} className="px-4 py-3">
             <form onSubmit={handleAdjust} className="flex flex-wrap items-end gap-3">
@@ -97,8 +214,8 @@ export default function CustomerRow({
                 <label className="mb-1 block text-xs text-gray-500">หมายเหตุ (ไม่บังคับ)</label>
                 <input
                   placeholder="เช่น ชดเชยระบบขัดข้อง"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
+                  value={adjustNote}
+                  onChange={(e) => setAdjustNote(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                 />
               </div>

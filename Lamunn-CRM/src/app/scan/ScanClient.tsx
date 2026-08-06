@@ -104,13 +104,16 @@ export default function ScanClient({ logoUrl }: { logoUrl: string }) {
             onChange={(e) => setName(e.target.value)}
             className="rounded-lg border border-gray-300 px-4 py-3 text-center"
           />
-          <input
-            required
-            type="date"
-            value={dateOfBirth}
-            onChange={(e) => setDateOfBirth(e.target.value)}
-            className="rounded-lg border border-gray-300 px-4 py-3 text-center"
-          />
+          <div className="text-left">
+            <label className="mb-1 block text-sm font-medium text-gray-700">{t("dobLabel")}</label>
+            <input
+              required
+              type="date"
+              value={dateOfBirth}
+              onChange={(e) => setDateOfBirth(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-center"
+            />
+          </div>
           <select
             required
             value={gender}
