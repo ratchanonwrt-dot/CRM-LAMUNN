@@ -23,7 +23,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
       _sum: { amount: true },
     }),
     // SUPER_ADMIN/MARKETING aren't tied to one branch, so they need to pick which
-    // branch a manual purchase entry belongs to; a BRANCH_MANAGER's own branch is implied.
+    // branch a manual purchase entry belongs to.
     user.role === "SUPER_ADMIN" || user.role === "MARKETING"
       ? prisma.branch.findMany({ where: { isActive: true }, orderBy: { name: "asc" } })
       : Promise.resolve([]),

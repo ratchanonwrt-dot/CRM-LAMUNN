@@ -9,33 +9,20 @@ const schema = z.object({
   name: z.string().min(1).optional(),
   email: z.string().email().optional(),
   password: z.string().min(8).optional(),
-  role: z.enum(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"]).optional(),
+  role: z.enum(["SUPER_ADMIN", "STAFF", "MARKETING"]).optional(),
   branchId: z.string().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const staff = await requireStaff(["SUPER_ADMIN", "BRANCH_MANAGER", "MARKETING"]);
+  const staff = await requireStaff(["SUPER_ADMIN", "MARKETING"]);
   if (!staff) return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
 
   const target = await prisma.staffUser.findUnique({ where: { id: params.id } });
   if (!target) return NextResponse.json({ error: "ไม่พบพนักงาน" }, { status: 404 });
-  if (staff.role === "BRANCH_MANAGER" && target.branchId !== staff.branchId) {
-    return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
-  }
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
-
-  // Branch managers may only edit STAFF rows and can't promote to another role/branch.
-  if (staff.role === "BRANCH_MANAGER") {
-    if (parsed.data.role && parsed.data.role !== "STAFF") {
-      return NextResponse.json({ error: "ผู้จัดการสาขาแก้บทบาทได้แค่พนักงาน" }, { status: 403 });
-    }
-    if (parsed.data.branchId && parsed.data.branchId !== staff.branchId) {
-      return NextResponse.json({ error: "ผู้จัดการสาขาย้ายสาขาให้พนักงานไม่ได้" }, { status: 403 });
-    }
-  }
 
   const role = parsed.data.role ?? target.role;
   const isHqRole = role === "SUPER_ADMIN" || role === "MARKETING";

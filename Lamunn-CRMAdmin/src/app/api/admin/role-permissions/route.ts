@@ -4,7 +4,7 @@ import { setRolePermission, logAudit, roleLabel, FEATURES, ROLES } from "@lamunn
 import { requireStaff } from "@/lib/requireStaff";
 
 const schema = z.object({
-  role: z.enum(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"]),
+  role: z.enum(["SUPER_ADMIN", "STAFF", "MARKETING"]),
   feature: z.string().min(1),
   allowed: z.boolean(),
 });

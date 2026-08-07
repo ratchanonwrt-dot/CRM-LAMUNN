@@ -15,8 +15,7 @@ const entityLabel: Record<string, string> = {
 };
 
 const roleLabel: Record<string, string> = {
-  SUPER_ADMIN: "ผู้ดูแลระบบ",
-  BRANCH_MANAGER: "ผู้จัดการสาขา",
+  SUPER_ADMIN: "ผู้จัดการ",
   STAFF: "พนักงาน",
   MARKETING: "ทีมการตลาด",
 };

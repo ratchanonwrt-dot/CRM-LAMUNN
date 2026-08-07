@@ -22,7 +22,7 @@ export default function AddStaffForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"SUPER_ADMIN" | "BRANCH_MANAGER" | "STAFF" | "MARKETING">("STAFF");
+  const [role, setRole] = useState<"SUPER_ADMIN" | "STAFF" | "MARKETING">("STAFF");
   const [branchId, setBranchId] = useState(fixedBranchId ?? branches[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -62,8 +62,7 @@ export default function AddStaffForm({
       {canChooseRole ? (
         <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
           <option value="STAFF">พนักงาน</option>
-          <option value="BRANCH_MANAGER">ผู้จัดการสาขา</option>
-          <option value="SUPER_ADMIN">ผู้ดูแลระบบ</option>
+          <option value="SUPER_ADMIN">ผู้จัดการ</option>
           <option value="MARKETING">ทีมการตลาด (HQ)</option>
         </select>
       ) : (

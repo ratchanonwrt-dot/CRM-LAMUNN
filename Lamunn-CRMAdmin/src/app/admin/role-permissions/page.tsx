@@ -16,7 +16,7 @@ export default async function RolePermissionsPage() {
   return (
     <div>
       <h1 className="mb-1 text-xl font-bold text-gray-800">ตั้งค่าสิทธิ</h1>
-      <p className="mb-6 text-sm text-gray-500">กำหนดว่าพนักงานแต่ละ role เข้าเมนูไหนได้บ้าง — ผู้ดูแลระบบ (SUPER_ADMIN) เข้าได้ทุกเมนูเสมอ</p>
+      <p className="mb-6 text-sm text-gray-500">กำหนดว่าพนักงานแต่ละ role เข้าเมนูไหนได้บ้าง — ผู้จัดการ (SUPER_ADMIN) เข้าได้ทุกเมนูเสมอ</p>
       <RolePermissionMatrix
         features={FEATURES.map((f) => ({ key: f.key, label: f.label }))}
         roles={editableRoles.map((r) => ({ key: r, label: roleLabel[r] }))}

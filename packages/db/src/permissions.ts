@@ -1,11 +1,10 @@
 import { prisma } from "./client";
 import type { StaffRole } from "@prisma/client";
 
-export const ROLES: StaffRole[] = ["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"];
+export const ROLES: StaffRole[] = ["SUPER_ADMIN", "STAFF", "MARKETING"];
 
 export const roleLabel: Record<StaffRole, string> = {
-  SUPER_ADMIN: "ผู้ดูแลระบบ (ทุกสาขา)",
-  BRANCH_MANAGER: "ผู้จัดการสาขา",
+  SUPER_ADMIN: "ผู้จัดการ (ทุกสาขา)",
   STAFF: "พนักงาน",
   MARKETING: "ทีมการตลาด",
 };
@@ -35,7 +34,6 @@ export type FeatureKey = (typeof FEATURES)[number]["key"];
 // combo with no row yet, so nothing changes until SUPER_ADMIN edits it.
 const DEFAULT_PERMISSIONS: Record<StaffRole, FeatureKey[]> = {
   SUPER_ADMIN: FEATURES.map((f) => f.key),
-  BRANCH_MANAGER: ["overview", "reports", "enterPoints", "customerAnalytics", "pointRules", "scanRedemption", "redemptions", "staff", "customers"],
   STAFF: ["overview", "reports", "enterPoints", "scanRedemption", "redemptions"],
   MARKETING: FEATURES.map((f) => f.key), // full parity with SUPER_ADMIN, per earlier request
 };

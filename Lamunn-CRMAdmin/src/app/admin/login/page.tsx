@@ -38,7 +38,7 @@ export default function StaffLoginPage() {
           />
           <div className="text-center">
             <h1 className="text-lg font-bold text-brand-700">เข้าสู่ระบบหลังบ้าน</h1>
-            <p className="text-sm text-gray-500">สำหรับพนักงานและผู้ดูแลระบบ</p>
+            <p className="text-sm text-gray-500">สำหรับพนักงานและผู้จัดการ</p>
           </div>
         </div>
 

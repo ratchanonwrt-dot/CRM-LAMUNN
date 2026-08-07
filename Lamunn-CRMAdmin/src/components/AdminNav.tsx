@@ -28,8 +28,7 @@ import {
 import type { FeatureKey } from "@lamunn/db";
 
 const roleLabel: Record<string, string> = {
-  SUPER_ADMIN: "ผู้ดูแลระบบ (ทุกสาขา)",
-  BRANCH_MANAGER: "ผู้จัดการสาขา",
+  SUPER_ADMIN: "ผู้จัดการ (ทุกสาขา)",
   STAFF: "พนักงาน",
   MARKETING: "ทีมการตลาด",
 };

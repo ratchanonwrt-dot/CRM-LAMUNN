@@ -8,24 +8,17 @@ const schema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(8),
-  role: z.enum(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"]),
+  role: z.enum(["SUPER_ADMIN", "STAFF", "MARKETING"]),
   branchId: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
-  const staff = await requireStaff(["SUPER_ADMIN", "BRANCH_MANAGER", "MARKETING"]);
+  const staff = await requireStaff(["SUPER_ADMIN", "MARKETING"]);
   if (!staff) return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });
-
-  // Branch managers may only create STAFF within their own branch.
-  if (staff.role === "BRANCH_MANAGER") {
-    if (parsed.data.role !== "STAFF" || parsed.data.branchId !== staff.branchId) {
-      return NextResponse.json({ error: "ผู้จัดการสาขาสร้างได้เฉพาะพนักงานในสาขาตนเอง" }, { status: 403 });
-    }
-  }
 
   const isHqRole = parsed.data.role === "SUPER_ADMIN" || parsed.data.role === "MARKETING";
   if (!isHqRole && !parsed.data.branchId) {

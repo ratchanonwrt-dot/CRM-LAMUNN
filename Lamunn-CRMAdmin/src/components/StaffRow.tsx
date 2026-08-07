@@ -14,15 +14,14 @@ interface Staff {
   id: string;
   name: string;
   email: string;
-  role: "SUPER_ADMIN" | "BRANCH_MANAGER" | "STAFF" | "MARKETING";
+  role: "SUPER_ADMIN" | "STAFF" | "MARKETING";
   branchId: string | null;
   branch: { code: string; name: string } | null;
   isActive: boolean;
 }
 
 const roleLabel: Record<string, string> = {
-  SUPER_ADMIN: "ผู้ดูแลระบบ",
-  BRANCH_MANAGER: "ผู้จัดการสาขา",
+  SUPER_ADMIN: "ผู้จัดการ",
   STAFF: "พนักงาน",
   MARKETING: "ทีมการตลาด (HQ)",
 };
@@ -98,8 +97,7 @@ export default function StaffRow({
               {canChooseRole ? (
                 <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
                   <option value="STAFF">พนักงาน</option>
-                  <option value="BRANCH_MANAGER">ผู้จัดการสาขา</option>
-                  <option value="SUPER_ADMIN">ผู้ดูแลระบบ</option>
+                  <option value="SUPER_ADMIN">ผู้จัดการ</option>
                   <option value="MARKETING">ทีมการตลาด (HQ)</option>
                 </select>
               ) : (
