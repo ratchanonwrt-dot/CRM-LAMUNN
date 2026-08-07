@@ -4,7 +4,7 @@ import DeleteButton from "@/components/DeleteButton";
 import { requirePageRole } from "@/lib/requirePageRole";
 
 export default async function PointRulesPage() {
-  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "MARKETING"]);
+  const user = await requirePageRole("pointRules");
   const role = user.role!;
   const myBranchId = user.branchId;
 

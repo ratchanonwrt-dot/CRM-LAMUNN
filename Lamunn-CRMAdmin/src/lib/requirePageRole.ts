@@ -1,13 +1,15 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { hasPermission, type FeatureKey } from "@lamunn/db";
+import type { StaffRole } from "@prisma/client";
 
 /** Server-side guard for page components: redirects to /admin if the logged-in
- * staff's role isn't in the allowed list. Use the same roles array AdminNav.tsx
- * uses for that page's link, so behavior for existing roles never changes. */
-export async function requirePageRole(allowedRoles: string[]) {
+ * staff's role doesn't have this feature enabled in /admin/role-permissions
+ * (SUPER_ADMIN always passes). */
+export async function requirePageRole(feature: FeatureKey) {
   const session = await getServerSession(authOptions);
-  const role = session?.user?.role;
-  if (!role || !allowedRoles.includes(role)) redirect("/admin");
+  const role = session?.user?.role as StaffRole | undefined;
+  if (!role || !(await hasPermission(role, feature))) redirect("/admin");
   return session!.user;
 }

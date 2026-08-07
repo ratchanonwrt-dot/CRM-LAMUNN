@@ -10,7 +10,7 @@ const statusLabel: Record<string, string> = {
 };
 
 export default async function RedemptionConfirmPage({ params }: { params: { id: string } }) {
-  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"]);
+  const user = await requirePageRole("redemptions");
   const needsBranchPicker = !user.branchId;
   const [redemption, branches] = await Promise.all([
     prisma.redemption.findUnique({

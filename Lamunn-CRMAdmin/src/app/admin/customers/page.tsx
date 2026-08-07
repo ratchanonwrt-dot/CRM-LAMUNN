@@ -12,7 +12,7 @@ function isSortField(v: string | undefined): v is SortField {
 }
 
 export default async function CustomersPage({ searchParams }: { searchParams: { sort?: string; dir?: string } }) {
-  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "MARKETING"]);
+  const user = await requirePageRole("customers");
   const [customers, purchaseStats, branches] = await Promise.all([
     prisma.customer.findMany(),
     prisma.pointTransaction.groupBy({

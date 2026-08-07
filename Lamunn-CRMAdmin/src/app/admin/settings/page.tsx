@@ -3,8 +3,10 @@ import HeroImageSettingsForm from "@/components/HeroImageSettingsForm";
 import LogoImageSettingsForm from "@/components/LogoImageSettingsForm";
 import SiteContentForm from "@/components/SiteContentForm";
 import TierImagesSettingsForm from "@/components/TierImagesSettingsForm";
+import { requirePageRole } from "@/lib/requirePageRole";
 
 export default async function AdminSettingsPage() {
+  await requirePageRole("settings");
   const [settings, tiers] = await Promise.all([getAppSettings(), getMembershipTiers()]);
 
   return (

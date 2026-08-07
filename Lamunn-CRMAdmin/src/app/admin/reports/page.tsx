@@ -10,7 +10,7 @@ const typeLabel: Record<string, string> = {
 };
 
 export default async function ReportsPage({ searchParams }: { searchParams: { branchId?: string } }) {
-  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"]);
+  const user = await requirePageRole("reports");
   const role = user.role!;
   const myBranchId = user.branchId;
   const isHqRole = role === "SUPER_ADMIN" || role === "MARKETING";

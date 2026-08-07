@@ -1,8 +1,10 @@
 import { prisma } from "@lamunn/db";
 import AddRewardForm from "@/components/AddRewardForm";
 import RewardRow from "@/components/RewardRow";
+import { requirePageRole } from "@/lib/requirePageRole";
 
 export default async function AdminRewardsPage() {
+  await requirePageRole("rewards");
   const rewards = await prisma.reward.findMany({ orderBy: { createdAt: "desc" } });
 
   return (

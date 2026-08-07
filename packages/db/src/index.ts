@@ -5,6 +5,7 @@ export * from "./expiry";
 export * from "./settings";
 export * from "./tiers";
 export * from "./audit";
+export * from "./permissions";
 export * from "./posBills";
 export * from "./posBranches";
 export * from "@prisma/client";

@@ -142,6 +142,20 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+// Which nav pages/features each role can access, editable by SUPER_ADMIN from
+// /admin/role-permissions. A missing row falls back to the hardcoded default in
+// packages/db/src/permissions.ts. SUPER_ADMIN itself always has full access — it is
+// never gated by this table, so an admin can never lock themselves out.
+model RolePermission {
+  id      String    @id @default(cuid())
+  role    StaffRole
+  feature String
+  allowed Boolean   @default(true)
+
+  @@unique([role, feature])
+  @@map("role_permissions")
+}
+
 model Customer {
   id             String    @id @default(cuid())
   name           String?

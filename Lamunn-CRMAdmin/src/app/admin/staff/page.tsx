@@ -4,7 +4,7 @@ import StaffRow from "@/components/StaffRow";
 import { requirePageRole } from "@/lib/requirePageRole";
 
 export default async function StaffPage() {
-  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "MARKETING"]);
+  const user = await requirePageRole("staff");
   const role = user.role!;
   const myBranchId = user.branchId;
 

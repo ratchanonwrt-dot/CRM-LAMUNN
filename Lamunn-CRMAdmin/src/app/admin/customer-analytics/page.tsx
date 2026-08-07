@@ -29,7 +29,7 @@ function ageFromDob(dob: Date, now: Date): number {
 }
 
 export default async function CustomerAnalyticsPage() {
-  await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "MARKETING"]);
+  await requirePageRole("customerAnalytics");
 
   const [customers, lastEarnByCustomer, redemptionStats] = await Promise.all([
     prisma.customer.findMany({

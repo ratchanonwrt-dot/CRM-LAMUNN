@@ -14,16 +14,18 @@ import {
   Percent,
   Gift,
   QrCode,
-  ScanLine,
   Camera,
+  Coins,
   BarChart3,
   PieChart,
   Palette,
   History,
+  ShieldCheck,
   LogOut,
   Menu,
   X,
 } from "lucide-react";
+import type { FeatureKey } from "@lamunn/db";
 
 const roleLabel: Record<string, string> = {
   SUPER_ADMIN: "ผู้ดูแลระบบ (ทุกสาขา)",
@@ -32,21 +34,25 @@ const roleLabel: Record<string, string> = {
   MARKETING: "ทีมการตลาด",
 };
 
-const allLinks = [
-  { href: "/admin", label: "ภาพรวม", icon: LayoutDashboard, color: "bg-sky-100 text-sky-400", roles: ["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"] },
-  { href: "/admin/branches", label: "สาขา", icon: Building2, color: "bg-violet-100 text-violet-400", roles: ["SUPER_ADMIN", "MARKETING"] },
-  { href: "/admin/staff", label: "พนักงาน", icon: Users, color: "bg-indigo-100 text-indigo-400", roles: ["SUPER_ADMIN", "BRANCH_MANAGER", "MARKETING"] },
-  { href: "/admin/customers", label: "ลูกค้า", icon: UserRound, color: "bg-pink-100 text-pink-400", roles: ["SUPER_ADMIN", "BRANCH_MANAGER", "MARKETING"] },
-  { href: "/admin/customer-analytics", label: "Dashboard ลูกค้า", icon: PieChart, color: "bg-lime-100 text-lime-500", roles: ["SUPER_ADMIN", "BRANCH_MANAGER", "MARKETING"] },
-  { href: "/admin/tiers", label: "ระดับสมาชิก", icon: Award, color: "bg-fuchsia-100 text-fuchsia-400", roles: ["SUPER_ADMIN", "MARKETING"] },
-  { href: "/admin/point-rules", label: "กติกาสะสมแต้ม", icon: Percent, color: "bg-orange-100 text-orange-400", roles: ["SUPER_ADMIN", "BRANCH_MANAGER", "MARKETING"] },
-  { href: "/admin/rewards", label: "รางวัล", icon: Gift, color: "bg-emerald-100 text-emerald-400", roles: ["SUPER_ADMIN", "MARKETING"] },
-  { href: "/admin/scan-redemption", label: "สแกน QR ยืนยันแลกรางวัล", icon: Camera, color: "bg-lime-100 text-lime-500", roles: ["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"] },
-  { href: "/admin/redemptions", label: "ยืนยันแลกรางวัล", icon: QrCode, color: "bg-teal-100 text-teal-400", roles: ["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"] },
-  { href: "/admin/reports", label: "รายงาน", icon: BarChart3, color: "bg-cyan-100 text-cyan-400", roles: ["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"] },
-  { href: "/admin/settings", label: "ตั้งค่าหน้าตาแอป", icon: Palette, color: "bg-rose-100 text-rose-400", roles: ["SUPER_ADMIN", "MARKETING"] },
-  { href: "/admin/audit-log", label: "ประวัติการแก้ไข", icon: History, color: "bg-slate-100 text-slate-400", roles: ["SUPER_ADMIN", "MARKETING"] },
-  { href: "/admin/qr-simulator", label: "จำลอง QR (ทดสอบ)", icon: ScanLine, color: "bg-amber-100 text-amber-400", roles: ["SUPER_ADMIN", "MARKETING"] },
+// Order here is the exact left-nav order requested. `feature` is null for links
+// gated outside the dynamic permission system (role-permissions itself is
+// SUPER_ADMIN-only and hardcoded, so a role can never edit its own access away).
+const allLinks: { href: string; label: string; icon: typeof LayoutDashboard; color: string; feature: FeatureKey | null; superAdminOnly?: boolean }[] = [
+  { href: "/admin", label: "ภาพรวม", icon: LayoutDashboard, color: "bg-sky-100 text-sky-400", feature: "overview" },
+  { href: "/admin/reports", label: "รายงาน", icon: BarChart3, color: "bg-cyan-100 text-cyan-400", feature: "reports" },
+  { href: "/admin/enter-points", label: "กรอกคะแนน", icon: Coins, color: "bg-yellow-100 text-yellow-500", feature: "enterPoints" },
+  { href: "/admin/branches", label: "สาขา", icon: Building2, color: "bg-violet-100 text-violet-400", feature: "branches" },
+  { href: "/admin/customer-analytics", label: "Dashboard ลูกค้า", icon: PieChart, color: "bg-lime-100 text-lime-500", feature: "customerAnalytics" },
+  { href: "/admin/tiers", label: "ระดับสมาชิก", icon: Award, color: "bg-fuchsia-100 text-fuchsia-400", feature: "tiers" },
+  { href: "/admin/point-rules", label: "กติกาสะสมแต้ม", icon: Percent, color: "bg-orange-100 text-orange-400", feature: "pointRules" },
+  { href: "/admin/rewards", label: "รางวัล", icon: Gift, color: "bg-emerald-100 text-emerald-400", feature: "rewards" },
+  { href: "/admin/scan-redemption", label: "สแกน QR ยืนยันแลกรางวัล", icon: Camera, color: "bg-lime-100 text-lime-500", feature: "scanRedemption" },
+  { href: "/admin/redemptions", label: "ยืนยันแลกรางวัล", icon: QrCode, color: "bg-teal-100 text-teal-400", feature: "redemptions" },
+  { href: "/admin/settings", label: "ตั้งค่าหน้าตาแอป", icon: Palette, color: "bg-rose-100 text-rose-400", feature: "settings" },
+  { href: "/admin/audit-log", label: "ประวัติการแก้ไข", icon: History, color: "bg-slate-100 text-slate-400", feature: "auditLog" },
+  { href: "/admin/staff", label: "พนักงาน", icon: Users, color: "bg-indigo-100 text-indigo-400", feature: "staff" },
+  { href: "/admin/customers", label: "ลูกค้า", icon: UserRound, color: "bg-pink-100 text-pink-400", feature: "customers" },
+  { href: "/admin/role-permissions", label: "ตั้งค่าสิทธิ", icon: ShieldCheck, color: "bg-red-100 text-red-500", feature: null, superAdminOnly: true },
 ];
 
 function NavLinks({ links, pathname, onNavigate }: { links: typeof allLinks; pathname: string; onNavigate?: () => void }) {
@@ -76,9 +82,9 @@ function NavLinks({ links, pathname, onNavigate }: { links: typeof allLinks; pat
   );
 }
 
-export default function AdminNav({ role, name }: { role: string; name: string }) {
+export default function AdminNav({ role, name, allowedFeatures }: { role: string; name: string; allowedFeatures: FeatureKey[] }) {
   const pathname = usePathname();
-  const links = allLinks.filter((l) => l.roles.includes(role));
+  const links = allLinks.filter((l) => (l.superAdminOnly ? role === "SUPER_ADMIN" : l.feature && allowedFeatures.includes(l.feature)));
   const [open, setOpen] = useState(false);
 
   const profileBlock = (
