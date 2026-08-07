@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-type StaffRole = "SUPER_ADMIN" | "STAFF" | "MARKETING";
+type StaffRole = "SUPER_ADMIN" | "SUPERVISOR" | "STAFF" | "MARKETING";
 
 /** Server-side guard for API routes: returns the staff session info, or null if the
  * caller isn't logged in as staff / doesn't have one of the allowed roles. */

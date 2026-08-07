@@ -6,9 +6,11 @@ import { requirePageRole } from "@/lib/requirePageRole";
 export default async function StaffPage() {
   const user = await requirePageRole("staff");
   const role = user.role!;
+  const myBranchId = user.branchId;
 
   const [staffList, branches] = await Promise.all([
     prisma.staffUser.findMany({
+      where: role === "SUPERVISOR" ? { branchId: myBranchId ?? undefined } : {},
       include: { branch: true },
       orderBy: { createdAt: "desc" },
     }),
@@ -19,7 +21,11 @@ export default async function StaffPage() {
     <div>
       <h1 className="mb-6 text-xl font-bold text-gray-800">จัดการพนักงาน</h1>
 
-      <AddStaffForm branches={branches} canChooseRole={role === "SUPER_ADMIN" || role === "MARKETING"} />
+      <AddStaffForm
+        branches={branches}
+        canChooseRole={role === "SUPER_ADMIN" || role === "MARKETING"}
+        fixedBranchId={role === "SUPERVISOR" ? myBranchId ?? undefined : undefined}
+      />
 
       <div className="mt-6 overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">

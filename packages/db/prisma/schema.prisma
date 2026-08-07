@@ -16,7 +16,8 @@ datasource db {
 // ---------- Enums ----------
 
 enum StaffRole {
-  SUPER_ADMIN // HQ, sees/manages all branches
+  SUPER_ADMIN // Manager — HQ, sees/manages all branches
+  SUPERVISOR // ผู้ดูแลสาขา — manages own branch: staff, reports, redemption approval
   STAFF // front-of-store: lookup customers, manual point adjustments
   MARKETING // HQ, campaign content only: rewards + app settings (hero/tier images/copy)
 }

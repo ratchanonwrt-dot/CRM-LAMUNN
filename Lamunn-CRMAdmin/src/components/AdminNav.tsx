@@ -28,9 +28,10 @@ import {
 import type { FeatureKey } from "@lamunn/db";
 
 const roleLabel: Record<string, string> = {
-  SUPER_ADMIN: "ผู้จัดการ (ทุกสาขา)",
-  STAFF: "พนักงาน",
-  MARKETING: "ทีมการตลาด",
+  SUPER_ADMIN: "ผู้จัดการ (Manager)",
+  SUPERVISOR: "ผู้ดูแลสาขา (Supervisor)",
+  STAFF: "พนักงาน (Staff)",
+  MARKETING: "การตลาด (Marketing)",
 };
 
 // Order here is the exact left-nav order requested. `feature` is null for links

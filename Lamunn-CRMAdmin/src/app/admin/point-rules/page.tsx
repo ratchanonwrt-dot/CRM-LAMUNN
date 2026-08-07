@@ -6,9 +6,11 @@ import { requirePageRole } from "@/lib/requirePageRole";
 export default async function PointRulesPage() {
   const user = await requirePageRole("pointRules");
   const role = user.role!;
+  const myBranchId = user.branchId;
 
   const [rules, branches] = await Promise.all([
     prisma.pointRule.findMany({
+      where: role === "SUPERVISOR" ? { branchId: myBranchId ?? undefined } : {},
       include: { branch: true },
       orderBy: { createdAt: "desc" },
     }),
@@ -20,7 +22,11 @@ export default async function PointRulesPage() {
       <h1 className="mb-2 text-xl font-bold text-gray-800">กติกาสะสมแต้ม</h1>
       <p className="mb-6 text-sm text-gray-500">กำหนดอัตราแลกบาทเป็นแต้ม เช่น 25 บาท = 1 แต้ม กติกาเฉพาะสาขาจะมีผลเหนือกติกาทั่วไป</p>
 
-      <AddPointRuleForm branches={branches} allowGlobal={role === "SUPER_ADMIN" || role === "MARKETING"} />
+      <AddPointRuleForm
+        branches={branches}
+        allowGlobal={role === "SUPER_ADMIN" || role === "MARKETING"}
+        fixedBranchId={role === "SUPERVISOR" ? myBranchId ?? undefined : undefined}
+      />
 
       <div className="mt-6 overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">

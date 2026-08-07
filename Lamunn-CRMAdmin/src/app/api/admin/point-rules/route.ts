@@ -11,12 +11,18 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const staff = await requireStaff(["SUPER_ADMIN", "MARKETING"]);
+  const staff = await requireStaff(["SUPER_ADMIN", "SUPERVISOR", "MARKETING"]);
   if (!staff) return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });
+
+  if (staff.role === "SUPERVISOR") {
+    if (!parsed.data.branchId || parsed.data.branchId !== staff.branchId) {
+      return NextResponse.json({ error: "ผู้ดูแลสาขาตั้งกติกาได้เฉพาะสาขาตนเอง" }, { status: 403 });
+    }
+  }
 
   const rule = await prisma.pointRule.create({
     data: {

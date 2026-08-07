@@ -22,7 +22,7 @@ export default function AddStaffForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"SUPER_ADMIN" | "STAFF" | "MARKETING">("STAFF");
+  const [role, setRole] = useState<"SUPER_ADMIN" | "SUPERVISOR" | "STAFF" | "MARKETING">("STAFF");
   const [branchId, setBranchId] = useState(fixedBranchId ?? branches[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -61,9 +61,10 @@ export default function AddStaffForm({
       <input required type="password" minLength={8} placeholder="รหัสผ่าน (8+ ตัว)" value={password} onChange={(e) => setPassword(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
       {canChooseRole ? (
         <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
-          <option value="STAFF">พนักงาน</option>
-          <option value="SUPER_ADMIN">ผู้จัดการ</option>
-          <option value="MARKETING">ทีมการตลาด (HQ)</option>
+          <option value="STAFF">พนักงาน (Staff)</option>
+          <option value="SUPERVISOR">ผู้ดูแลสาขา (Supervisor)</option>
+          <option value="SUPER_ADMIN">ผู้จัดการ (Manager)</option>
+          <option value="MARKETING">การตลาด (Marketing)</option>
         </select>
       ) : (
         <input disabled value="พนักงาน" className="rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-500" />

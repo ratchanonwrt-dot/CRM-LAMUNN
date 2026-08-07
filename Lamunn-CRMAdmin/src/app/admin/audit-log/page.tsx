@@ -15,9 +15,10 @@ const entityLabel: Record<string, string> = {
 };
 
 const roleLabel: Record<string, string> = {
-  SUPER_ADMIN: "ผู้จัดการ",
-  STAFF: "พนักงาน",
-  MARKETING: "ทีมการตลาด",
+  SUPER_ADMIN: "ผู้จัดการ (Manager)",
+  SUPERVISOR: "ผู้ดูแลสาขา (Supervisor)",
+  STAFF: "พนักงาน (Staff)",
+  MARKETING: "การตลาด (Marketing)",
 };
 
 export default async function AuditLogPage() {

@@ -1,12 +1,13 @@
 import { prisma } from "./client";
 import type { StaffRole } from "@prisma/client";
 
-export const ROLES: StaffRole[] = ["SUPER_ADMIN", "STAFF", "MARKETING"];
+export const ROLES: StaffRole[] = ["SUPER_ADMIN", "SUPERVISOR", "STAFF", "MARKETING"];
 
 export const roleLabel: Record<StaffRole, string> = {
-  SUPER_ADMIN: "ผู้จัดการ (ทุกสาขา)",
-  STAFF: "พนักงาน",
-  MARKETING: "ทีมการตลาด",
+  SUPER_ADMIN: "ผู้จัดการ (Manager)",
+  SUPERVISOR: "ผู้ดูแลสาขา (Supervisor)",
+  STAFF: "พนักงาน (Staff)",
+  MARKETING: "การตลาด (Marketing)",
 };
 
 // One entry per nav page. `key` is what page.tsx / AdminNav check against;
@@ -34,6 +35,7 @@ export type FeatureKey = (typeof FEATURES)[number]["key"];
 // combo with no row yet, so nothing changes until SUPER_ADMIN edits it.
 const DEFAULT_PERMISSIONS: Record<StaffRole, FeatureKey[]> = {
   SUPER_ADMIN: FEATURES.map((f) => f.key),
+  SUPERVISOR: ["overview", "reports", "enterPoints", "customerAnalytics", "pointRules", "scanRedemption", "redemptions", "staff", "customers"],
   STAFF: ["overview", "reports", "enterPoints", "scanRedemption", "redemptions"],
   MARKETING: FEATURES.map((f) => f.key), // full parity with SUPER_ADMIN, per earlier request
 };

@@ -14,16 +14,17 @@ interface Staff {
   id: string;
   name: string;
   email: string;
-  role: "SUPER_ADMIN" | "STAFF" | "MARKETING";
+  role: "SUPER_ADMIN" | "SUPERVISOR" | "STAFF" | "MARKETING";
   branchId: string | null;
   branch: { code: string; name: string } | null;
   isActive: boolean;
 }
 
 const roleLabel: Record<string, string> = {
-  SUPER_ADMIN: "ผู้จัดการ",
-  STAFF: "พนักงาน",
-  MARKETING: "ทีมการตลาด (HQ)",
+  SUPER_ADMIN: "ผู้จัดการ (Manager)",
+  SUPERVISOR: "ผู้ดูแลสาขา (Supervisor)",
+  STAFF: "พนักงาน (Staff)",
+  MARKETING: "การตลาด (Marketing)",
 };
 
 export default function StaffRow({
@@ -96,9 +97,10 @@ export default function StaffRow({
               <input type="password" minLength={8} placeholder="รหัสผ่านใหม่ (เว้นว่าง = ไม่เปลี่ยน)" value={password} onChange={(e) => setPassword(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
               {canChooseRole ? (
                 <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                  <option value="STAFF">พนักงาน</option>
-                  <option value="SUPER_ADMIN">ผู้จัดการ</option>
-                  <option value="MARKETING">ทีมการตลาด (HQ)</option>
+                  <option value="STAFF">พนักงาน (Staff)</option>
+                  <option value="SUPERVISOR">ผู้ดูแลสาขา (Supervisor)</option>
+                  <option value="SUPER_ADMIN">ผู้จัดการ (Manager)</option>
+                  <option value="MARKETING">การตลาด (Marketing)</option>
                 </select>
               ) : (
                 <input disabled value={roleLabel[role]} className="rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-500" />
