@@ -4,7 +4,7 @@ import DeleteButton from "@/components/DeleteButton";
 import { requirePageRole } from "@/lib/requirePageRole";
 
 export default async function PointRulesPage() {
-  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER"]);
+  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "MARKETING"]);
   const role = user.role!;
   const myBranchId = user.branchId;
 
@@ -24,7 +24,7 @@ export default async function PointRulesPage() {
 
       <AddPointRuleForm
         branches={branches}
-        allowGlobal={role === "SUPER_ADMIN"}
+        allowGlobal={role === "SUPER_ADMIN" || role === "MARKETING"}
         fixedBranchId={role === "BRANCH_MANAGER" ? myBranchId ?? undefined : undefined}
       />
 

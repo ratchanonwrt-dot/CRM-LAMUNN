@@ -3,15 +3,33 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function ConfirmRedemptionButton({ redemptionId }: { redemptionId: string }) {
+interface Branch {
+  id: string;
+  name: string;
+}
+
+export default function ConfirmRedemptionButton({
+  redemptionId,
+  branches,
+}: {
+  redemptionId: string;
+  /** Passed only for HQ-level roles (no branchId of their own) — they must say
+   * which branch physically handed the reward out. */
+  branches?: Branch[];
+}) {
   const router = useRouter();
+  const [branchId, setBranchId] = useState(branches?.[0]?.id ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleConfirm() {
     setError(null);
     setLoading(true);
-    const res = await fetch(`/api/admin/redemptions/${redemptionId}/confirm`, { method: "POST" });
+    const res = await fetch(`/api/admin/redemptions/${redemptionId}/confirm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(branches ? { branchId } : {}),
+    });
     const data = await res.json();
     setLoading(false);
     if (!res.ok) {
@@ -23,9 +41,25 @@ export default function ConfirmRedemptionButton({ redemptionId }: { redemptionId
 
   return (
     <div className="mt-2 flex flex-col gap-2">
+      {branches && (
+        <div>
+          <label className="mb-1 block text-xs text-gray-500">สาขาที่ให้ลูกค้ารับรางวัล</label>
+          <select
+            value={branchId}
+            onChange={(e) => setBranchId(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          >
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <button
         onClick={handleConfirm}
-        disabled={loading}
+        disabled={loading || (branches && !branchId)}
         className="rounded-lg bg-brand-600 px-4 py-3 font-medium text-white disabled:opacity-50"
       >
         {loading ? "กำลังยืนยัน..." : "ยืนยันแลกรางวัล"}

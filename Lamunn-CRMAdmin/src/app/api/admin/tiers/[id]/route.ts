@@ -16,13 +16,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!staff) return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
 
   const body = await req.json().catch(() => null);
-
-  // Marketing can only touch the tier's image (used by TierImagesSettingsForm) —
-  // name/minPoints/benefit/sortOrder affect the loyalty-program structure itself.
-  if (staff.role === "MARKETING" && body && Object.keys(body).some((k) => k !== "imageUrl")) {
-    return NextResponse.json({ error: "ทีมการตลาดแก้ได้เฉพาะรูปของระดับสมาชิก" }, { status: 403 });
-  }
-
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
@@ -43,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const staff = await requireStaff(["SUPER_ADMIN"]);
+  const staff = await requireStaff(["SUPER_ADMIN", "MARKETING"]);
   if (!staff) return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
 
   const existing = await prisma.membershipTier.findUnique({ where: { id: params.id } });

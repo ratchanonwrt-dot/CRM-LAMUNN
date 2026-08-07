@@ -22,7 +22,7 @@ const roleLabel: Record<string, string> = {
 };
 
 export default async function AuditLogPage() {
-  await requirePageRole(["SUPER_ADMIN"]);
+  await requirePageRole(["SUPER_ADMIN", "MARKETING"]);
   const logs = await getAuditLogs();
 
   return (

@@ -10,11 +10,15 @@ const statusLabel: Record<string, string> = {
 };
 
 export default async function RedemptionConfirmPage({ params }: { params: { id: string } }) {
-  await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF"]);
-  const redemption = await prisma.redemption.findUnique({
-    where: { id: params.id },
-    include: { reward: true, customer: true, branch: true },
-  });
+  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"]);
+  const needsBranchPicker = !user.branchId;
+  const [redemption, branches] = await Promise.all([
+    prisma.redemption.findUnique({
+      where: { id: params.id },
+      include: { reward: true, customer: true, branch: true },
+    }),
+    needsBranchPicker ? prisma.branch.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }) : Promise.resolve([]),
+  ]);
 
   if (!redemption) notFound();
 
@@ -52,7 +56,12 @@ export default async function RedemptionConfirmPage({ params }: { params: { id: 
           </p>
         </div>
 
-        {redemption.status === "PENDING" && <ConfirmRedemptionButton redemptionId={redemption.id} />}
+        {redemption.status === "PENDING" && (
+          <ConfirmRedemptionButton
+            redemptionId={redemption.id}
+            branches={needsBranchPicker ? branches.map((b) => ({ id: b.id, name: b.name })) : undefined}
+          />
+        )}
       </div>
     </div>
   );

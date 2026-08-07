@@ -12,7 +12,7 @@ function isSortField(v: string | undefined): v is SortField {
 }
 
 export default async function CustomersPage({ searchParams }: { searchParams: { sort?: string; dir?: string } }) {
-  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER"]);
+  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "MARKETING"]);
   const [customers, purchaseStats, branches] = await Promise.all([
     prisma.customer.findMany(),
     prisma.pointTransaction.groupBy({
@@ -22,9 +22,9 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
       _max: { createdAt: true },
       _sum: { amount: true },
     }),
-    // SUPER_ADMIN isn't tied to one branch, so they need to pick which branch a
-    // manual purchase entry belongs to; a BRANCH_MANAGER's own branch is implied.
-    user.role === "SUPER_ADMIN"
+    // SUPER_ADMIN/MARKETING aren't tied to one branch, so they need to pick which
+    // branch a manual purchase entry belongs to; a BRANCH_MANAGER's own branch is implied.
+    user.role === "SUPER_ADMIN" || user.role === "MARKETING"
       ? prisma.branch.findMany({ where: { isActive: true }, orderBy: { name: "asc" } })
       : Promise.resolve([]),
   ]);

@@ -9,7 +9,7 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const staff = await requireStaff(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF"]);
+  const staff = await requireStaff(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"]);
   if (!staff) return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
 
   const body = await req.json().catch(() => null);

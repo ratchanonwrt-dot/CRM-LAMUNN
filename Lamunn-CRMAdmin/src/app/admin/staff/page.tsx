@@ -4,7 +4,7 @@ import StaffRow from "@/components/StaffRow";
 import { requirePageRole } from "@/lib/requirePageRole";
 
 export default async function StaffPage() {
-  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER"]);
+  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "MARKETING"]);
   const role = user.role!;
   const myBranchId = user.branchId;
 
@@ -23,7 +23,7 @@ export default async function StaffPage() {
 
       <AddStaffForm
         branches={branches}
-        canChooseRole={role === "SUPER_ADMIN"}
+        canChooseRole={(role === "SUPER_ADMIN" || role === "MARKETING")}
         fixedBranchId={role === "BRANCH_MANAGER" ? myBranchId ?? undefined : undefined}
       />
 
@@ -41,7 +41,7 @@ export default async function StaffPage() {
           </thead>
           <tbody>
             {staffList.map((s) => (
-              <StaffRow key={s.id} staff={s} branches={branches} canChooseRole={role === "SUPER_ADMIN"} />
+              <StaffRow key={s.id} staff={s} branches={branches} canChooseRole={(role === "SUPER_ADMIN" || role === "MARKETING")} />
             ))}
           </tbody>
         </table>

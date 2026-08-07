@@ -10,11 +10,12 @@ const typeLabel: Record<string, string> = {
 };
 
 export default async function ReportsPage({ searchParams }: { searchParams: { branchId?: string } }) {
-  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF"]);
+  const user = await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"]);
   const role = user.role!;
   const myBranchId = user.branchId;
+  const isHqRole = role === "SUPER_ADMIN" || role === "MARKETING";
 
-  const effectiveBranchId = role === "SUPER_ADMIN" ? searchParams.branchId : myBranchId ?? undefined;
+  const effectiveBranchId = isHqRole ? searchParams.branchId : myBranchId ?? undefined;
 
   const [transactions, branches] = await Promise.all([
     prisma.pointTransaction.findMany({
@@ -23,14 +24,14 @@ export default async function ReportsPage({ searchParams }: { searchParams: { br
       orderBy: { createdAt: "desc" },
       take: 100,
     }),
-    role === "SUPER_ADMIN" ? prisma.branch.findMany({ orderBy: { code: "asc" } }) : Promise.resolve([]),
+    isHqRole ? prisma.branch.findMany({ orderBy: { code: "asc" } }) : Promise.resolve([]),
   ]);
 
   return (
     <div>
       <h1 className="mb-6 text-xl font-bold text-gray-800">รายงานธุรกรรม (ล่าสุด 100 รายการ)</h1>
 
-      {role === "SUPER_ADMIN" && (
+      {isHqRole && (
         <form className="mb-4 flex gap-2" method="get">
           <select name="branchId" defaultValue={searchParams.branchId ?? ""} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
             <option value="">ทุกสาขา</option>

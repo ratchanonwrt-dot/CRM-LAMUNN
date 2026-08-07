@@ -4,7 +4,7 @@ import TierRow from "@/components/TierRow";
 import { requirePageRole } from "@/lib/requirePageRole";
 
 export default async function TiersPage() {
-  await requirePageRole(["SUPER_ADMIN"]);
+  await requirePageRole(["SUPER_ADMIN", "MARKETING"]);
   const tiers = await getMembershipTiers();
 
   return (

@@ -8,7 +8,7 @@ import { reconcileVoidedBills, syncBranchesFromPos } from "@lamunn/db";
 // once a day via Vercel Cron (see Lamunn-CRM/vercel.json) — this endpoint is for
 // on-demand checks.
 export async function POST() {
-  const staff = await requireStaff(["SUPER_ADMIN"]);
+  const staff = await requireStaff(["SUPER_ADMIN", "MARKETING"]);
   if (!staff) return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
 
   const [voidedBills, branches] = await Promise.all([reconcileVoidedBills(), syncBranchesFromPos()]);

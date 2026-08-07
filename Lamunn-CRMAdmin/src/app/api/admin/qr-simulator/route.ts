@@ -14,7 +14,7 @@ const schema = z.object({
 // the POS is expected to print, so the scan flow can be exercised end to end before
 // the POS side implements signing. Not linked from customer-facing pages.
 export async function POST(req: NextRequest) {
-  const staff = await requireStaff(["SUPER_ADMIN"]);
+  const staff = await requireStaff(["SUPER_ADMIN", "MARKETING"]);
   if (!staff) return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
 
   const body = await req.json().catch(() => null);

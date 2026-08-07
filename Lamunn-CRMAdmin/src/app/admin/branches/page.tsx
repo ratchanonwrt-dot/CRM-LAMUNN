@@ -4,7 +4,7 @@ import ToggleActiveButton from "@/components/ToggleActiveButton";
 import { requirePageRole } from "@/lib/requirePageRole";
 
 export default async function BranchesPage() {
-  await requirePageRole(["SUPER_ADMIN"]);
+  await requirePageRole(["SUPER_ADMIN", "MARKETING"]);
   const branches = await prisma.branch.findMany({ orderBy: { code: "asc" } });
 
   return (

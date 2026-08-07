@@ -7,7 +7,7 @@ import { requirePageRole } from "@/lib/requirePageRole";
 // route), so a PENDING redemption isn't tied to any branch yet — a customer can
 // walk into any branch to redeem, so every branch's staff sees the full queue.
 export default async function RedemptionsPage() {
-  await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF"]);
+  await requirePageRole(["SUPER_ADMIN", "BRANCH_MANAGER", "STAFF", "MARKETING"]);
   const redemptions = await prisma.redemption.findMany({
     where: { status: "PENDING" },
     include: { reward: true, customer: true },
