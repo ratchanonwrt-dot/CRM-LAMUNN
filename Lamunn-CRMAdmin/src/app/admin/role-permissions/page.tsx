@@ -11,15 +11,14 @@ export default async function RolePermissionsPage() {
   if (session?.user?.role !== "SUPER_ADMIN") redirect("/admin");
 
   const matrix = await getPermissionMatrix();
-  const editableRoles = ROLES.filter((r) => r !== "SUPER_ADMIN");
 
   return (
     <div>
       <h1 className="mb-1 text-xl font-bold text-gray-800">ตั้งค่าสิทธิ</h1>
-      <p className="mb-6 text-sm text-gray-500">กำหนดว่าพนักงานแต่ละ role เข้าเมนูไหนได้บ้าง — ผู้จัดการ (SUPER_ADMIN) เข้าได้ทุกเมนูเสมอ</p>
+      <p className="mb-6 text-sm text-gray-500">กำหนดว่าพนักงานแต่ละ role เข้าเมนูไหนได้บ้าง — ผู้จัดการ (Manager) เข้าได้ทุกเมนูเสมอ แก้ไม่ได้ เพื่อไม่ให้ล็อกตัวเองออกจากระบบ</p>
       <RolePermissionMatrix
         features={FEATURES.map((f) => ({ key: f.key, label: f.label }))}
-        roles={editableRoles.map((r) => ({ key: r, label: roleLabel[r] }))}
+        roles={ROLES.map((r) => ({ key: r, label: roleLabel[r], locked: r === "SUPER_ADMIN" }))}
         matrix={matrix}
       />
     </div>

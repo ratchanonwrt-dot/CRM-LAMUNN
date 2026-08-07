@@ -9,7 +9,7 @@ export default function RolePermissionMatrix({
   matrix,
 }: {
   features: { key: string; label: string }[];
-  roles: { key: string; label: string }[];
+  roles: { key: string; label: string; locked?: boolean }[];
   matrix: Record<string, Record<string, boolean>>;
 }) {
   const [state, setState] = useState(matrix);
@@ -52,17 +52,19 @@ export default function RolePermissionMatrix({
               <td className="px-4 py-2.5 font-medium text-gray-700">{f.label}</td>
               {roles.map((r) => {
                 const cellKey = `${r.key}:${f.key}`;
-                const allowed = state[r.key]?.[f.key] ?? false;
+                const allowed = r.locked ? true : (state[r.key]?.[f.key] ?? false);
                 return (
                   <td key={r.key} className="px-4 py-2.5 text-center">
                     <button
                       type="button"
-                      onClick={() => toggle(r.key, f.key)}
-                      disabled={pending === cellKey}
+                      onClick={() => !r.locked && toggle(r.key, f.key)}
+                      disabled={r.locked || pending === cellKey}
                       aria-label={`${r.label} - ${f.label}`}
+                      title={r.locked ? "ผู้จัดการเข้าได้ทุกเมนูเสมอ แก้ไม่ได้" : undefined}
                       className={clsx(
-                        "h-5 w-9 rounded-full transition-colors disabled:opacity-50",
-                        allowed ? "bg-brand-600" : "bg-gray-200"
+                        "h-5 w-9 rounded-full transition-colors disabled:cursor-not-allowed",
+                        allowed ? "bg-brand-600" : "bg-gray-200",
+                        r.locked ? "opacity-60" : "disabled:opacity-50"
                       )}
                     >
                       <span
