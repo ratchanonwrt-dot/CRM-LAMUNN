@@ -20,14 +20,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });
 
-  // Supervisors may only create STAFF within their own branch.
-  if (staff.role === "SUPERVISOR") {
-    if (parsed.data.role !== "STAFF" || parsed.data.branchId !== staff.branchId) {
-      return NextResponse.json({ error: "ผู้ดูแลสาขาสร้างได้เฉพาะพนักงานในสาขาตนเอง" }, { status: 403 });
-    }
-  }
-
-  const isHqRole = parsed.data.role === "SUPER_ADMIN" || parsed.data.role === "MARKETING";
+  const isHqRole = parsed.data.role === "SUPER_ADMIN" || parsed.data.role === "MARKETING" || parsed.data.role === "SUPERVISOR";
   if (!isHqRole && !parsed.data.branchId) {
     return NextResponse.json({ error: "กรุณาเลือกสาขา" }, { status: 400 });
   }

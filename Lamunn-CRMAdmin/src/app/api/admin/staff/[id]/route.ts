@@ -19,26 +19,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const target = await prisma.staffUser.findUnique({ where: { id: params.id } });
   if (!target) return NextResponse.json({ error: "ไม่พบพนักงาน" }, { status: 404 });
-  if (staff.role === "SUPERVISOR" && target.branchId !== staff.branchId) {
-    return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
-  }
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
-  // Supervisors may only edit STAFF rows and can't promote to another role/branch.
-  if (staff.role === "SUPERVISOR") {
-    if (parsed.data.role && parsed.data.role !== "STAFF") {
-      return NextResponse.json({ error: "ผู้ดูแลสาขาแก้บทบาทได้แค่พนักงาน" }, { status: 403 });
-    }
-    if (parsed.data.branchId && parsed.data.branchId !== staff.branchId) {
-      return NextResponse.json({ error: "ผู้ดูแลสาขาย้ายสาขาให้พนักงานไม่ได้" }, { status: 403 });
-    }
-  }
-
   const role = parsed.data.role ?? target.role;
-  const isHqRole = role === "SUPER_ADMIN" || role === "MARKETING";
+  const isHqRole = role === "SUPER_ADMIN" || role === "MARKETING" || role === "SUPERVISOR";
   if (!isHqRole && !parsed.data.branchId && !target.branchId) {
     return NextResponse.json({ error: "กรุณาเลือกสาขา" }, { status: 400 });
   }

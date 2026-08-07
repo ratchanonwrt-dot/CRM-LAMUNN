@@ -58,7 +58,7 @@ export default function StaffRow({
         email,
         password: password || undefined,
         role,
-        branchId: role === "SUPER_ADMIN" || role === "MARKETING" ? undefined : branchId,
+        branchId: role === "SUPER_ADMIN" || role === "MARKETING" || role === "SUPERVISOR" ? undefined : branchId,
       }),
     });
     const data = await res.json();
@@ -105,7 +105,7 @@ export default function StaffRow({
               ) : (
                 <input disabled value={roleLabel[role]} className="rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-500" />
               )}
-              {role !== "SUPER_ADMIN" && role !== "MARKETING" && (
+              {role !== "SUPER_ADMIN" && role !== "MARKETING" && role !== "SUPERVISOR" && (
                 <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
                   {branches.map((b) => (
                     <option key={b.id} value={b.id}>

@@ -13,7 +13,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: { br
   const user = await requirePageRole("reports");
   const role = user.role!;
   const myBranchId = user.branchId;
-  const isHqRole = role === "SUPER_ADMIN" || role === "MARKETING";
+  const isHqRole = role === "SUPER_ADMIN" || role === "MARKETING" || role === "SUPERVISOR";
 
   const effectiveBranchId = isHqRole ? searchParams.branchId : myBranchId ?? undefined;
 

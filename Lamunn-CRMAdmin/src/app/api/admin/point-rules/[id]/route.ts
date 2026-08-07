@@ -9,10 +9,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const rule = await prisma.pointRule.findUnique({ where: { id: params.id } });
   if (!rule) return NextResponse.json({ error: "ไม่พบกติกานี้" }, { status: 404 });
 
-  if (staff.role === "SUPERVISOR" && rule.branchId !== staff.branchId) {
-    return NextResponse.json({ error: "ผู้ดูแลสาขาลบได้เฉพาะกติกาของสาขาตนเอง" }, { status: 403 });
-  }
-
   await prisma.pointRule.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
 }

@@ -7,7 +7,7 @@ export default async function AdminDashboardPage() {
   const role = session!.user.role!;
   const branchId = session!.user.branchId;
 
-  const isHqRole = role === "SUPER_ADMIN" || role === "MARKETING";
+  const isHqRole = role === "SUPER_ADMIN" || role === "MARKETING" || role === "SUPERVISOR";
   const branchFilter = isHqRole ? {} : { branchId: branchId ?? undefined };
 
   const startOfToday = new Date();

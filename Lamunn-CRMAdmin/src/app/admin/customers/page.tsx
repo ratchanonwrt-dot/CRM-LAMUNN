@@ -22,9 +22,9 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
       _max: { createdAt: true },
       _sum: { amount: true },
     }),
-    // SUPER_ADMIN/MARKETING aren't tied to one branch, so they need to pick which
-    // branch a manual purchase entry belongs to; a SUPERVISOR's own branch is implied.
-    user.role === "SUPER_ADMIN" || user.role === "MARKETING"
+    // SUPER_ADMIN/MARKETING/SUPERVISOR aren't tied to one branch, so they need to
+    // pick which branch a manual purchase entry belongs to.
+    user.role === "SUPER_ADMIN" || user.role === "MARKETING" || user.role === "SUPERVISOR"
       ? prisma.branch.findMany({ where: { isActive: true }, orderBy: { name: "asc" } })
       : Promise.resolve([]),
   ]);

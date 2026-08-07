@@ -18,12 +18,6 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });
 
-  if (staff.role === "SUPERVISOR") {
-    if (!parsed.data.branchId || parsed.data.branchId !== staff.branchId) {
-      return NextResponse.json({ error: "ผู้ดูแลสาขาตั้งกติกาได้เฉพาะสาขาตนเอง" }, { status: 403 });
-    }
-  }
-
   const rule = await prisma.pointRule.create({
     data: {
       name: parsed.data.name,
