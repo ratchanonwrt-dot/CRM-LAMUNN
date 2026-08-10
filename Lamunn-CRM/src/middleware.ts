@@ -6,8 +6,10 @@ export default withAuth(
     const { pathname } = req.nextUrl;
     const token = req.nextauth.token;
 
-    // /dashboard and /rewards require a customer session.
-    if ((pathname.startsWith("/dashboard") || pathname.startsWith("/rewards")) && token?.userType !== "customer") {
+    // These routes all read session.user.customerId directly without checking
+    // for null, so an unauthenticated request must never reach the page component.
+    const protectedPaths = ["/dashboard", "/rewards", "/history", "/coupons"];
+    if (protectedPaths.some((p) => pathname.startsWith(p)) && token?.userType !== "customer") {
       const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);
@@ -25,5 +27,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/rewards/:path*"],
+  matcher: ["/dashboard/:path*", "/rewards/:path*", "/history/:path*", "/coupons/:path*"],
 };

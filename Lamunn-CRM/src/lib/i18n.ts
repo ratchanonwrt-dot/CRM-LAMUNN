@@ -57,6 +57,7 @@ export const translations = {
     navHome: "หน้าหลัก",
     navRedeem: "แลกรางวัล",
     navHistory: "ประวัติแต้ม",
+    navCoupons: "คูปองของฉัน",
     signOut: "ออกจากระบบ",
 
     currentTierLabel: "ระดับปัจจุบัน",
@@ -100,6 +101,11 @@ export const translations = {
     statusCancelled: "ถูกยกเลิก",
     qrAlt: "QR ยืนยันการแลกรางวัล",
     showQrHint: "โชว์ QR นี้ให้พนักงานหน้าร้านสแกนเพื่อรับของรางวัล",
+
+    myCouponsTitle: "คูปองของฉัน",
+    noCoupons: "ยังไม่มีคูปอง",
+    viewCoupon: "ดูคูปอง",
+    freeGiftLabel: "ได้รับฟรี",
   },
   en: {
     appTitle: "Lamunn CRM",
@@ -155,6 +161,7 @@ export const translations = {
     navHome: "Home",
     navRedeem: "Redeem Rewards",
     navHistory: "Points History",
+    navCoupons: "My Coupons",
     signOut: "Sign Out",
 
     currentTierLabel: "Current Tier",
@@ -198,6 +205,11 @@ export const translations = {
     statusCancelled: "Cancelled",
     qrAlt: "Redemption confirmation QR",
     showQrHint: "Show this QR to staff at the branch to collect your reward",
+
+    myCouponsTitle: "My Coupons",
+    noCoupons: "No coupons yet",
+    viewCoupon: "View Coupon",
+    freeGiftLabel: "Free gift",
   },
 } as const satisfies Record<Locale, Record<string, string>>;
 

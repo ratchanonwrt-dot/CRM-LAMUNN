@@ -21,6 +21,7 @@ export const FEATURES = [
   { key: "tiers", label: "ระดับสมาชิก" },
   { key: "pointRules", label: "กติกาสะสมแต้ม" },
   { key: "rewards", label: "รางวัล" },
+  { key: "luckyDraw", label: "Lucky Draw" },
   { key: "scanRedemption", label: "สแกน QR ยืนยันแลกรางวัล" },
   { key: "redemptions", label: "ยืนยันแลกรางวัล" },
   { key: "settings", label: "ตั้งค่าหน้าตาแอป" },
@@ -36,6 +37,7 @@ export type FeatureKey = (typeof FEATURES)[number]["key"];
 const DEFAULT_PERMISSIONS: Record<StaffRole, FeatureKey[]> = {
   SUPER_ADMIN: FEATURES.map((f) => f.key),
   SUPERVISOR: ["overview", "reports", "enterPoints", "customerAnalytics", "pointRules", "scanRedemption", "redemptions", "staff", "customers"],
+  // luckyDraw not included by default for SUPERVISOR/STAFF — SUPER_ADMIN can flip it on via /admin/role-permissions
   STAFF: ["overview", "reports", "enterPoints", "scanRedemption", "redemptions"],
   MARKETING: FEATURES.map((f) => f.key), // full parity with SUPER_ADMIN, per earlier request
 };
