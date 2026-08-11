@@ -5,7 +5,7 @@ import { requirePageRole } from "@/lib/requirePageRole";
 
 export default async function AdminRewardsPage() {
   await requirePageRole("rewards");
-  const rewards = await prisma.reward.findMany({ orderBy: { createdAt: "desc" } });
+  const rewards = await prisma.reward.findMany({ where: { kind: "REWARD" }, orderBy: { createdAt: "desc" } });
 
   return (
     <div>
@@ -28,7 +28,7 @@ export default async function AdminRewardsPage() {
           </thead>
           <tbody>
             {rewards.map((r) => (
-              <RewardRow key={r.id} reward={{ ...r, discountMaxAmount: r.discountMaxAmount === null ? null : Number(r.discountMaxAmount) }} />
+              <RewardRow key={r.id} reward={r} />
             ))}
           </tbody>
         </table>

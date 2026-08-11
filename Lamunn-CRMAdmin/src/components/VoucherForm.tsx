@@ -42,7 +42,7 @@ export default function VoucherForm({ rewards }: { rewards: RewardOption[] }) {
   if (rewards.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-400">
-        ยังไม่มีรางวัลในระบบ — ไปเพิ่มรางวัลที่หน้า &quot;รางวัล&quot; ก่อน แล้วค่อยกลับมาออกวอเชอร์ที่นี่
+ยังไม่มีวอเชอร์ในระบบ — เพิ่มวอเชอร์ที่แบบฟอร์มด้านบนก่อน แล้วค่อยกลับมาแจกที่นี่
       </div>
     );
   }

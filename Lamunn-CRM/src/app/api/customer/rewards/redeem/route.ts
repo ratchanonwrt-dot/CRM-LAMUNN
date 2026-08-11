@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
         tx.customer.findUnique({ where: { id: customerId } }),
       ]);
 
-      if (!reward || !reward.isActive) throw new Error("ไม่พบรางวัลนี้");
+      if (!reward || !reward.isActive || reward.kind !== "REWARD" || reward.pointsCost === null) throw new Error("ไม่พบรางวัลนี้");
       if (reward.stock !== null && reward.stock <= 0) throw new Error("รางวัลนี้หมดแล้ว");
       if (!customer || customer.pointsBalance < reward.pointsCost) throw new Error("แต้มสะสมไม่เพียงพอ");
 

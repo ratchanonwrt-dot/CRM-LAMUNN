@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   }
 
   const reward = await prisma.reward.findUnique({ where: { id: parsed.data.rewardId } });
-  if (!reward || !reward.isActive) return NextResponse.json({ error: "ไม่พบรางวัลนี้" }, { status: 404 });
+  if (!reward || !reward.isActive || reward.kind !== "VOUCHER") return NextResponse.json({ error: "ไม่พบวอเชอร์นี้" }, { status: 404 });
   if (reward.stock !== null && reward.stock <= 0) return NextResponse.json({ error: "รางวัลนี้หมดแล้ว" }, { status: 400 });
 
   let expiresAt: Date | null = null;

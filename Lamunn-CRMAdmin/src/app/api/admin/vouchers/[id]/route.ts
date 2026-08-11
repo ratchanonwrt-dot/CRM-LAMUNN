@@ -7,46 +7,47 @@ const schema = z.object({
   isActive: z.boolean().optional(),
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  pointsCost: z.coerce.number().int().positive().optional(),
   stock: z.coerce.number().int().min(0).nullable().optional(),
   imageUrl: z.string().url().nullable().optional(),
+  discountPercent: z.coerce.number().int().min(1).max(100).nullable().optional(),
+  discountMaxAmount: z.coerce.number().min(0).nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const staff = await requireStaff(["SUPER_ADMIN", "MARKETING"]);
+  const staff = await requireStaff(["SUPER_ADMIN", "SUPERVISOR", "MARKETING"]);
   if (!staff) return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
-  const reward = await prisma.reward.update({ where: { id: params.id }, data: parsed.data });
+  const voucher = await prisma.reward.update({ where: { id: params.id, kind: "VOUCHER" }, data: parsed.data });
 
   await logAudit({
     staffId: staff.staffId,
     staffName: staff.staffName,
     staffRole: staff.role,
     action: "UPDATE",
-    entityType: "Reward",
-    entityId: reward.id,
-    summary: `แก้ไขรางวัล "${reward.name}"`,
+    entityType: "Voucher",
+    entityId: voucher.id,
+    summary: `แก้ไขวอเชอร์ "${voucher.name}"`,
     changes: parsed.data,
   });
 
-  return NextResponse.json({ ok: true, reward });
+  return NextResponse.json({ ok: true, voucher });
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const staff = await requireStaff(["SUPER_ADMIN", "MARKETING"]);
+  const staff = await requireStaff(["SUPER_ADMIN", "SUPERVISOR", "MARKETING"]);
   if (!staff) return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
 
   const existing = await prisma.reward.findUnique({ where: { id: params.id } });
 
   try {
-    await prisma.reward.delete({ where: { id: params.id } });
+    await prisma.reward.delete({ where: { id: params.id, kind: "VOUCHER" } });
   } catch {
     return NextResponse.json(
-      { error: "ลบไม่ได้เพราะมีลูกค้าแลกรางวัลนี้ไปแล้ว ปิดใช้งานแทนได้" },
+      { error: "ลบไม่ได้เพราะมีลูกค้าได้รับวอเชอร์นี้ไปแล้ว ปิดใช้งานแทนได้" },
       { status: 409 }
     );
   }
@@ -56,9 +57,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     staffName: staff.staffName,
     staffRole: staff.role,
     action: "DELETE",
-    entityType: "Reward",
+    entityType: "Voucher",
     entityId: params.id,
-    summary: `ลบรางวัล "${existing?.name ?? params.id}"`,
+    summary: `ลบวอเชอร์ "${existing?.name ?? params.id}"`,
   });
 
   return NextResponse.json({ ok: true });

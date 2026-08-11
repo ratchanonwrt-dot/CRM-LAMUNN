@@ -265,18 +265,24 @@ model PointTransaction {
   @@map("point_transactions")
 }
 
+enum RewardKind {
+  REWARD // shown in the customer app's catalog, self-service redeem with points
+  VOUCHER // admin-only: keyed to a specific customer by phone from /admin/vouchers, never self-service
+}
+
 model Reward {
-  id                 String   @id @default(cuid())
-  name               String
-  description        String?
-  pointsCost         Int
-  stock              Int? // null = unlimited
-  imageUrl           String?
-  discountPercent    Int? // e.g. 50 = "ลด 50%" — set only for discount-style vouchers
-  discountMaxAmount  Decimal? @db.Decimal(10, 2) // e.g. 300 = "สูงสุด 300 บาท" — caps the discount above
-  isActive           Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                String     @id @default(cuid())
+  kind              RewardKind @default(REWARD)
+  name              String
+  description       String?
+  pointsCost        Int? // required for kind=REWARD, irrelevant (null) for kind=VOUCHER
+  stock             Int? // null = unlimited
+  imageUrl          String?
+  discountPercent   Int? // e.g. 50 = "ลด 50%" — set only for discount-style vouchers
+  discountMaxAmount Decimal?   @db.Decimal(10, 2) // e.g. 300 = "สูงสุด 300 บาท" — caps the discount above
+  isActive          Boolean    @default(true)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   redemptions Redemption[]
 
