@@ -52,6 +52,9 @@ export const translations = {
     pdpaConsentText:
       "ข้าพเจ้ายินยอมให้ Lamunn เก็บและใช้ข้อมูลส่วนบุคคลของข้าพเจ้า (ชื่อ เบอร์โทรศัพท์ วันเกิด เพศ และประวัติการซื้อ) เพื่อพัฒนาระบบการขายและบริการให้มีประสิทธิภาพมากยิ่งขึ้น ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562",
     pdpaConsentRequiredError: "กรุณายอมรับเงื่อนไขการใช้ข้อมูลก่อนสมัครสมาชิก",
+    tosConsentText:
+      "ข้าพเจ้ายอมรับข้อกำหนดและเงื่อนไขการใช้บริการระบบสมาชิก Lamunn: แต้มสะสมและสิทธิประโยชน์ไม่มีมูลค่าเป็นเงินสดและไม่สามารถโอนให้ผู้อื่นได้ บริษัทขอสงวนสิทธิ์เปลี่ยนแปลง ระงับ หรือยกเลิกโปรโมชั่น กติกาสะสมแต้ม หรือของรางวัลได้โดยไม่ต้องแจ้งล่วงหน้า และขอสงวนสิทธิ์ระงับหรือยกเลิกสมาชิกภาพหากพบการทุจริตหรือใช้งานผิดวัตถุประสงค์ บริษัทจะไม่นำข้อมูลของท่านไปเปิดเผย จำหน่าย หรือเผยแพร่ต่อบุคคลภายนอกโดยไม่ได้รับความยินยอม เว้นแต่กรณีที่กฎหมายกำหนด",
+    tosConsentRequiredError: "กรุณายอมรับข้อกำหนดและเงื่อนไขการใช้บริการก่อนสมัครสมาชิก",
 
     navMyPoints: "แต้มของฉัน",
     navHome: "หน้าหลัก",
@@ -159,6 +162,9 @@ export const translations = {
     pdpaConsentText:
       "I consent to Lamunn collecting and using my personal data (name, phone number, date of birth, gender, and purchase history) to improve its sales system and services, in accordance with the Personal Data Protection Act B.E. 2562.",
     pdpaConsentRequiredError: "Please accept the data usage consent before signing up",
+    tosConsentText:
+      "I agree to the Terms of Service for the Lamunn membership program: accumulated points and benefits have no cash value and cannot be transferred to another person. The company reserves the right to change, suspend, or end promotions, point-earning rules, or rewards at any time without prior notice, and may suspend or terminate membership if fraud or misuse is detected. The company will not disclose, sell, or publish your data to any third party without consent, except where required by law.",
+    tosConsentRequiredError: "Please accept the Terms of Service before signing up",
 
     navMyPoints: "My Points",
     navHome: "Home",

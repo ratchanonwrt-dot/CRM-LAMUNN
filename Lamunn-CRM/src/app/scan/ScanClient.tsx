@@ -24,10 +24,11 @@ export default function ScanClient({ logoUrl }: { logoUrl: string }) {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [gender, setGender] = useState("");
   const [consented, setConsented] = useState(false);
+  const [tosConsented, setTosConsented] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [state, setState] = useState<ScanState>({ status: "form" });
 
-  async function submit(extra?: { name: string; dateOfBirth: string; gender: string; consented: boolean }) {
+  async function submit(extra?: { name: string; dateOfBirth: string; gender: string; consented: boolean; tosConsented: boolean }) {
     setStep("submitting");
     const res = await fetch("/api/points/scan", {
       method: "POST",
@@ -57,8 +58,12 @@ export default function ScanClient({ logoUrl }: { logoUrl: string }) {
       setProfileError(t("pdpaConsentRequiredError"));
       return;
     }
+    if (!tosConsented) {
+      setProfileError(t("tosConsentRequiredError"));
+      return;
+    }
     setProfileError(null);
-    submit({ name, dateOfBirth, gender, consented });
+    submit({ name, dateOfBirth, gender, consented, tosConsented });
   }
 
   return (
@@ -137,6 +142,16 @@ export default function ScanClient({ logoUrl }: { logoUrl: string }) {
               className="mt-0.5 shrink-0"
             />
             {t("pdpaConsentText")}
+          </label>
+
+          <label className="flex items-start gap-2 text-left text-xs text-gray-500">
+            <input
+              type="checkbox"
+              checked={tosConsented}
+              onChange={(e) => setTosConsented(e.target.checked)}
+              className="mt-0.5 shrink-0"
+            />
+            {t("tosConsentText")}
           </label>
 
           {profileError && <p className="text-sm text-red-600">{profileError}</p>}

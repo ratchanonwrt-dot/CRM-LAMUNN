@@ -15,6 +15,7 @@ export default function OnboardingPage() {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [gender, setGender] = useState("");
   const [consented, setConsented] = useState(false);
+  const [tosConsented, setTosConsented] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,12 +25,16 @@ export default function OnboardingPage() {
       setError(t("pdpaConsentRequiredError"));
       return;
     }
+    if (!tosConsented) {
+      setError(t("tosConsentRequiredError"));
+      return;
+    }
     setError(null);
     setLoading(true);
     const res = await fetch("/api/customer/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, dateOfBirth, gender: gender || undefined, consented }),
+      body: JSON.stringify({ name, dateOfBirth, gender: gender || undefined, consented, tosConsented }),
     });
     const data = await res.json();
     setLoading(false);
@@ -98,6 +103,16 @@ export default function OnboardingPage() {
             className="mt-0.5 shrink-0"
           />
           {t("pdpaConsentText")}
+        </label>
+
+        <label className="flex items-start gap-2 text-xs text-gray-500">
+          <input
+            type="checkbox"
+            checked={tosConsented}
+            onChange={(e) => setTosConsented(e.target.checked)}
+            className="mt-0.5 shrink-0"
+          />
+          {t("tosConsentText")}
         </label>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
