@@ -4,6 +4,7 @@ import { requirePageRole } from "@/lib/requirePageRole";
 import EnterPointsForm from "@/components/EnterPointsForm";
 
 const ENTER_POINTS_NOTE_PREFIX = "กรอกคะแนนโดยพนักงาน";
+const ENTER_AMOUNT_NOTE_PREFIX = "กรอกยอดซื้อโดยพนักงาน (กรอกคะแนน)";
 
 export default async function EnterPointsPage({ searchParams }: { searchParams: { branchId?: string } }) {
   const user = await requirePageRole("enterPoints");
@@ -17,8 +18,10 @@ export default async function EnterPointsPage({ searchParams }: { searchParams: 
     prisma.branch.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
     prisma.pointTransaction.findMany({
       where: {
-        type: "ADJUST",
-        note: { startsWith: ENTER_POINTS_NOTE_PREFIX },
+        OR: [
+          { type: "ADJUST", note: { startsWith: ENTER_POINTS_NOTE_PREFIX } },
+          { type: "EARN", note: { startsWith: ENTER_AMOUNT_NOTE_PREFIX } },
+        ],
         ...(effectiveBranchId ? { branchId: effectiveBranchId } : {}),
       },
       include: { customer: true, branch: true, processedByStaff: true },
@@ -30,7 +33,7 @@ export default async function EnterPointsPage({ searchParams }: { searchParams: 
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-1 text-xl font-bold text-gray-800">กรอกคะแนน</h1>
-      <p className="mb-6 text-sm text-gray-500">กรอกเบอร์โทรลูกค้า จำนวนแต้ม และสาขา แต้มจะเข้าระบบทันที (ใช้สำหรับลูกค้าที่เป็นสมาชิกอยู่แล้วเท่านั้น)</p>
+      <p className="mb-6 text-sm text-gray-500">กรอกเบอร์โทรลูกค้าแล้วเลือกได้ว่าจะกรอกแต้มตรงๆ หรือกรอกยอดซื้อให้ระบบแปลงเป็นแต้มเอง แต้มจะเข้าระบบทันที (ใช้สำหรับลูกค้าที่เป็นสมาชิกอยู่แล้วเท่านั้น)</p>
       <EnterPointsForm
         branches={branches.map((b) => ({ id: b.id, name: b.name }))}
         defaultBranchId={user.branchId ?? ""}
@@ -62,13 +65,14 @@ export default async function EnterPointsPage({ searchParams }: { searchParams: 
               <th className="px-4 py-2">พนักงานที่กรอก</th>
               <th className="px-4 py-2">เบอร์ลูกค้า</th>
               <th className="px-4 py-2">สาขา</th>
+              <th className="px-4 py-2">ยอดซื้อ</th>
               <th className="px-4 py-2">แต้ม</th>
             </tr>
           </thead>
           <tbody>
             {log.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-gray-400">
                   ยังไม่มีรายการ
                 </td>
               </tr>
@@ -79,6 +83,7 @@ export default async function EnterPointsPage({ searchParams }: { searchParams: 
                   <td className="px-4 py-2">{tx.processedByStaff?.name ?? "-"}</td>
                   <td className="px-4 py-2 text-gray-500">{tx.customer.phone ?? "-"}</td>
                   <td className="px-4 py-2 text-gray-500">{tx.branch?.code ?? "-"}</td>
+                  <td className="px-4 py-2 text-gray-500">{tx.amount ? `${Number(tx.amount).toLocaleString("th-TH")} บาท` : "-"}</td>
                   <td className="px-4 py-2 font-medium text-brand-700">+{tx.points}</td>
                 </tr>
               ))
