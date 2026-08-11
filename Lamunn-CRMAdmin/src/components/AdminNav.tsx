@@ -37,51 +37,70 @@ const roleLabel: Record<string, string> = {
   MARKETING: "การตลาด (Marketing)",
 };
 
+// Section headers give a clear visual split between the retail/storefront
+// membership system (branch-facing) and the separate B2B/Catering system, per
+// request — the two must never look like one flat, undifferentiated list.
+const SECTIONS = [
+  { key: "retail", label: "ระบบสมาชิกหน้าร้าน" },
+  { key: "b2b", label: "B2B / Catering" },
+  { key: "system", label: "ระบบ" },
+] as const;
+type SectionKey = (typeof SECTIONS)[number]["key"];
+
 // Order here is the exact left-nav order requested. `feature` is null for links
 // gated outside the dynamic permission system (role-permissions itself is
 // SUPER_ADMIN-only and hardcoded, so a role can never edit its own access away).
-const allLinks: { href: string; label: string; icon: typeof LayoutDashboard; color: string; feature: FeatureKey | null; superAdminOnly?: boolean }[] = [
-  { href: "/admin", label: "ภาพรวม", icon: LayoutDashboard, color: "bg-sky-100 text-sky-400", feature: "overview" },
-  { href: "/admin/reports", label: "รายงาน", icon: BarChart3, color: "bg-cyan-100 text-cyan-400", feature: "reports" },
-  { href: "/admin/enter-points", label: "กรอกคะแนน", icon: Coins, color: "bg-yellow-100 text-yellow-500", feature: "enterPoints" },
-  { href: "/admin/branches", label: "สาขา", icon: Building2, color: "bg-violet-100 text-violet-400", feature: "branches" },
-  { href: "/admin/customer-analytics", label: "Dashboard ลูกค้า", icon: PieChart, color: "bg-lime-100 text-lime-500", feature: "customerAnalytics" },
-  { href: "/admin/tiers", label: "ระดับสมาชิก", icon: Award, color: "bg-fuchsia-100 text-fuchsia-400", feature: "tiers" },
-  { href: "/admin/point-rules", label: "กติกาสะสมแต้ม", icon: Percent, color: "bg-orange-100 text-orange-400", feature: "pointRules" },
-  { href: "/admin/rewards", label: "รางวัล", icon: Gift, color: "bg-emerald-100 text-emerald-400", feature: "rewards" },
-  { href: "/admin/vouchers", label: "Voucher", icon: Ticket, color: "bg-amber-100 text-amber-500", feature: "vouchers" },
-  { href: "/admin/scan-redemption", label: "สแกน QR ยืนยันแลกรางวัล", icon: Camera, color: "bg-lime-100 text-lime-500", feature: "scanRedemption" },
-  { href: "/admin/redemptions", label: "ยืนยันแลกรางวัล", icon: QrCode, color: "bg-teal-100 text-teal-400", feature: "redemptions" },
-  { href: "/admin/settings", label: "ตั้งค่าหน้าตาแอป", icon: Palette, color: "bg-rose-100 text-rose-400", feature: "settings" },
-  { href: "/admin/audit-log", label: "ประวัติการแก้ไข", icon: History, color: "bg-slate-100 text-slate-400", feature: "auditLog" },
-  { href: "/admin/staff", label: "พนักงาน", icon: Users, color: "bg-indigo-100 text-indigo-400", feature: "staff" },
-  { href: "/admin/customers", label: "ลูกค้า", icon: UserRound, color: "bg-pink-100 text-pink-400", feature: "customers" },
-  { href: "/admin/b2b", label: "ลูกค้า B2B/Catering", icon: Briefcase, color: "bg-stone-100 text-stone-500", feature: "b2bCustomers" },
-  { href: "/admin/b2b/tiers", label: "ระดับ B2B/Catering", icon: Layers, color: "bg-stone-100 text-stone-500", feature: "b2bTiers" },
-  { href: "/admin/role-permissions", label: "ตั้งค่าสิทธิ", icon: ShieldCheck, color: "bg-red-100 text-red-500", feature: null, superAdminOnly: true },
+const allLinks: { href: string; label: string; icon: typeof LayoutDashboard; color: string; feature: FeatureKey | null; section: SectionKey; superAdminOnly?: boolean }[] = [
+  { href: "/admin", label: "ภาพรวม", icon: LayoutDashboard, color: "bg-sky-100 text-sky-400", feature: "overview", section: "retail" },
+  { href: "/admin/reports", label: "รายงาน", icon: BarChart3, color: "bg-cyan-100 text-cyan-400", feature: "reports", section: "retail" },
+  { href: "/admin/enter-points", label: "กรอกคะแนน", icon: Coins, color: "bg-yellow-100 text-yellow-500", feature: "enterPoints", section: "retail" },
+  { href: "/admin/branches", label: "สาขา", icon: Building2, color: "bg-violet-100 text-violet-400", feature: "branches", section: "retail" },
+  { href: "/admin/customer-analytics", label: "Dashboard ลูกค้า", icon: PieChart, color: "bg-lime-100 text-lime-500", feature: "customerAnalytics", section: "retail" },
+  { href: "/admin/tiers", label: "ระดับสมาชิก", icon: Award, color: "bg-fuchsia-100 text-fuchsia-400", feature: "tiers", section: "retail" },
+  { href: "/admin/point-rules", label: "กติกาสะสมแต้ม", icon: Percent, color: "bg-orange-100 text-orange-400", feature: "pointRules", section: "retail" },
+  { href: "/admin/rewards", label: "รางวัล", icon: Gift, color: "bg-emerald-100 text-emerald-400", feature: "rewards", section: "retail" },
+  { href: "/admin/vouchers", label: "Voucher", icon: Ticket, color: "bg-amber-100 text-amber-500", feature: "vouchers", section: "retail" },
+  { href: "/admin/scan-redemption", label: "สแกน QR ยืนยันแลกรางวัล", icon: Camera, color: "bg-lime-100 text-lime-500", feature: "scanRedemption", section: "retail" },
+  { href: "/admin/redemptions", label: "ยืนยันแลกรางวัล", icon: QrCode, color: "bg-teal-100 text-teal-400", feature: "redemptions", section: "retail" },
+  { href: "/admin/customers", label: "ลูกค้า", icon: UserRound, color: "bg-pink-100 text-pink-400", feature: "customers", section: "retail" },
+  { href: "/admin/b2b", label: "ลูกค้า B2B/Catering", icon: Briefcase, color: "bg-stone-100 text-stone-500", feature: "b2bCustomers", section: "b2b" },
+  { href: "/admin/b2b/tiers", label: "ระดับ B2B/Catering", icon: Layers, color: "bg-stone-100 text-stone-500", feature: "b2bTiers", section: "b2b" },
+  { href: "/admin/settings", label: "ตั้งค่าหน้าตาแอป", icon: Palette, color: "bg-rose-100 text-rose-400", feature: "settings", section: "system" },
+  { href: "/admin/audit-log", label: "ประวัติการแก้ไข", icon: History, color: "bg-slate-100 text-slate-400", feature: "auditLog", section: "system" },
+  { href: "/admin/staff", label: "พนักงาน", icon: Users, color: "bg-indigo-100 text-indigo-400", feature: "staff", section: "system" },
+  { href: "/admin/role-permissions", label: "ตั้งค่าสิทธิ", icon: ShieldCheck, color: "bg-red-100 text-red-500", feature: null, section: "system", superAdminOnly: true },
 ];
 
 function NavLinks({ links, pathname, onNavigate }: { links: typeof allLinks; pathname: string; onNavigate?: () => void }) {
   return (
     <nav className="flex flex-1 flex-col gap-1">
-      {links.map((link) => {
-        const Icon = link.icon;
-        const active = pathname === link.href;
+      {SECTIONS.map((sectionDef) => {
+        const sectionLinks = links.filter((l) => l.section === sectionDef.key);
+        if (sectionLinks.length === 0) return null;
         return (
-          <Link
-            key={link.href}
-            href={link.href}
-            onClick={onNavigate}
-            className={clsx(
-              "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition-colors",
-              active ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-50"
-            )}
-          >
-            <span className={clsx("flex h-7 w-7 shrink-0 items-center justify-center rounded-full", link.color)}>
-              <Icon size={15} strokeWidth={2.4} />
-            </span>
-            {link.label}
-          </Link>
+          <div key={sectionDef.key} className="mb-2">
+            <p className="mb-1 mt-3 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 first:mt-0">{sectionDef.label}</p>
+            {sectionLinks.map((link) => {
+              const Icon = link.icon;
+              const active = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={onNavigate}
+                  className={clsx(
+                    "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition-colors",
+                    active ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-50"
+                  )}
+                >
+                  <span className={clsx("flex h-7 w-7 shrink-0 items-center justify-center rounded-full", link.color)}>
+                    <Icon size={15} strokeWidth={2.4} />
+                  </span>
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
         );
       })}
     </nav>
