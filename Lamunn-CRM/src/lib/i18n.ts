@@ -71,7 +71,6 @@ export const translations = {
     greetingMorning: "สวัสดีตอนเช้า",
     greetingAfternoon: "สวัสดีตอนบ่าย",
     greetingEvening: "สวัสดีตอนเย็น",
-    welcomeSuffix: "ยินดีต้อนรับสู่ Lamunn",
     pointsRemainingLabel: "คะแนนคงเหลือ",
     expiresOnPrefix: "{points} แต้ม หมดอายุภายใน {date}",
 
@@ -179,7 +178,6 @@ export const translations = {
     greetingMorning: "Good morning",
     greetingAfternoon: "Good afternoon",
     greetingEvening: "Good evening",
-    welcomeSuffix: "welcome to Lamunn",
     pointsRemainingLabel: "Points remaining",
     expiresOnPrefix: "{points} pts expire by {date}",
 

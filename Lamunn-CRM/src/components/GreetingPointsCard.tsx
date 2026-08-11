@@ -34,7 +34,7 @@ export default function GreetingPointsCard({
   return (
     <div className="mx-4 mt-5 rounded-2xl bg-white p-5 shadow-md">
       <p className="text-sm text-gray-500">
-        {greetingEmoji[greetingKey]} {greetingText} {t("welcomeSuffix")}
+        {greetingEmoji[greetingKey]} {greetingText}
       </p>
 
       <div className="mt-3 flex items-center gap-2.5">
