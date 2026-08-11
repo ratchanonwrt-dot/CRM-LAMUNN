@@ -2,6 +2,7 @@ import { prisma } from "@lamunn/db";
 import { format } from "date-fns";
 import { requirePageRole } from "@/lib/requirePageRole";
 import EnterPointsForm from "@/components/EnterPointsForm";
+import DeleteButton from "@/components/DeleteButton";
 
 const ENTER_POINTS_NOTE_PREFIX = "กรอกคะแนนโดยพนักงาน";
 const ENTER_AMOUNT_NOTE_PREFIX = "กรอกยอดซื้อโดยพนักงาน (กรอกคะแนน)";
@@ -67,12 +68,13 @@ export default async function EnterPointsPage({ searchParams }: { searchParams: 
               <th className="px-4 py-2">สาขา</th>
               <th className="px-4 py-2">ยอดซื้อ</th>
               <th className="px-4 py-2">แต้ม</th>
+              <th className="px-4 py-2"></th>
             </tr>
           </thead>
           <tbody>
             {log.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-gray-400">
                   ยังไม่มีรายการ
                 </td>
               </tr>
@@ -85,6 +87,12 @@ export default async function EnterPointsPage({ searchParams }: { searchParams: 
                   <td className="px-4 py-2 text-gray-500">{tx.branch?.code ?? "-"}</td>
                   <td className="px-4 py-2 text-gray-500">{tx.amount ? `${Number(tx.amount).toLocaleString("th-TH")} บาท` : "-"}</td>
                   <td className="px-4 py-2 font-medium text-brand-700">+{tx.points}</td>
+                  <td className="px-4 py-2">
+                    <DeleteButton
+                      endpoint={`/api/admin/enter-points/${tx.id}`}
+                      confirmMessage={`ลบรายการนี้ใช่ไหม? ระบบจะหักแต้ม ${tx.points} แต้มออกจากลูกค้า ${tx.customer.phone ?? ""} คืน`}
+                    />
+                  </td>
                 </tr>
               ))
             )}
