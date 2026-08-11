@@ -28,7 +28,7 @@ export default async function AdminRewardsPage() {
           </thead>
           <tbody>
             {rewards.map((r) => (
-              <RewardRow key={r.id} reward={r} />
+              <RewardRow key={r.id} reward={{ ...r, discountMaxAmount: r.discountMaxAmount === null ? null : Number(r.discountMaxAmount) }} />
             ))}
           </tbody>
         </table>

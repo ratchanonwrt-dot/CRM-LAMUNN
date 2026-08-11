@@ -11,6 +11,7 @@ import { requireStaff } from "@/lib/requireStaff";
 const schema = z.object({
   phone: z.string().min(1),
   rewardId: z.string().min(1),
+  expiresAt: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -30,6 +31,14 @@ export async function POST(req: NextRequest) {
   if (!reward || !reward.isActive) return NextResponse.json({ error: "ไม่พบรางวัลนี้" }, { status: 404 });
   if (reward.stock !== null && reward.stock <= 0) return NextResponse.json({ error: "รางวัลนี้หมดแล้ว" }, { status: 400 });
 
+  let expiresAt: Date | null = null;
+  if (parsed.data.expiresAt) {
+    expiresAt = new Date(parsed.data.expiresAt);
+    if (Number.isNaN(expiresAt.getTime())) return NextResponse.json({ error: "วันหมดอายุไม่ถูกต้อง" }, { status: 400 });
+    expiresAt.setHours(23, 59, 59, 999); // valid through the end of the chosen day
+    if (expiresAt < new Date()) return NextResponse.json({ error: "วันหมดอายุต้องเป็นวันในอนาคต" }, { status: 400 });
+  }
+
   const redemption = await prisma.$transaction(async (tx) => {
     if (reward.stock !== null) {
       await tx.reward.update({ where: { id: reward.id }, data: { stock: { decrement: 1 } } });
@@ -40,6 +49,7 @@ export async function POST(req: NextRequest) {
         rewardId: reward.id,
         pointsSpent: 0,
         status: "PENDING",
+        expiresAt,
       },
     });
   });

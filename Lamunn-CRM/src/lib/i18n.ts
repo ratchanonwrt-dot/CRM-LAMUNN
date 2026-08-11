@@ -106,6 +106,10 @@ export const translations = {
     noCoupons: "ยังไม่มีคูปอง",
     viewCoupon: "ดูคูปอง",
     freeGiftLabel: "ได้รับฟรี",
+    discountBadge: "ส่วนลด {percent}%",
+    discountMaxNote: "สูงสุด {amount} บาท",
+    voucherExpiresOn: "ใช้ได้ถึง {date}",
+    voucherExpired: "หมดอายุแล้ว",
   },
   en: {
     appTitle: "Lamunn CRM",
@@ -210,6 +214,10 @@ export const translations = {
     noCoupons: "No coupons yet",
     viewCoupon: "View Coupon",
     freeGiftLabel: "Free gift",
+    discountBadge: "{percent}% off",
+    discountMaxNote: "up to ฿{amount}",
+    voucherExpiresOn: "Valid until {date}",
+    voucherExpired: "Expired",
   },
 } as const satisfies Record<Locale, Record<string, string>>;
 

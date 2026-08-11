@@ -14,6 +14,8 @@ interface Reward {
   pointsCost: number;
   stock: number | null;
   imageUrl: string | null;
+  discountPercent: number | null;
+  discountMaxAmount: number | string | null;
   isActive: boolean;
 }
 
@@ -38,6 +40,8 @@ export default function RewardRow({ reward }: { reward: Reward }) {
   const [pointsCost, setPointsCost] = useState(String(reward.pointsCost));
   const [stock, setStock] = useState(reward.stock === null ? "" : String(reward.stock));
   const [imageUrl, setImageUrl] = useState<string | null>(reward.imageUrl);
+  const [discountPercent, setDiscountPercent] = useState(reward.discountPercent === null ? "" : String(reward.discountPercent));
+  const [discountMaxAmount, setDiscountMaxAmount] = useState(reward.discountMaxAmount === null ? "" : String(reward.discountMaxAmount));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -54,6 +58,8 @@ export default function RewardRow({ reward }: { reward: Reward }) {
         pointsCost,
         stock: stock === "" ? null : stock,
         imageUrl,
+        discountPercent: discountPercent === "" ? null : discountPercent,
+        discountMaxAmount: discountMaxAmount === "" ? null : discountMaxAmount,
       }),
     });
     const data = await res.json();
@@ -79,7 +85,14 @@ export default function RewardRow({ reward }: { reward: Reward }) {
             </div>
           )}
         </td>
-        <td className="px-4 py-2">{reward.name}</td>
+        <td className="px-4 py-2">
+          {reward.name}
+          {reward.discountPercent !== null && (
+            <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+              ลด {reward.discountPercent}%{reward.discountMaxAmount ? ` สูงสุด ${Number(reward.discountMaxAmount).toLocaleString("th-TH")} บ.` : ""}
+            </span>
+          )}
+        </td>
         <td className="px-4 py-2">{reward.pointsCost}</td>
         <td className="px-4 py-2 text-gray-500">{reward.stock === null ? "ไม่จำกัด" : reward.stock}</td>
         <td className="px-4 py-2">
@@ -106,6 +119,25 @@ export default function RewardRow({ reward }: { reward: Reward }) {
                 <input type="number" min="0" placeholder="จำนวนคงเหลือ (ว่าง = ไม่จำกัด)" value={stock} onChange={(e) => setStock(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
               </div>
               <ImageUploadField value={imageUrl} onChange={setImageUrl} />
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  placeholder="ส่วนลด % (ถ้าเป็นวอเชอร์ส่วนลด)"
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(e.target.value)}
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="ลดสูงสุด (บาท)"
+                  value={discountMaxAmount}
+                  onChange={(e) => setDiscountMaxAmount(e.target.value)}
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
               <div>
                 <button type="submit" disabled={loading} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
                   {loading ? "กำลังบันทึก..." : "บันทึก"}

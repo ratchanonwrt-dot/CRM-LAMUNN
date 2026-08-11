@@ -6,11 +6,14 @@ interface RewardOption {
   id: string;
   name: string;
   stock: number | null;
+  discountPercent: number | null;
+  discountMaxAmount: number | null;
 }
 
 export default function VoucherForm({ rewards }: { rewards: RewardOption[] }) {
   const [phone, setPhone] = useState("");
   const [rewardId, setRewardId] = useState(rewards[0]?.id ?? "");
+  const [expiresAt, setExpiresAt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ customerName: string; rewardName: string } | null>(null);
@@ -23,7 +26,7 @@ export default function VoucherForm({ rewards }: { rewards: RewardOption[] }) {
     const res = await fetch("/api/admin/vouchers/grant", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: phone.trim(), rewardId }),
+      body: JSON.stringify({ phone: phone.trim(), rewardId, expiresAt: expiresAt || undefined }),
     });
     const data = await res.json();
     setLoading(false);
@@ -44,6 +47,8 @@ export default function VoucherForm({ rewards }: { rewards: RewardOption[] }) {
     );
   }
 
+  const selectedReward = rewards.find((r) => r.id === rewardId);
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6">
       <div>
@@ -63,10 +68,27 @@ export default function VoucherForm({ rewards }: { rewards: RewardOption[] }) {
           {rewards.map((r) => (
             <option key={r.id} value={r.id}>
               {r.name}
+              {r.discountPercent ? ` — ลด ${r.discountPercent}%${r.discountMaxAmount ? ` สูงสุด ${r.discountMaxAmount.toLocaleString("th-TH")} บ.` : ""}` : ""}
               {r.stock !== null ? ` (เหลือ ${r.stock})` : ""}
             </option>
           ))}
         </select>
+        {selectedReward?.discountPercent ? (
+          <p className="mt-1 text-xs text-amber-600">
+            วอเชอร์ส่วนลด {selectedReward.discountPercent}%
+            {selectedReward.discountMaxAmount ? ` (สูงสุด ${selectedReward.discountMaxAmount.toLocaleString("th-TH")} บาท)` : ""}
+          </p>
+        ) : null}
+      </div>
+      <div>
+        <label className="mb-1 block text-xs text-gray-500">วันหมดอายุ (ไม่บังคับ — ว่าง = ไม่มีวันหมดอายุ)</label>
+        <input
+          type="date"
+          value={expiresAt}
+          onChange={(e) => setExpiresAt(e.target.value)}
+          min={new Date().toISOString().slice(0, 10)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        />
       </div>
 
       <button

@@ -29,30 +29,44 @@ export default async function RedemptionsPage() {
               <th className="px-4 py-2">ลูกค้า</th>
               <th className="px-4 py-2">รางวัล</th>
               <th className="px-4 py-2">แต้ม</th>
+              <th className="px-4 py-2">วันหมดอายุ</th>
               <th className="px-4 py-2"></th>
             </tr>
           </thead>
           <tbody>
             {redemptions.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-gray-400">
                   ไม่มีรายการรอยืนยัน
                 </td>
               </tr>
             )}
-            {redemptions.map((r) => (
-              <tr key={r.id} className="border-t border-gray-100">
-                <td className="px-4 py-2 text-gray-500">{format(r.createdAt, "d MMM yyyy HH:mm")}</td>
-                <td className="px-4 py-2">{r.customer.name ?? r.customer.phone ?? "-"}</td>
-                <td className="px-4 py-2">{r.reward.name}</td>
-                <td className="px-4 py-2">{r.pointsSpent}</td>
-                <td className="px-4 py-2">
-                  <Link href={`/admin/redemptions/${r.id}`} className="rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">
-                    ดู/ยืนยัน
-                  </Link>
-                </td>
-              </tr>
-            ))}
+            {redemptions.map((r) => {
+              const isExpired = r.expiresAt !== null && r.expiresAt < new Date();
+              return (
+                <tr key={r.id} className="border-t border-gray-100">
+                  <td className="px-4 py-2 text-gray-500">{format(r.createdAt, "d MMM yyyy HH:mm")}</td>
+                  <td className="px-4 py-2">{r.customer.name ?? r.customer.phone ?? "-"}</td>
+                  <td className="px-4 py-2">{r.reward.name}</td>
+                  <td className="px-4 py-2">{r.pointsSpent}</td>
+                  <td className="px-4 py-2">
+                    {r.expiresAt ? (
+                      <span className={isExpired ? "font-medium text-red-600" : "text-gray-500"}>
+                        {format(r.expiresAt, "d MMM yyyy")}
+                        {isExpired ? " (หมดอายุ)" : ""}
+                      </span>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    <Link href={`/admin/redemptions/${r.id}`} className="rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">
+                      ดู/ยืนยัน
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

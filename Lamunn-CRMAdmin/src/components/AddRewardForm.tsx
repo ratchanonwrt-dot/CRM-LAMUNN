@@ -12,6 +12,8 @@ export default function AddRewardForm() {
   const [pointsCost, setPointsCost] = useState("100");
   const [stock, setStock] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [discountPercent, setDiscountPercent] = useState("");
+  const [discountMaxAmount, setDiscountMaxAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -22,7 +24,15 @@ export default function AddRewardForm() {
     const res = await fetch("/api/admin/rewards", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, description, pointsCost, stock: stock || undefined, imageUrl: imageUrl || undefined }),
+      body: JSON.stringify({
+        name,
+        description,
+        pointsCost,
+        stock: stock || undefined,
+        imageUrl: imageUrl || undefined,
+        discountPercent: discountPercent || undefined,
+        discountMaxAmount: discountMaxAmount || undefined,
+      }),
     });
     const data = await res.json();
     setLoading(false);
@@ -34,6 +44,8 @@ export default function AddRewardForm() {
     setDescription("");
     setStock("");
     setImageUrl(null);
+    setDiscountPercent("");
+    setDiscountMaxAmount("");
     router.refresh();
   }
 
@@ -50,6 +62,25 @@ export default function AddRewardForm() {
         <input type="number" min="0" placeholder="จำนวนคงเหลือ (ว่าง = ไม่จำกัด)" value={stock} onChange={(e) => setStock(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
       </div>
       <ImageUploadField value={imageUrl} onChange={setImageUrl} />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <input
+          type="number"
+          min="1"
+          max="100"
+          placeholder="ส่วนลด % (ถ้าเป็นวอเชอร์ส่วนลด)"
+          value={discountPercent}
+          onChange={(e) => setDiscountPercent(e.target.value)}
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        />
+        <input
+          type="number"
+          min="0"
+          placeholder="ลดสูงสุด (บาท)"
+          value={discountMaxAmount}
+          onChange={(e) => setDiscountMaxAmount(e.target.value)}
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        />
+      </div>
       <div>
         <button type="submit" disabled={loading} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
           {loading ? "กำลังเพิ่ม..." : "เพิ่มรางวัล"}

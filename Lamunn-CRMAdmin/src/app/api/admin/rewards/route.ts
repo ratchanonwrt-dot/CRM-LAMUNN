@@ -9,6 +9,8 @@ const schema = z.object({
   pointsCost: z.coerce.number().int().positive(),
   stock: z.coerce.number().int().min(0).optional(),
   imageUrl: z.string().url().optional(),
+  discountPercent: z.coerce.number().int().min(1).max(100).optional(),
+  discountMaxAmount: z.coerce.number().min(0).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -26,6 +28,8 @@ export async function POST(req: NextRequest) {
       pointsCost: parsed.data.pointsCost,
       stock: parsed.data.stock ?? null,
       imageUrl: parsed.data.imageUrl,
+      discountPercent: parsed.data.discountPercent ?? null,
+      discountMaxAmount: parsed.data.discountMaxAmount ?? null,
     },
   });
 

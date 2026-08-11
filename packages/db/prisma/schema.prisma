@@ -266,15 +266,17 @@ model PointTransaction {
 }
 
 model Reward {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  pointsCost  Int
-  stock       Int? // null = unlimited
-  imageUrl    String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  name               String
+  description        String?
+  pointsCost         Int
+  stock              Int? // null = unlimited
+  imageUrl           String?
+  discountPercent    Int? // e.g. 50 = "ลด 50%" — set only for discount-style vouchers
+  discountMaxAmount  Decimal? @db.Decimal(10, 2) // e.g. 300 = "สูงสุด 300 บาท" — caps the discount above
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   redemptions Redemption[]
 
@@ -293,6 +295,7 @@ model Redemption {
   branch             Branch?          @relation(fields: [branchId], references: [id])
   fulfilledByStaff   StaffUser?       @relation("FulfilledByStaff", fields: [fulfilledByStaffId], references: [id])
   fulfilledByStaffId String?
+  expiresAt          DateTime? // set only for granted vouchers with a deadline (see /admin/vouchers) — null means no expiry
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 

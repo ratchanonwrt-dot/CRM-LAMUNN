@@ -12,7 +12,15 @@ export default async function VouchersPage() {
       <p className="mb-6 text-sm text-gray-500">
         กรอกเบอร์โทรลูกค้าและเลือกของรางวัล ระบบจะออกวอเชอร์ให้ทันที — ลูกค้ากดดูคูปองที่หน้า &quot;คูปองของฉัน&quot; แล้วเอา QR ไปให้พนักงานหน้าร้านสแกนเพื่อรับของ (ไม่หักแต้ม)
       </p>
-      <VoucherForm rewards={rewards.map((r) => ({ id: r.id, name: r.name, stock: r.stock }))} />
+      <VoucherForm
+        rewards={rewards.map((r) => ({
+          id: r.id,
+          name: r.name,
+          stock: r.stock,
+          discountPercent: r.discountPercent,
+          discountMaxAmount: r.discountMaxAmount === null ? null : Number(r.discountMaxAmount),
+        }))}
+      />
     </div>
   );
 }

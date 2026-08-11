@@ -17,6 +17,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (redemption.status !== "PENDING") {
     return NextResponse.json({ error: "รายการนี้ถูกยืนยันหรือยกเลิกไปแล้ว" }, { status: 409 });
   }
+  if (redemption.expiresAt && redemption.expiresAt < new Date()) {
+    return NextResponse.json({ error: "วอเชอร์นี้หมดอายุแล้ว" }, { status: 409 });
+  }
 
   const updated = await prisma.redemption.update({
     where: { id: params.id },

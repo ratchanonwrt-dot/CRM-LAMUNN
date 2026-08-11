@@ -22,6 +22,8 @@ export default async function RedemptionConfirmPage({ params }: { params: { id: 
 
   if (!redemption) notFound();
 
+  const isExpired = redemption.status === "PENDING" && redemption.expiresAt !== null && redemption.expiresAt < new Date();
+
   return (
     <div className="mx-auto max-w-md">
       <h1 className="mb-6 text-xl font-bold text-gray-800">ยืนยันการแลกรางวัล</h1>
@@ -46,17 +48,17 @@ export default async function RedemptionConfirmPage({ params }: { params: { id: 
             className={
               redemption.status === "COMPLETED"
                 ? "font-semibold text-brand-700"
-                : redemption.status === "CANCELLED"
+                : redemption.status === "CANCELLED" || isExpired
                   ? "font-semibold text-red-600"
                   : "font-semibold text-gray-600"
             }
           >
-            {statusLabel[redemption.status] ?? redemption.status}
+            {isExpired ? "หมดอายุแล้ว" : statusLabel[redemption.status] ?? redemption.status}
             {redemption.branch ? ` · ${redemption.branch.name}` : ""}
           </p>
         </div>
 
-        {redemption.status === "PENDING" && (
+        {redemption.status === "PENDING" && !isExpired && (
           <ConfirmRedemptionButton
             redemptionId={redemption.id}
             branches={needsBranchPicker ? branches.map((b) => ({ id: b.id, name: b.name })) : undefined}
