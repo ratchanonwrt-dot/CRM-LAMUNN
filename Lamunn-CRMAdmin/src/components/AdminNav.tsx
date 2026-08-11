@@ -22,6 +22,8 @@ import {
   History,
   ShieldCheck,
   Ticket,
+  Briefcase,
+  Layers,
   LogOut,
   Menu,
   X,
@@ -54,6 +56,8 @@ const allLinks: { href: string; label: string; icon: typeof LayoutDashboard; col
   { href: "/admin/audit-log", label: "ประวัติการแก้ไข", icon: History, color: "bg-slate-100 text-slate-400", feature: "auditLog" },
   { href: "/admin/staff", label: "พนักงาน", icon: Users, color: "bg-indigo-100 text-indigo-400", feature: "staff" },
   { href: "/admin/customers", label: "ลูกค้า", icon: UserRound, color: "bg-pink-100 text-pink-400", feature: "customers" },
+  { href: "/admin/b2b", label: "ลูกค้า B2B/Catering", icon: Briefcase, color: "bg-stone-100 text-stone-500", feature: "b2bCustomers" },
+  { href: "/admin/b2b/tiers", label: "ระดับ B2B/Catering", icon: Layers, color: "bg-stone-100 text-stone-500", feature: "b2bTiers" },
   { href: "/admin/role-permissions", label: "ตั้งค่าสิทธิ", icon: ShieldCheck, color: "bg-red-100 text-red-500", feature: null, superAdminOnly: true },
 ];
 

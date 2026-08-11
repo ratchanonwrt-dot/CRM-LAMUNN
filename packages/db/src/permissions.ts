@@ -28,6 +28,8 @@ export const FEATURES = [
   { key: "auditLog", label: "ประวัติการแก้ไข" },
   { key: "staff", label: "พนักงาน" },
   { key: "customers", label: "ลูกค้า" },
+  { key: "b2bCustomers", label: "ลูกค้า B2B/Catering" },
+  { key: "b2bTiers", label: "ระดับ B2B/Catering" },
 ] as const;
 
 export type FeatureKey = (typeof FEATURES)[number]["key"];
@@ -37,7 +39,7 @@ export type FeatureKey = (typeof FEATURES)[number]["key"];
 const DEFAULT_PERMISSIONS: Record<StaffRole, FeatureKey[]> = {
   SUPER_ADMIN: FEATURES.map((f) => f.key),
   SUPERVISOR: ["overview", "reports", "enterPoints", "customerAnalytics", "pointRules", "scanRedemption", "redemptions", "staff", "customers"],
-  // vouchers not included by default for SUPERVISOR/STAFF — SUPER_ADMIN can flip it on via /admin/role-permissions
+  // vouchers and b2bCustomers/b2bTiers not included by default for SUPERVISOR/STAFF — SUPER_ADMIN can flip them on via /admin/role-permissions
   STAFF: ["overview", "reports", "enterPoints", "scanRedemption", "redemptions"],
   MARKETING: FEATURES.map((f) => f.key), // full parity with SUPER_ADMIN, per earlier request
 };
