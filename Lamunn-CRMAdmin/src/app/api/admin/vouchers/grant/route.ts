@@ -4,9 +4,10 @@ import { prisma, logAudit } from "@lamunn/db";
 import { requireStaff } from "@/lib/requireStaff";
 
 // Grants a reward for free (no points deducted) to a specific customer by phone —
-// used for lucky-draw winners. Creates a normal PENDING Redemption so the existing
-// customer "My Coupons" view + staff scan-redemption/confirm flow both just work,
-// with pointsSpent: 0 marking it as a free gift rather than a points redemption.
+// used to issue vouchers (lucky-draw prizes, goodwill gestures, etc). Creates a
+// normal PENDING Redemption so the existing customer "My Coupons" view + staff
+// scan-redemption/confirm flow both just work, with pointsSpent: 0 marking it as
+// a free gift rather than a points redemption.
 const schema = z.object({
   phone: z.string().min(1),
   rewardId: z.string().min(1),
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
     action: "CREATE",
     entityType: "Redemption",
     entityId: redemption.id,
-    summary: `แจกคูปอง Lucky Draw "${reward.name}" ให้ ${customer.name ?? customer.phone}`,
+    summary: `ออกวอเชอร์ "${reward.name}" ให้ ${customer.name ?? customer.phone}`,
     changes: { phone: parsed.data.phone, rewardId: reward.id },
   });
 

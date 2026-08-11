@@ -8,7 +8,7 @@ interface RewardOption {
   stock: number | null;
 }
 
-export default function LuckyDrawForm({ rewards }: { rewards: RewardOption[] }) {
+export default function VoucherForm({ rewards }: { rewards: RewardOption[] }) {
   const [phone, setPhone] = useState("");
   const [rewardId, setRewardId] = useState(rewards[0]?.id ?? "");
   const [loading, setLoading] = useState(false);
@@ -20,7 +20,7 @@ export default function LuckyDrawForm({ rewards }: { rewards: RewardOption[] }) 
     setError(null);
     setSuccess(null);
     setLoading(true);
-    const res = await fetch("/api/admin/lucky-draw/grant", {
+    const res = await fetch("/api/admin/vouchers/grant", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: phone.trim(), rewardId }),
@@ -39,7 +39,7 @@ export default function LuckyDrawForm({ rewards }: { rewards: RewardOption[] }) 
   if (rewards.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-400">
-        ยังไม่มีรางวัลในระบบ — ไปเพิ่มรางวัลที่หน้า &quot;รางวัล&quot; ก่อน แล้วค่อยกลับมาแจกที่นี่
+        ยังไม่มีรางวัลในระบบ — ไปเพิ่มรางวัลที่หน้า &quot;รางวัล&quot; ก่อน แล้วค่อยกลับมาออกวอเชอร์ที่นี่
       </div>
     );
   }
@@ -47,7 +47,7 @@ export default function LuckyDrawForm({ rewards }: { rewards: RewardOption[] }) 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6">
       <div>
-        <label className="mb-1 block text-xs text-gray-500">เบอร์โทรผู้โชคดี</label>
+        <label className="mb-1 block text-xs text-gray-500">เบอร์โทรลูกค้า</label>
         <input
           type="tel"
           required
@@ -74,13 +74,13 @@ export default function LuckyDrawForm({ rewards }: { rewards: RewardOption[] }) 
         disabled={loading || !phone.trim() || !rewardId}
         className="rounded-lg bg-brand-600 px-4 py-3 font-medium text-white disabled:opacity-50"
       >
-        {loading ? "กำลังออกคูปอง..." : "แจกคูปอง"}
+        {loading ? "กำลังออกวอเชอร์..." : "ออกวอเชอร์"}
       </button>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {success && (
         <p className="text-sm text-brand-700">
-          แจก &quot;{success.rewardName}&quot; ให้ {success.customerName} สำเร็จ — ลูกค้าจะเห็นคูปองที่หน้า &quot;คูปองของฉัน&quot; ในแอป
+          ออกวอเชอร์ &quot;{success.rewardName}&quot; ให้ {success.customerName} สำเร็จ — ลูกค้าจะเห็นคูปองที่หน้า &quot;คูปองของฉัน&quot; ในแอป
         </p>
       )}
     </form>
