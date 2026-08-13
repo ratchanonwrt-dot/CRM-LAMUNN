@@ -10,6 +10,14 @@ function getGreetingKey(hour: number): "greetingMorning" | "greetingAfternoon" |
   return "greetingEvening";
 }
 
+// Runs server-side on Vercel, whose machines run in UTC — new Date().getHours()
+// would give the wrong greeting for Thai customers, so read the hour in
+// Asia/Bangkok explicitly instead of the server's local time.
+function getBangkokHour(): number {
+  const hourPart = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Bangkok", hour: "numeric", hour12: false }).formatToParts(new Date()).find((p) => p.type === "hour");
+  return hourPart ? Number(hourPart.value) % 24 : new Date().getHours();
+}
+
 const greetingEmoji = {
   greetingMorning: "🌅",
   greetingAfternoon: "☀️",
@@ -28,7 +36,7 @@ export default function GreetingPointsCard({
   expirySummary: { points: number; expiresAt: Date } | null;
 }) {
   const t = (key: Parameters<typeof translate>[1], vars?: Record<string, string | number>) => translate(locale, key, vars);
-  const greetingKey = getGreetingKey(new Date().getHours());
+  const greetingKey = getGreetingKey(getBangkokHour());
   const greetingText = resolveText(settings, locale, greetingKey);
 
   return (
