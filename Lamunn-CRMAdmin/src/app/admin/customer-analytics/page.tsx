@@ -36,7 +36,7 @@ export default async function CustomerAnalyticsPage() {
       select: { id: true, name: true, phone: true, gender: true, dateOfBirth: true, createdAt: true, pointsBalance: true, lifetimePoints: true },
     }),
     prisma.pointTransaction.groupBy({ by: ["customerId"], where: { type: "EARN" }, _max: { createdAt: true } }),
-    prisma.redemption.groupBy({ by: ["rewardId"], _count: true }),
+    prisma.redemption.groupBy({ by: ["rewardName"], _count: true }),
   ]);
 
   const now = new Date();
@@ -102,13 +102,10 @@ export default async function CustomerAnalyticsPage() {
     .map((c) => ({ label: c.name || c.phone || "-", value: c.lifetimePoints }));
 
   // ---- Top rewards ----
-  const rewardIds = redemptionStats.map((r) => r.rewardId);
-  const rewards = rewardIds.length > 0 ? await prisma.reward.findMany({ where: { id: { in: rewardIds } } }) : [];
-  const rewardNameById = new Map(rewards.map((r) => [r.id, r.name]));
   const topRewards = [...redemptionStats]
     .sort((a, b) => b._count - a._count)
     .slice(0, 10)
-    .map((r) => ({ label: rewardNameById.get(r.rewardId) ?? "-", value: r._count }));
+    .map((r) => ({ label: r.rewardName, value: r._count }));
 
   return (
     <CustomerAnalyticsDashboard

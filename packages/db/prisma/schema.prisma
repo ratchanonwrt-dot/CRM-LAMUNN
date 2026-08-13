@@ -295,8 +295,10 @@ model Redemption {
   id                 String           @id @default(cuid())
   customerId         String
   customer           Customer         @relation(fields: [customerId], references: [id])
-  rewardId           String
-  reward             Reward           @relation(fields: [rewardId], references: [id])
+  rewardId           String?
+  reward             Reward?          @relation(fields: [rewardId], references: [id], onDelete: SetNull)
+  rewardName         String // snapshot of Reward.name at redemption time, so history/coupons still
+  // read correctly after the catalog reward itself is deleted (rewardId goes null, this doesn't)
   pointsSpent        Int
   status             RedemptionStatus @default(PENDING)
   branchId           String?

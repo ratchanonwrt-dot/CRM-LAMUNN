@@ -56,16 +56,16 @@ export default async function CouponsPage() {
             return (
               <li key={r.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <div className="flex items-start gap-3">
-                  {r.reward.imageUrl ? (
-                    <Image src={r.reward.imageUrl} alt={r.reward.name} width={56} height={56} className="h-14 w-14 shrink-0 rounded-2xl object-cover" />
+                  {r.reward?.imageUrl ? (
+                    <Image src={r.reward.imageUrl} alt={r.rewardName} width={56} height={56} className="h-14 w-14 shrink-0 rounded-2xl object-cover" />
                   ) : (
                     <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-brand-300">
                       <Gift size={24} strokeWidth={2.2} />
                     </div>
                   )}
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800">{r.reward.name}</h3>
-                    {r.reward.discountPercent !== null && (
+                    <h3 className="font-semibold text-gray-800">{r.reward?.name ?? r.rewardName}</h3>
+                    {r.reward?.discountPercent != null && (
                       <p className="mt-0.5 text-xs font-medium text-amber-600">
                         {t("discountBadge", { percent: r.reward.discountPercent })}
                         {r.reward.discountMaxAmount ? ` · ${t("discountMaxNote", { amount: Number(r.reward.discountMaxAmount).toLocaleString(locale === "th" ? "th-TH" : "en-US") })}` : ""}

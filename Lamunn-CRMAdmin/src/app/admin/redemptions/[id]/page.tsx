@@ -36,7 +36,7 @@ export default async function RedemptionConfirmPage({ params }: { params: { id: 
         </div>
         <div>
           <p className="text-xs text-gray-400">รางวัล</p>
-          <p className="font-medium text-gray-800">{redemption.reward.name}</p>
+          <p className="font-medium text-gray-800">{redemption.reward?.name ?? redemption.rewardName}</p>
         </div>
         <div>
           <p className="text-xs text-gray-400">แต้มที่ใช้</p>

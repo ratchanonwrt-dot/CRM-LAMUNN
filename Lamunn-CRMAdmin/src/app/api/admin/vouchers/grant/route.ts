@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
       data: {
         customerId: customer.id,
         rewardId: reward.id,
+        rewardName: reward.name,
         pointsSpent: 0,
         status: "PENDING",
         expiresAt,

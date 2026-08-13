@@ -19,7 +19,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       where: { id: redemption.customerId },
       data: { pointsBalance: { increment: redemption.pointsSpent } },
     }),
-    ...(redemption.reward.stock !== null ? [prisma.reward.update({ where: { id: redemption.rewardId }, data: { stock: { increment: 1 } } })] : []),
+    ...(redemption.reward && redemption.reward.stock !== null
+      ? [prisma.reward.update({ where: { id: redemption.rewardId! }, data: { stock: { increment: 1 } } })]
+      : []),
   ]);
 
   await logAudit({
@@ -29,7 +31,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     action: "DELETE",
     entityType: "Redemption",
     entityId: redemption.id,
-    summary: `ลบรายการแลกรางวัล "${redemption.reward.name}" ของ ${redemption.customer.name ?? redemption.customer.phone ?? redemption.customerId}${
+    summary: `ลบรายการแลกรางวัล "${redemption.reward?.name ?? redemption.rewardName}" ของ ${redemption.customer.name ?? redemption.customer.phone ?? redemption.customerId}${
       redemption.pointsSpent > 0 ? ` (คืน ${redemption.pointsSpent} แต้ม)` : ""
     }`,
   });

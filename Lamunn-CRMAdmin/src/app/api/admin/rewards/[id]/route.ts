@@ -41,15 +41,12 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if (!staff) return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
 
   const existing = await prisma.reward.findUnique({ where: { id: params.id } });
+  if (!existing) return NextResponse.json({ error: "ไม่พบรางวัลนี้" }, { status: 404 });
 
-  try {
-    await prisma.reward.delete({ where: { id: params.id } });
-  } catch {
-    return NextResponse.json(
-      { error: "ลบไม่ได้เพราะมีลูกค้าแลกรางวัลนี้ไปแล้ว ปิดใช้งานแทนได้" },
-      { status: 409 }
-    );
-  }
+  // Redemption.rewardId is ON DELETE SET NULL with a rewardName snapshot, so this
+  // is safe even for rewards customers have already redeemed — their coupon/
+  // history still shows the reward's name, it just stops linking to the catalog.
+  await prisma.reward.delete({ where: { id: params.id } });
 
   await logAudit({
     staffId: staff.staffId,

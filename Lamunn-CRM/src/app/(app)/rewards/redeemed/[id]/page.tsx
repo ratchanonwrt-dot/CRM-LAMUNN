@@ -37,8 +37,8 @@ export default async function RedeemedPage({ params }: { params: { id: string } 
       <main className="mx-auto flex max-w-sm flex-col items-center gap-4 px-4 py-8 pb-24 text-center">
         <h1 className="text-xl font-bold text-brand-700">{t("redeemSuccessTitle")}</h1>
         <p className="text-gray-600">
-          {redemption.reward.name}
-          {redemption.reward.discountPercent !== null
+          {redemption.reward?.name ?? redemption.rewardName}
+          {redemption.reward?.discountPercent != null
             ? ` · ${t("discountBadge", { percent: redemption.reward.discountPercent })}${
                 redemption.reward.discountMaxAmount
                   ? ` (${t("discountMaxNote", { amount: Number(redemption.reward.discountMaxAmount).toLocaleString(locale === "th" ? "th-TH" : "en-US") })})`
