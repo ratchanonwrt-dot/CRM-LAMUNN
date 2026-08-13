@@ -2,17 +2,26 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { prisma } from "@lamunn/db";
 import { requirePageRole } from "@/lib/requirePageRole";
+import DeleteButton from "@/components/DeleteButton";
 
 // Redemption.branchId is only set once a staff member confirms it (see confirm
 // route), so a PENDING redemption isn't tied to any branch yet — a customer can
 // walk into any branch to redeem, so every branch's staff sees the full queue.
 export default async function RedemptionsPage() {
   await requirePageRole("redemptions");
-  const redemptions = await prisma.redemption.findMany({
-    where: { status: "PENDING" },
-    include: { reward: true, customer: true },
-    orderBy: { createdAt: "asc" },
-  });
+  const [redemptions, history] = await Promise.all([
+    prisma.redemption.findMany({
+      where: { status: "PENDING" },
+      include: { reward: true, customer: true },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.redemption.findMany({
+      where: { status: "COMPLETED" },
+      include: { reward: true, customer: true, branch: true },
+      orderBy: { updatedAt: "desc" },
+      take: 100,
+    }),
+  ]);
 
   return (
     <div>
@@ -67,6 +76,50 @@ export default async function RedemptionsPage() {
                 </tr>
               );
             })}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="mb-2 mt-10 text-lg font-semibold text-gray-800">ประวัติรางวัลที่ยืนยันแล้ว (ล่าสุด 100 รายการ)</h2>
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-left text-gray-500">
+            <tr>
+              <th className="px-4 py-2">วันที่ยืนยัน</th>
+              <th className="px-4 py-2">ลูกค้า</th>
+              <th className="px-4 py-2">รางวัล</th>
+              <th className="px-4 py-2">แต้ม</th>
+              <th className="px-4 py-2">สาขา</th>
+              <th className="px-4 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-4 py-6 text-center text-gray-400">
+                  ยังไม่มีประวัติ
+                </td>
+              </tr>
+            )}
+            {history.map((r) => (
+              <tr key={r.id} className="border-t border-gray-100">
+                <td className="px-4 py-2 text-gray-500">{format(r.updatedAt, "d MMM yyyy HH:mm")}</td>
+                <td className="px-4 py-2">{r.customer.name ?? r.customer.phone ?? "-"}</td>
+                <td className="px-4 py-2">{r.reward.name}</td>
+                <td className="px-4 py-2">{r.pointsSpent}</td>
+                <td className="px-4 py-2 text-gray-500">{r.branch?.name ?? "-"}</td>
+                <td className="px-4 py-2">
+                  <DeleteButton
+                    endpoint={`/api/admin/redemptions/${r.id}`}
+                    confirmMessage={
+                      r.pointsSpent > 0
+                        ? `ลบรายการนี้ใช่ไหม? ระบบจะคืนแต้ม ${r.pointsSpent} แต้มให้ลูกค้า ${r.customer.phone ?? ""}`
+                        : `ลบรายการนี้ใช่ไหม?`
+                    }
+                  />
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
