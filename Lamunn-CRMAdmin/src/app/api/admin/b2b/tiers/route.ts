@@ -7,6 +7,7 @@ const schema = z.object({
   name: z.string().min(1),
   minSpend: z.coerce.number().min(0),
   discountPercent: z.coerce.number().int().min(0).max(100),
+  benefit: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
       name: parsed.data.name,
       minSpend: parsed.data.minSpend,
       discountPercent: parsed.data.discountPercent,
+      benefit: parsed.data.benefit || null,
       sortOrder: parsed.data.minSpend,
     },
   });

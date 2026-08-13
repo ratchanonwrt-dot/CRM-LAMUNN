@@ -9,6 +9,7 @@ export default function AddB2BTierForm() {
   const [name, setName] = useState("");
   const [minSpend, setMinSpend] = useState("");
   const [discountPercent, setDiscountPercent] = useState("");
+  const [benefit, setBenefit] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -19,7 +20,7 @@ export default function AddB2BTierForm() {
     const res = await fetch("/api/admin/b2b/tiers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, minSpend, discountPercent }),
+      body: JSON.stringify({ name, minSpend, discountPercent, benefit: benefit || undefined }),
     });
     const data = await res.json();
     setLoading(false);
@@ -30,6 +31,7 @@ export default function AddB2BTierForm() {
     setName("");
     setMinSpend("");
     setDiscountPercent("");
+    setBenefit("");
     router.refresh();
   }
 
@@ -61,6 +63,12 @@ export default function AddB2BTierForm() {
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
         />
       </div>
+      <input
+        placeholder="สิทธิประโยชน์อื่นๆ (ไม่บังคับ) เช่น จัดส่งฟรี, ดูแลลูกค้าลำดับแรก"
+        value={benefit}
+        onChange={(e) => setBenefit(e.target.value)}
+        className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+      />
       <div>
         <button type="submit" disabled={loading} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
           {loading ? "กำลังเพิ่ม..." : "เพิ่มระดับ"}

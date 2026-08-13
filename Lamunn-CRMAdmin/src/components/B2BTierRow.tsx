@@ -10,6 +10,7 @@ interface B2BTier {
   name: string;
   minSpend: number;
   discountPercent: number;
+  benefit: string | null;
 }
 
 export default function B2BTierRow({ tier }: { tier: B2BTier }) {
@@ -18,6 +19,7 @@ export default function B2BTierRow({ tier }: { tier: B2BTier }) {
   const [name, setName] = useState(tier.name);
   const [minSpend, setMinSpend] = useState(String(tier.minSpend));
   const [discountPercent, setDiscountPercent] = useState(String(tier.discountPercent));
+  const [benefit, setBenefit] = useState(tier.benefit ?? "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -28,7 +30,7 @@ export default function B2BTierRow({ tier }: { tier: B2BTier }) {
     const res = await fetch(`/api/admin/b2b/tiers/${tier.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, minSpend, discountPercent }),
+      body: JSON.stringify({ name, minSpend, discountPercent, benefit: benefit || null }),
     });
     const data = await res.json();
     setLoading(false);
@@ -51,6 +53,7 @@ export default function B2BTierRow({ tier }: { tier: B2BTier }) {
         <td className="px-4 py-2 font-medium text-gray-800">{tier.name}</td>
         <td className="px-4 py-2 text-gray-500">{tier.minSpend.toLocaleString()} บาทขึ้นไป</td>
         <td className="px-4 py-2 text-gray-500">ลด {tier.discountPercent}%</td>
+        <td className="px-4 py-2 text-gray-500">{tier.benefit || "-"}</td>
         <td className="px-4 py-2">
           <button onClick={() => setEditing((v) => !v)} className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
             <Pencil size={12} />
@@ -63,13 +66,19 @@ export default function B2BTierRow({ tier }: { tier: B2BTier }) {
       </tr>
       {editing && (
         <tr className="border-t border-gray-100 bg-gray-50">
-          <td colSpan={6} className="px-4 py-3">
+          <td colSpan={7} className="px-4 py-3">
             <form onSubmit={handleSave} className="flex flex-col gap-3">
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                 <input required placeholder="ชื่อระดับ" value={name} onChange={(e) => setName(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
                 <input required type="number" min="0" placeholder="ยอดซื้อสะสมขั้นต่ำ (บาท)" value={minSpend} onChange={(e) => setMinSpend(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
                 <input required type="number" min="0" max="100" placeholder="ส่วนลด %" value={discountPercent} onChange={(e) => setDiscountPercent(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
               </div>
+              <input
+                placeholder="สิทธิประโยชน์อื่นๆ (ไม่บังคับ)"
+                value={benefit}
+                onChange={(e) => setBenefit(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
               <div>
                 <button type="submit" disabled={loading} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
                   {loading ? "กำลังบันทึก..." : "บันทึก"}

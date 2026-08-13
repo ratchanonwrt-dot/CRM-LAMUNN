@@ -47,6 +47,13 @@ export default async function B2BCustomerDetailPage({ params }: { params: { id: 
         </div>
       </div>
 
+      {currentTier?.benefit && (
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4">
+          <p className="text-xs text-gray-400">สิทธิประโยชน์อื่นๆ ของระดับ {currentTier.name}</p>
+          <p className="mt-1 text-sm text-gray-700">{currentTier.benefit}</p>
+        </div>
+      )}
+
       <B2BPurchaseForm customerId={customer.id} />
 
       <div className="mt-6 overflow-x-auto rounded-xl border border-gray-200 bg-white">

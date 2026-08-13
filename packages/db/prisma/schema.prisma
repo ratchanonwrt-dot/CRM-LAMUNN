@@ -360,6 +360,7 @@ model B2BTier {
   name            String
   minSpend        Decimal  @db.Decimal(12, 2)
   discountPercent Int
+  benefit         String? // free-text extra perks beyond the discount — priority support, free delivery, etc.
   sortOrder       Int      @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

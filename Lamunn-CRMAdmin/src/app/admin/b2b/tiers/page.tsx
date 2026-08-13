@@ -21,6 +21,7 @@ export default async function B2BTiersPage() {
               <th className="px-4 py-2">ชื่อระดับ</th>
               <th className="px-4 py-2">เกณฑ์ยอดซื้อสะสม</th>
               <th className="px-4 py-2">ส่วนลด</th>
+              <th className="px-4 py-2">สิทธิประโยชน์อื่นๆ</th>
               <th className="px-4 py-2"></th>
               <th className="px-4 py-2"></th>
             </tr>
@@ -28,7 +29,7 @@ export default async function B2BTiersPage() {
           <tbody>
             {tiers.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-gray-400">
                   ยังไม่มีระดับ B2B/Catering
                 </td>
               </tr>

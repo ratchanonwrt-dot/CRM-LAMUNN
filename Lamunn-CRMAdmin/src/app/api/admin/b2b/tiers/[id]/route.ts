@@ -7,6 +7,7 @@ const schema = z.object({
   name: z.string().min(1).optional(),
   minSpend: z.coerce.number().min(0).optional(),
   discountPercent: z.coerce.number().int().min(0).max(100).optional(),
+  benefit: z.string().nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
