@@ -56,7 +56,12 @@ export default function TierImagesSettingsForm({ tiers }: { tiers: Tier[] }) {
           {tiers.map((tier) => (
             <div key={tier.id}>
               <p className="mb-1 text-xs font-medium text-gray-600">{tier.name}</p>
-              <ImageUploadField value={images[tier.id]} onChange={(url) => handleSave(tier.id, url)} />
+              <ImageUploadField
+                value={images[tier.id]}
+                onChange={(url) => handleSave(tier.id, url)}
+                aspectHint="16:9"
+                previewAspectClass="h-16 aspect-video"
+              />
               {savingId === tier.id && <p className="mt-1 text-xs text-gray-400">กำลังบันทึก...</p>}
               {savedId === tier.id && <p className="mt-1 text-xs text-brand-600">บันทึกแล้ว</p>}
             </div>

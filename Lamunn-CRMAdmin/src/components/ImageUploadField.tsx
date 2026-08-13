@@ -7,10 +7,16 @@ export default function ImageUploadField({
   value,
   onChange,
   className,
+  aspectHint,
+  previewAspectClass = "h-16 w-16",
 }: {
   value: string | null;
   onChange: (url: string | null) => void;
   className?: string;
+  /** Recommended image ratio shown as helper text, e.g. "16:9" — purely informational, doesn't crop the file. */
+  aspectHint?: string;
+  /** Tailwind size/aspect classes for the preview box — defaults to a 64x64 square. Pass e.g. "h-16 w-28 aspect-video" to preview at the recommended ratio instead. */
+  previewAspectClass?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -25,22 +31,28 @@ export default function ImageUploadField({
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
-    const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
-    const data = await res.json();
-    setUploading(false);
-
-    if (!res.ok) {
-      setError(data.error ?? "อัปโหลดไม่สำเร็จ");
-      return;
+    try {
+      const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
+      // A non-JSON response (platform error page, truncated body, etc.) must not
+      // leave the button stuck on "กำลังอัปโหลด..." forever with no feedback.
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) {
+        setError(data?.error ?? "อัปโหลดไม่สำเร็จ");
+        return;
+      }
+      onChange(data.url);
+    } catch {
+      setError("อัปโหลดไม่สำเร็จ กรุณาลองใหม่");
+    } finally {
+      setUploading(false);
     }
-    onChange(data.url);
   }
 
   return (
     <div className={className}>
       <div className="flex items-center gap-3">
         {value ? (
-          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-gray-200 shadow-sm">
+          <div className={`relative shrink-0 overflow-hidden rounded-2xl border border-gray-200 shadow-sm ${previewAspectClass}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={value} alt="" className="h-full w-full object-cover" />
             <button
@@ -53,7 +65,7 @@ export default function ImageUploadField({
             </button>
           </div>
         ) : (
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-2 border-dashed border-brand-200 bg-brand-50 text-brand-300">
+          <div className={`flex shrink-0 items-center justify-center rounded-2xl border-2 border-dashed border-brand-200 bg-brand-50 text-brand-300 ${previewAspectClass}`}>
             <ImagePlus size={22} strokeWidth={2.2} />
           </div>
         )}
@@ -69,6 +81,7 @@ export default function ImageUploadField({
         </button>
         <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={handleFileChange} />
       </div>
+      {aspectHint && <p className="mt-1 text-xs text-gray-400">แนะนำอัตราส่วนภาพ {aspectHint}</p>}
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );

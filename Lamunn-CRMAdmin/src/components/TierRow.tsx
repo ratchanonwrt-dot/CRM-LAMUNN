@@ -23,6 +23,7 @@ export default function TierRow({ tier }: { tier: Tier }) {
   const [imageUrl, setImageUrl] = useState<string | null>(tier.imageUrl);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [imageSaving, setImageSaving] = useState(false);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -40,6 +41,28 @@ export default function TierRow({ tier }: { tier: Tier }) {
       return;
     }
     setEditing(false);
+    router.refresh();
+  }
+
+  // Saves the image the moment a file finishes uploading, independent of the
+  // rest of the form's "บันทึก" button — previously the upload only updated
+  // local state, so closing the row (or navigating away) without remembering
+  // to click Save silently discarded the new image.
+  async function handleImageChange(nextUrl: string | null) {
+    setImageUrl(nextUrl);
+    setImageSaving(true);
+    setError(null);
+    const res = await fetch(`/api/admin/tiers/${tier.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl: nextUrl }),
+    });
+    const data = await res.json();
+    setImageSaving(false);
+    if (!res.ok) {
+      setError(data.error ?? "บันทึกรูปไม่สำเร็จ");
+      return;
+    }
     router.refresh();
   }
 
@@ -78,7 +101,10 @@ export default function TierRow({ tier }: { tier: Tier }) {
                 <input required type="number" min="0" placeholder="แต้มขั้นต่ำ" value={minPoints} onChange={(e) => setMinPoints(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
                 <input placeholder="สิทธิประโยชน์ (Benefit)" value={benefit} onChange={(e) => setBenefit(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
               </div>
-              <ImageUploadField value={imageUrl} onChange={setImageUrl} />
+              <div>
+                <ImageUploadField value={imageUrl} onChange={handleImageChange} aspectHint="16:9" previewAspectClass="h-16 aspect-video" />
+                {imageSaving && <p className="mt-1 text-xs text-gray-400">กำลังบันทึกรูป...</p>}
+              </div>
               <div>
                 <button type="submit" disabled={loading} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
                   {loading ? "กำลังบันทึก..." : "บันทึก"}

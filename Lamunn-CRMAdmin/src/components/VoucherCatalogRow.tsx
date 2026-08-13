@@ -122,7 +122,7 @@ export default function VoucherCatalogRow({ voucher }: { voucher: Voucher }) {
                 onChange={(e) => setStock(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm md:w-1/4"
               />
-              <ImageUploadField value={imageUrl} onChange={setImageUrl} />
+              <ImageUploadField value={imageUrl} onChange={setImageUrl} aspectHint="5:3" previewAspectClass="h-16 aspect-[5/3]" />
               <div>
                 <button type="submit" disabled={loading} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
                   {loading ? "กำลังบันทึก..." : "บันทึก"}

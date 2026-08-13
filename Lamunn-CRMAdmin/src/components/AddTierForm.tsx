@@ -47,7 +47,7 @@ export default function AddTierForm() {
         <input required type="number" min="0" placeholder="แต้มขั้นต่ำ" value={minPoints} onChange={(e) => setMinPoints(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
         <input placeholder="สิทธิประโยชน์ (Benefit)" value={benefit} onChange={(e) => setBenefit(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
       </div>
-      <ImageUploadField value={imageUrl} onChange={setImageUrl} />
+      <ImageUploadField value={imageUrl} onChange={setImageUrl} aspectHint="16:9" previewAspectClass="h-16 aspect-video" />
       <div>
         <button type="submit" disabled={loading} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
           {loading ? "กำลังเพิ่ม..." : "เพิ่มระดับ"}
