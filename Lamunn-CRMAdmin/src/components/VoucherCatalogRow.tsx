@@ -29,6 +29,8 @@ export default function VoucherCatalogRow({ voucher }: { voucher: Voucher }) {
   const [discountMaxAmount, setDiscountMaxAmount] = useState(voucher.discountMaxAmount === null ? "" : String(voucher.discountMaxAmount));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [imageSaving, setImageSaving] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -53,6 +55,27 @@ export default function VoucherCatalogRow({ voucher }: { voucher: Voucher }) {
       return;
     }
     setEditing(false);
+    router.refresh();
+  }
+
+  // Saves the image the moment a file finishes uploading, independent of the
+  // rest of the form's "บันทึก" button — otherwise an upload could look
+  // successful but silently not persist if the admin never clicked Save.
+  async function handleImageChange(nextUrl: string | null) {
+    setImageUrl(nextUrl);
+    setImageSaving(true);
+    setError(null);
+    const res = await fetch(`/api/admin/vouchers/${voucher.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl: nextUrl }),
+    });
+    const data = await res.json();
+    setImageSaving(false);
+    if (!res.ok) {
+      setError(data.error ?? "บันทึกรูปไม่สำเร็จ");
+      return;
+    }
     router.refresh();
   }
 
@@ -122,10 +145,23 @@ export default function VoucherCatalogRow({ voucher }: { voucher: Voucher }) {
                 onChange={(e) => setStock(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm md:w-1/4"
               />
-              <ImageUploadField value={imageUrl} onChange={setImageUrl} aspectHint="5:3" previewAspectClass="h-16 aspect-[5/3]" />
               <div>
-                <button type="submit" disabled={loading} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
-                  {loading ? "กำลังบันทึก..." : "บันทึก"}
+                <ImageUploadField
+                  value={imageUrl}
+                  onChange={handleImageChange}
+                  onUploadingChange={setImageUploading}
+                  aspectHint="5:3"
+                  previewAspectClass="h-16 aspect-[5/3]"
+                />
+                {imageSaving && <p className="mt-1 text-xs text-gray-400">กำลังบันทึกรูป...</p>}
+              </div>
+              <div>
+                <button
+                  type="submit"
+                  disabled={loading || imageUploading || imageSaving}
+                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  {loading ? "กำลังบันทึก..." : imageUploading ? "กำลังอัปโหลดรูป..." : "บันทึก"}
                 </button>
               </div>
               {error && <p className="text-xs text-red-600">{error}</p>}

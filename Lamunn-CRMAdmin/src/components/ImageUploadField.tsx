@@ -9,6 +9,7 @@ export default function ImageUploadField({
   className,
   aspectHint,
   previewAspectClass = "h-16 w-16",
+  onUploadingChange,
 }: {
   value: string | null;
   onChange: (url: string | null) => void;
@@ -17,6 +18,10 @@ export default function ImageUploadField({
   aspectHint?: string;
   /** Tailwind size/aspect classes for the preview box — defaults to a 64x64 square. Pass e.g. "h-16 w-28 aspect-video" to preview at the recommended ratio instead. */
   previewAspectClass?: string;
+  /** Lets a parent form (e.g. one with its own separate "บันทึก" button) disable
+   * submission while a file is mid-upload, so it can't submit a stale imageUrl
+   * and silently clobber other fields the admin already filled in. */
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -29,6 +34,7 @@ export default function ImageUploadField({
 
     setError(null);
     setUploading(true);
+    onUploadingChange?.(true);
     const formData = new FormData();
     formData.append("file", file);
     try {
@@ -45,6 +51,7 @@ export default function ImageUploadField({
       setError("อัปโหลดไม่สำเร็จ กรุณาลองใหม่");
     } finally {
       setUploading(false);
+      onUploadingChange?.(false);
     }
   }
 

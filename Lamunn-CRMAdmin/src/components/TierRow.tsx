@@ -24,6 +24,7 @@ export default function TierRow({ tier }: { tier: Tier }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageSaving, setImageSaving] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -102,12 +103,25 @@ export default function TierRow({ tier }: { tier: Tier }) {
                 <input placeholder="สิทธิประโยชน์ (Benefit)" value={benefit} onChange={(e) => setBenefit(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
               </div>
               <div>
-                <ImageUploadField value={imageUrl} onChange={handleImageChange} aspectHint="16:9" previewAspectClass="h-16 aspect-video" />
+                <ImageUploadField
+                  value={imageUrl}
+                  onChange={handleImageChange}
+                  onUploadingChange={setImageUploading}
+                  aspectHint="16:9"
+                  previewAspectClass="h-16 aspect-video"
+                />
                 {imageSaving && <p className="mt-1 text-xs text-gray-400">กำลังบันทึกรูป...</p>}
               </div>
               <div>
-                <button type="submit" disabled={loading} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
-                  {loading ? "กำลังบันทึก..." : "บันทึก"}
+                {/* Disabled while a file is mid-upload/mid-save so a click here can't submit a
+                    stale imageUrl and wipe out the image or other fields — this is exactly what
+                    silently happened before: clicking Save while the upload was still in flight. */}
+                <button
+                  type="submit"
+                  disabled={loading || imageUploading || imageSaving}
+                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  {loading ? "กำลังบันทึก..." : imageUploading ? "กำลังอัปโหลดรูป..." : "บันทึก"}
                 </button>
               </div>
               {error && <p className="text-xs text-red-600">{error}</p>}
