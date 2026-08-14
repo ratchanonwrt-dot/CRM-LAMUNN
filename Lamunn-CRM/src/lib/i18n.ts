@@ -39,7 +39,10 @@ export const translations = {
 
     welcomeTitle: "ยินดีต้อนรับ!",
     welcomeDesc: "กรอกข้อมูลอีกนิดเพื่อเปิดใช้งานสมาชิก",
+    confirmDobTitle: "กรุณายืนยันวันเกิดของคุณ",
+    confirmDobDesc: "เพื่อความถูกต้องของข้อมูลสมาชิก กรุณากรอกวันเกิดของคุณอีกครั้ง — หลังจากนี้จะไม่สามารถแก้ไขได้เอง",
     dobLabel: "วันเกิด",
+    dobLockedNote: "กรอกได้เพียงครั้งเดียว หากต้องการแก้ไขในภายหลัง กรุณาติดต่อพนักงานที่สาขา",
     saveFailedError: "บันทึกไม่สำเร็จ",
     savingText: "กำลังบันทึก...",
     startButton: "เริ่มใช้งาน",
@@ -149,6 +152,9 @@ export const translations = {
 
     welcomeTitle: "Welcome!",
     welcomeDesc: "Fill in a few more details to activate your membership",
+    confirmDobTitle: "Please confirm your date of birth",
+    confirmDobDesc: "To keep your membership info accurate, please enter your date of birth once more — it can't be changed after this.",
+    dobLockedNote: "One-time entry only. To change it later, please contact staff at any branch.",
     dobLabel: "Date of Birth",
     saveFailedError: "Failed to save",
     savingText: "Saving...",

@@ -164,6 +164,10 @@ model Customer {
   lineUserId     String?   @unique
   email          String?
   dateOfBirth    DateTime?
+  // Set the moment a customer confirms their date of birth (first entry, or the
+  // one-time re-confirmation prompt) — once set, dateOfBirth can never be changed
+  // by the customer again, only by staff, to stop birthday-month promo abuse.
+  dateOfBirthConfirmedAt DateTime?
   gender         Gender?
   pdpaConsentedAt DateTime? // when the customer accepted the data-usage consent notice at signup
   tosConsentedAt DateTime? // when the customer accepted the Terms of Service at signup

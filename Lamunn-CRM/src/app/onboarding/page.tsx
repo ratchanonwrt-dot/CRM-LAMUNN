@@ -1,126 +1,32 @@
-"use client";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@lamunn/db";
+import OnboardingForm from "@/components/OnboardingForm";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useLocale } from "@/components/LanguageProvider";
-import LanguageSwitch from "@/components/LanguageSwitch";
+export default async function OnboardingPage({ searchParams }: { searchParams: { callbackUrl?: string } }) {
+  const callbackUrl = searchParams.callbackUrl || "/dashboard";
 
-export default function OnboardingPage() {
-  const { t } = useLocale();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const session = await getServerSession(authOptions);
+  const customerId = session?.user?.customerId;
+  if (!customerId) redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
 
-  const [name, setName] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState("");
-  const [gender, setGender] = useState("");
-  const [consented, setConsented] = useState(false);
-  const [tosConsented, setTosConsented] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+  if (!customer) redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!consented) {
-      setError(t("pdpaConsentRequiredError"));
-      return;
-    }
-    if (!tosConsented) {
-      setError(t("tosConsentRequiredError"));
-      return;
-    }
-    setError(null);
-    setLoading(true);
-    const res = await fetch("/api/customer/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, dateOfBirth, gender: gender || undefined, consented, tosConsented }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) {
-      setError(data.error ?? t("saveFailedError"));
-      return;
-    }
-    router.push(callbackUrl);
-    router.refresh();
-  }
+  // Already fully set up — nothing for this page to collect, so don't show it again.
+  if (customer.name && customer.dateOfBirthConfirmedAt) redirect(callbackUrl);
 
-  return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-6">
-      <div className="flex justify-end">
-        <LanguageSwitch />
-      </div>
+  const initial = {
+    name: customer.name ?? "",
+    dateOfBirth: customer.dateOfBirth ? customer.dateOfBirth.toISOString().slice(0, 10) : "",
+    gender: customer.gender ?? "",
+    needsPdpaConsent: !customer.pdpaConsentedAt,
+    needsTosConsent: !customer.tosConsentedAt,
+    // If they already have a name (so this isn't a brand-new signup) but their DOB was
+    // never confirmed, this is the one-time re-confirmation prompt, not first-time onboarding.
+    isReconfirm: !!customer.name && !customer.dateOfBirthConfirmedAt,
+  };
 
-      <div className="text-center">
-        <h1 className="text-xl font-bold text-brand-700">{t("welcomeTitle")}</h1>
-        <p className="mt-2 text-sm text-gray-500">{t("welcomeDesc")}</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">{t("nameLabel")}</label>
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-3"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">{t("dobLabel")}</label>
-          <input
-            required
-            type="date"
-            value={dateOfBirth}
-            onChange={(e) => setDateOfBirth(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-3"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">{t("genderLabel")}</label>
-          <select
-            required
-            value={gender}
-            onChange={(e) => setGender(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-3"
-          >
-            <option value="" disabled>
-              —
-            </option>
-            <option value="FEMALE">{t("genderFemale")}</option>
-            <option value="MALE">{t("genderMale")}</option>
-            <option value="LGBTQ">{t("genderLgbtq")}</option>
-            <option value="UNSPECIFIED">{t("genderUnspecified")}</option>
-          </select>
-        </div>
-
-        <label className="flex items-start gap-2 text-xs text-gray-500">
-          <input
-            type="checkbox"
-            checked={consented}
-            onChange={(e) => setConsented(e.target.checked)}
-            className="mt-0.5 shrink-0"
-          />
-          {t("pdpaConsentText")}
-        </label>
-
-        <label className="flex items-start gap-2 text-xs text-gray-500">
-          <input
-            type="checkbox"
-            checked={tosConsented}
-            onChange={(e) => setTosConsented(e.target.checked)}
-            className="mt-0.5 shrink-0"
-          />
-          {t("tosConsentText")}
-        </label>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <button type="submit" disabled={loading} className="rounded-lg bg-brand-600 px-6 py-3 font-medium text-white disabled:opacity-50">
-          {loading ? t("savingText") : t("startButton")}
-        </button>
-      </form>
-    </main>
-  );
+  return <OnboardingForm initial={initial} callbackUrl={callbackUrl} />;
 }

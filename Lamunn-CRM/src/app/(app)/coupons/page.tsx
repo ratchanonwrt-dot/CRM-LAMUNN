@@ -24,7 +24,7 @@ export default async function CouponsPage() {
   const customerId = session!.user.customerId!;
 
   const customerCheck = await prisma.customer.findUnique({ where: { id: customerId } });
-  if (!customerCheck?.name || !customerCheck.dateOfBirth) redirect("/onboarding?callbackUrl=/coupons");
+  if (!customerCheck?.name || !customerCheck.dateOfBirthConfirmedAt) redirect("/onboarding?callbackUrl=/coupons");
 
   const [redemptions, settings] = await Promise.all([
     prisma.redemption.findMany({

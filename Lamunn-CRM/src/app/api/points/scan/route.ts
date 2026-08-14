@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "วันเกิดไม่ถูกต้อง", code: "MALFORMED" }, { status: 400 });
     }
     customer = await prisma.customer.create({
-      data: { phone, name, dateOfBirth: parsedDob, gender, pdpaConsentedAt: new Date(), tosConsentedAt: new Date() },
+      data: { phone, name, dateOfBirth: parsedDob, dateOfBirthConfirmedAt: new Date(), gender, pdpaConsentedAt: new Date(), tosConsentedAt: new Date() },
     });
   }
   const customerId = customer.id;
