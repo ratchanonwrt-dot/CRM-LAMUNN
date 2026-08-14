@@ -18,7 +18,7 @@ function describeDiscount(r: RewardOption): string {
   return "";
 }
 
-export default function VoucherForm({ rewards }: { rewards: RewardOption[] }) {
+export default function VoucherForm({ rewards, hasInactiveVouchers = false }: { rewards: RewardOption[]; hasInactiveVouchers?: boolean }) {
   const [phone, setPhone] = useState("");
   const [rewardId, setRewardId] = useState(rewards[0]?.id ?? "");
   const [expiresAt, setExpiresAt] = useState("");
@@ -50,7 +50,9 @@ export default function VoucherForm({ rewards }: { rewards: RewardOption[] }) {
   if (rewards.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-400">
-ยังไม่มีวอเชอร์ในระบบ — เพิ่มวอเชอร์ที่แบบฟอร์มด้านบนก่อน แล้วค่อยกลับมาแจกที่นี่
+        {hasInactiveVouchers
+          ? "วอเชอร์ทั้งหมดที่มีอยู่ถูกปิดใช้งานอยู่ — กดปุ่ม \"เปิดใช้งาน\" ที่วอเชอร์ที่ต้องการในตารางด้านบนก่อน แล้วค่อยกลับมาแจกที่นี่"
+          : "ยังไม่มีวอเชอร์ในระบบ — เพิ่มวอเชอร์ที่แบบฟอร์มด้านบนก่อน แล้วค่อยกลับมาแจกที่นี่"}
       </div>
     );
   }

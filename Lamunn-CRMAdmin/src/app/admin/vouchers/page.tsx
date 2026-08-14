@@ -63,6 +63,7 @@ export default async function VouchersPage() {
       <h2 className="mb-1 mt-10 text-lg font-semibold text-gray-800">แจกวอเชอร์ให้ลูกค้า</h2>
       <p className="mb-4 text-sm text-gray-500">กรอกเบอร์โทรลูกค้าและเลือกวอเชอร์จากรายการด้านบน ระบบจะออกให้ทันที</p>
       <VoucherForm
+        hasInactiveVouchers={vouchers.length > 0 && activeVouchers.length === 0}
         rewards={activeVouchers.map((r) => ({
           id: r.id,
           name: r.name,
