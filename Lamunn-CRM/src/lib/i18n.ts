@@ -110,6 +110,10 @@ export const translations = {
     myCouponsTitle: "คูปองของฉัน",
     noCoupons: "ยังไม่มีคูปอง",
     viewCoupon: "ดูคูปอง",
+    redeemedRewardsTitle: "รางวัลที่แลกด้วยแต้ม",
+    noRedeemedRewards: "ยังไม่มีรางวัลที่แลก",
+    myVouchersSectionTitle: "วอเชอร์ส่วนลด",
+    noVouchersYet: "ยังไม่มีวอเชอร์",
     freeGiftLabel: "ได้รับฟรี",
     discountBadge: "ส่วนลด {percent}%",
     discountMaxNote: "สูงสุด {amount} บาท",
@@ -117,6 +121,11 @@ export const translations = {
     minSpendNote: "เมื่อซื้อครบ {amount} บาท",
     voucherExpiresOn: "ใช้ได้ถึง {date}",
     voucherExpired: "หมดอายุแล้ว",
+
+    redeemConfirmTitle: "ยืนยันการแลกรางวัล",
+    redeemConfirmBody: "ระบบจะหักแต้ม {points} แต้มทันที และคุณต้องแสดง QR ให้พนักงานยืนยันภายใน 1 ชั่วโมง หากเกินเวลาคูปองจะหมดอายุและไม่คืนแต้ม",
+    redeemConfirmButton: "ยืนยันแลก",
+    redeemCancelButton: "ยกเลิก",
   },
   en: {
     appTitle: "Lamunn CRM",
@@ -225,6 +234,10 @@ export const translations = {
     myCouponsTitle: "My Coupons",
     noCoupons: "No coupons yet",
     viewCoupon: "View Coupon",
+    redeemedRewardsTitle: "Rewards Redeemed with Points",
+    noRedeemedRewards: "No rewards redeemed yet",
+    myVouchersSectionTitle: "Discount Vouchers",
+    noVouchersYet: "No vouchers yet",
     freeGiftLabel: "Free gift",
     discountBadge: "{percent}% off",
     discountMaxNote: "up to ฿{amount}",
@@ -232,6 +245,11 @@ export const translations = {
     minSpendNote: "min. spend ฿{amount}",
     voucherExpiresOn: "Valid until {date}",
     voucherExpired: "Expired",
+
+    redeemConfirmTitle: "Confirm Redemption",
+    redeemConfirmBody: "{points} points will be deducted immediately, and you must show the QR code to staff within 1 hour. If it expires, the points will not be refunded.",
+    redeemConfirmButton: "Confirm Redeem",
+    redeemCancelButton: "Cancel",
   },
 } as const satisfies Record<Locale, Record<string, string>>;
 

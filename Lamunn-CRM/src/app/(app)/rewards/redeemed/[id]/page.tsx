@@ -71,7 +71,7 @@ export default async function RedeemedPage({ params }: { params: { id: string } 
         </p>
 
         {redemption.status === "PENDING" && redemption.expiresAt && !isExpired && (
-          <p className="text-sm text-gray-400">{t("voucherExpiresOn", { date: format(redemption.expiresAt, "d MMM yyyy") })}</p>
+          <p className="text-sm text-gray-400">{t("voucherExpiresOn", { date: format(redemption.expiresAt, "d MMM yyyy HH:mm") })}</p>
         )}
 
         {showQr && <p className="text-sm text-gray-400">{t("showQrHint")}</p>}

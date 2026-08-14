@@ -33,6 +33,7 @@ export default function RewardCard({ reward, customerBalance }: { reward: Reward
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const canAfford = customerBalance >= reward.pointsCost;
   const outOfStock = reward.stock !== null && reward.stock <= 0;
@@ -47,6 +48,7 @@ export default function RewardCard({ reward, customerBalance }: { reward: Reward
     });
     const data = await res.json();
     setLoading(false);
+    setConfirming(false);
     if (!res.ok) {
       setError(data.error ?? t("redeemFailedError"));
       return;
@@ -69,13 +71,36 @@ export default function RewardCard({ reward, customerBalance }: { reward: Reward
           {reward.description && <p className="mt-1 text-sm text-gray-500">{reward.description}</p>}
         </div>
       </div>
-      <button
-        onClick={handleRedeem}
-        disabled={!canAfford || outOfStock || loading}
-        className="mt-3 w-full rounded-full border border-brand-200 bg-brand-50 py-2 text-sm font-medium text-brand-700 disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
-      >
-        {outOfStock ? t("outOfStock") : loading ? t("redeeming") : `${t("useLabel")} ${reward.pointsCost} ${t("pointsUnit")}`}
-      </button>
+      {confirming ? (
+        <div className="mt-3 rounded-lg bg-amber-50 p-3">
+          <p className="text-xs font-medium text-amber-800">{t("redeemConfirmTitle")}</p>
+          <p className="mt-1 text-xs text-amber-700">{t("redeemConfirmBody", { points: reward.pointsCost })}</p>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => setConfirming(false)}
+              disabled={loading}
+              className="flex-1 rounded-full border border-gray-200 bg-white py-2 text-xs font-medium text-gray-600 disabled:opacity-50"
+            >
+              {t("redeemCancelButton")}
+            </button>
+            <button
+              onClick={handleRedeem}
+              disabled={loading}
+              className="flex-1 rounded-full bg-brand-600 py-2 text-xs font-medium text-white disabled:opacity-50"
+            >
+              {loading ? t("redeeming") : t("redeemConfirmButton")}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setConfirming(true)}
+          disabled={!canAfford || outOfStock}
+          className="mt-3 w-full rounded-full border border-brand-200 bg-brand-50 py-2 text-sm font-medium text-brand-700 disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+        >
+          {outOfStock ? t("outOfStock") : `${t("useLabel")} ${reward.pointsCost} ${t("pointsUnit")}`}
+        </button>
+      )}
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </div>
   );

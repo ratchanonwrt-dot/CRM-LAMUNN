@@ -46,6 +46,11 @@ export async function POST(req: NextRequest) {
           rewardName: reward.name,
           pointsSpent: reward.pointsCost,
           status: "PENDING",
+          // Reward redemptions are separate from the tier-voucher system (which
+          // uses its own multi-month expiresAt) — this one hour window exists so
+          // staff can prep/hand over the physical item right away instead of
+          // holding a reservation indefinitely.
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         },
       });
 
