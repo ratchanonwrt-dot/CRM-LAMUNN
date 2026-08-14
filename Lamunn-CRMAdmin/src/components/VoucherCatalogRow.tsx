@@ -1,11 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Ticket, Pencil } from "lucide-react";
 import ToggleActiveButton from "@/components/ToggleActiveButton";
 import DeleteButton from "@/components/DeleteButton";
 import ImageUploadField from "@/components/ImageUploadField";
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs text-gray-500">{label}</label>
+      {children}
+    </div>
+  );
+}
 
 interface Voucher {
   id: string;
@@ -130,53 +139,79 @@ export default function VoucherCatalogRow({ voucher, autoTierNames = [] }: { vou
           <td colSpan={7} className="px-4 py-3">
             <form onSubmit={handleSave} className="flex flex-col gap-3">
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <input required placeholder="ชื่อวอเชอร์" value={name} onChange={(e) => setName(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-                <input placeholder="รายละเอียด" value={description} onChange={(e) => setDescription(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  placeholder="ส่วนลด %"
-                  value={discountPercent}
-                  onChange={(e) => setDiscountPercent(e.target.value)}
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="ลดสูงสุด (บาท)"
-                  value={discountMaxAmount}
-                  onChange={(e) => setDiscountMaxAmount(e.target.value)}
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
+                <Field label="ชื่อวอเชอร์">
+                  <input required placeholder="เช่น ส่วนลด 20 บาท" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                </Field>
+                <Field label="รายละเอียด (ไม่บังคับ)">
+                  <input placeholder="รายละเอียดเพิ่มเติม" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+                </Field>
               </div>
-              <p className="text-xs text-gray-400">หรือกำหนดส่วนลดแบบจำนวนเงินคงที่แทน % ด้านบน:</p>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="ลด (บาท) เช่น 20"
-                  value={discountAmount}
-                  onChange={(e) => setDiscountAmount(e.target.value)}
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="ซื้อครบ (บาท) เช่น 200"
-                  value={minSpendAmount}
-                  onChange={(e) => setMinSpendAmount(e.target.value)}
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                />
+
+              <div className="rounded-lg border border-gray-200 p-3">
+                <p className="mb-2 text-xs font-semibold text-gray-600">แบบที่ 1 — ลดเป็นเปอร์เซ็นต์</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="ลดกี่ % ของยอดซื้อ">
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      placeholder="เช่น 20 = ลด 20%"
+                      value={discountPercent}
+                      onChange={(e) => setDiscountPercent(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    />
+                  </Field>
+                  <Field label="ลดสูงสุดไม่เกินกี่บาท (ไม่บังคับ)">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="เช่น 100 = ลดสูงสุด 100 บาท"
+                      value={discountMaxAmount}
+                      onChange={(e) => setDiscountMaxAmount(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    />
+                  </Field>
+                </div>
               </div>
-              <input
-                type="number"
-                min="0"
-                placeholder="จำนวนคงเหลือ (ว่าง = ไม่จำกัด)"
-                value={stock}
-                onChange={(e) => setStock(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm md:w-1/4"
-              />
+
+              <div className="rounded-lg border border-gray-200 p-3">
+                <p className="mb-2 text-xs font-semibold text-gray-600">แบบที่ 2 — ลดเป็นจำนวนเงินคงที่ (เลือกใช้แบบใดแบบหนึ่งกับแบบที่ 1 ด้านบน ไม่ต้องกรอกทั้งคู่)</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="ลดกี่บาท">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="เช่น 20 = ลด 20 บาท"
+                      value={discountAmount}
+                      onChange={(e) => setDiscountAmount(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    />
+                  </Field>
+                  <Field label="ต้องซื้อครบกี่บาทถึงใช้คูปองนี้ได้ (ยอดซื้อขั้นต่ำ)">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="เช่น 200 = ซื้อครบ 200 บาท"
+                      value={minSpendAmount}
+                      onChange={(e) => setMinSpendAmount(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    />
+                  </Field>
+                </div>
+              </div>
+
+              <div className="md:w-1/4">
+                <Field label="จำนวนคงเหลือ (ว่าง = ไม่จำกัด)">
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="ไม่บังคับ"
+                    value={stock}
+                    onChange={(e) => setStock(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                </Field>
+              </div>
               <div>
                 <ImageUploadField
                   value={imageUrl}
