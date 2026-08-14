@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import { prisma, expireOldPoints, getExpirySummary, getAppSettings, getMembershipTiers, resolveTier, nextTier } from "@lamunn/db";
+import { prisma, expireOldPoints, getExpirySummary, getAppSettings, getMembershipTiers, nextTier } from "@lamunn/db";
 import HeroBanner from "@/components/HeroBanner";
 import GreetingPointsCard from "@/components/GreetingPointsCard";
 import MembershipCardView from "@/components/MembershipCardView";
@@ -21,14 +21,14 @@ export default async function DashboardPage() {
   if (!customerCheck?.name || !customerCheck.dateOfBirthConfirmedAt) redirect("/onboarding?callbackUrl=/dashboard");
 
   const [customer, expirySummary, settings, tiers] = await Promise.all([
-    prisma.customer.findUnique({ where: { id: customerId } }),
+    prisma.customer.findUnique({ where: { id: customerId }, include: { currentTier: true } }),
     getExpirySummary(customerId),
     getAppSettings(),
     getMembershipTiers(),
   ]);
 
   const lifetimePoints = customer?.lifetimePoints ?? 0;
-  const currentTier = resolveTier(lifetimePoints, tiers);
+  const currentTier = customer?.currentTier ?? null;
   const nextTierInfo = nextTier(lifetimePoints, tiers);
 
   return (

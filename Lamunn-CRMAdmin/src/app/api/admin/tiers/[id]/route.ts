@@ -9,6 +9,7 @@ const schema = z.object({
   benefit: z.string().nullable().optional(),
   imageUrl: z.string().url().nullable().optional(),
   sortOrder: z.coerce.number().int().optional(),
+  maintenanceSpendThreshold: z.coerce.number().min(0).nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {

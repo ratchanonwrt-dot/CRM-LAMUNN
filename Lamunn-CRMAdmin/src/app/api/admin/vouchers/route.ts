@@ -14,6 +14,8 @@ const schema = z.object({
   imageUrl: z.string().url().optional(),
   discountPercent: z.coerce.number().int().min(1).max(100).optional(),
   discountMaxAmount: z.coerce.number().min(0).optional(),
+  discountAmount: z.coerce.number().min(0).optional(),
+  minSpendAmount: z.coerce.number().min(0).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -34,6 +36,8 @@ export async function POST(req: NextRequest) {
       imageUrl: parsed.data.imageUrl,
       discountPercent: parsed.data.discountPercent ?? null,
       discountMaxAmount: parsed.data.discountMaxAmount ?? null,
+      discountAmount: parsed.data.discountAmount ?? null,
+      minSpendAmount: parsed.data.minSpendAmount ?? null,
     },
   });
 

@@ -6,7 +6,11 @@ import VoucherForm from "@/components/VoucherForm";
 
 export default async function VouchersPage() {
   await requirePageRole("vouchers");
-  const vouchers = await prisma.reward.findMany({ where: { kind: "VOUCHER" }, orderBy: { createdAt: "desc" } });
+  const vouchers = await prisma.reward.findMany({
+    where: { kind: "VOUCHER" },
+    orderBy: { createdAt: "desc" },
+    include: { tierVoucherTemplates: { include: { tier: true } } },
+  });
   const activeVouchers = vouchers.filter((v) => v.isActive);
 
   return (
@@ -42,7 +46,13 @@ export default async function VouchersPage() {
               vouchers.map((v) => (
                 <VoucherCatalogRow
                   key={v.id}
-                  voucher={{ ...v, discountMaxAmount: v.discountMaxAmount === null ? null : Number(v.discountMaxAmount) }}
+                  voucher={{
+                    ...v,
+                    discountMaxAmount: v.discountMaxAmount === null ? null : Number(v.discountMaxAmount),
+                    discountAmount: v.discountAmount === null ? null : Number(v.discountAmount),
+                    minSpendAmount: v.minSpendAmount === null ? null : Number(v.minSpendAmount),
+                  }}
+                  autoTierNames={v.tierVoucherTemplates.map((t) => t.tier.name)}
                 />
               ))
             )}
@@ -59,6 +69,8 @@ export default async function VouchersPage() {
           stock: r.stock,
           discountPercent: r.discountPercent,
           discountMaxAmount: r.discountMaxAmount === null ? null : Number(r.discountMaxAmount),
+          discountAmount: r.discountAmount === null ? null : Number(r.discountAmount),
+          minSpendAmount: r.minSpendAmount === null ? null : Number(r.minSpendAmount),
         }))}
       />
     </div>

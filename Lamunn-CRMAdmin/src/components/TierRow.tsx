@@ -5,6 +5,16 @@ import { useRouter } from "next/navigation";
 import { Award, Pencil } from "lucide-react";
 import DeleteButton from "@/components/DeleteButton";
 import ImageUploadField from "@/components/ImageUploadField";
+import TierVoucherTemplateManager from "@/components/TierVoucherTemplateManager";
+
+interface VoucherOption {
+  id: string;
+  name: string;
+  discountPercent: number | null;
+  discountMaxAmount: number | null;
+  discountAmount: number | null;
+  minSpendAmount: number | null;
+}
 
 interface Tier {
   id: string;
@@ -12,14 +22,19 @@ interface Tier {
   minPoints: number;
   benefit: string | null;
   imageUrl: string | null;
+  maintenanceSpendThreshold: number | null;
+  voucherTemplates: { id: string; quantity: number; reward: VoucherOption }[];
 }
 
-export default function TierRow({ tier }: { tier: Tier }) {
+export default function TierRow({ tier, availableVouchers }: { tier: Tier; availableVouchers: VoucherOption[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(tier.name);
   const [minPoints, setMinPoints] = useState(String(tier.minPoints));
   const [benefit, setBenefit] = useState(tier.benefit ?? "");
+  const [maintenanceSpendThreshold, setMaintenanceSpendThreshold] = useState(
+    tier.maintenanceSpendThreshold === null ? "" : String(tier.maintenanceSpendThreshold)
+  );
   const [imageUrl, setImageUrl] = useState<string | null>(tier.imageUrl);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -33,7 +48,13 @@ export default function TierRow({ tier }: { tier: Tier }) {
     const res = await fetch(`/api/admin/tiers/${tier.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, minPoints, benefit: benefit || null, imageUrl }),
+      body: JSON.stringify({
+        name,
+        minPoints,
+        benefit: benefit || null,
+        imageUrl,
+        maintenanceSpendThreshold: maintenanceSpendThreshold === "" ? null : maintenanceSpendThreshold,
+      }),
     });
     const data = await res.json();
     setLoading(false);
@@ -83,6 +104,9 @@ export default function TierRow({ tier }: { tier: Tier }) {
         <td className="px-4 py-2 font-medium text-gray-800">{tier.name}</td>
         <td className="px-4 py-2 text-gray-500">{tier.minPoints} แต้มขึ้นไป</td>
         <td className="px-4 py-2 text-gray-500">{tier.benefit || "-"}</td>
+        <td className="px-4 py-2 text-gray-500">
+          {tier.maintenanceSpendThreshold !== null ? `${tier.maintenanceSpendThreshold.toLocaleString("th-TH")} บ. / 6 ด.` : "-"}
+        </td>
         <td className="px-4 py-2">
           <button onClick={() => setEditing((v) => !v)} className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
             <Pencil size={12} />
@@ -93,14 +117,29 @@ export default function TierRow({ tier }: { tier: Tier }) {
           <DeleteButton endpoint={`/api/admin/tiers/${tier.id}`} confirmMessage={`ลบระดับ "${tier.name}" ใช่ไหม?`} />
         </td>
       </tr>
+      <tr className="border-t border-gray-100 bg-gray-50/50">
+        <td colSpan={7} className="px-4 py-2">
+          <TierVoucherTemplateManager tierId={tier.id} templates={tier.voucherTemplates} availableVouchers={availableVouchers} />
+        </td>
+      </tr>
       {editing && (
         <tr className="border-t border-gray-100 bg-gray-50">
-          <td colSpan={6} className="px-4 py-3">
+          <td colSpan={7} className="px-4 py-3">
             <form onSubmit={handleSave} className="flex flex-col gap-3">
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                 <input required placeholder="ชื่อระดับ" value={name} onChange={(e) => setName(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
                 <input required type="number" min="0" placeholder="แต้มขั้นต่ำ" value={minPoints} onChange={(e) => setMinPoints(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
                 <input placeholder="สิทธิประโยชน์ (Benefit)" value={benefit} onChange={(e) => setBenefit(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="ยอดซื้อสะสมที่ต้องรักษาไว้ทุก 6 เดือน (ว่าง = ไม่มีเกณฑ์)"
+                  value={maintenanceSpendThreshold}
+                  onChange={(e) => setMaintenanceSpendThreshold(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm md:w-1/2"
+                />
               </div>
               <div>
                 <ImageUploadField

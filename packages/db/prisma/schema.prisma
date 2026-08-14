@@ -173,11 +173,30 @@ model Customer {
   tosConsentedAt DateTime? // when the customer accepted the Terms of Service at signup
   pointsBalance  Int       @default(0) // denormalized running balance, kept in sync in a DB transaction
   // Cumulative points ever earned (EARN + positive ADJUST) — only ever increases,
-  // so redeeming rewards never demotes a customer's membership tier.
+  // used as the ceiling a customer can be promoted up to (see currentTierId).
   lifetimePoints Int       @default(0)
   isActive       Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  // The customer's actual displayed/effective tier — decoupled from lifetimePoints
+  // because it can be demoted (lifetimePoints never decreases). Promotion is instant
+  // whenever lifetimePoints crosses a new threshold; demotion only happens at the
+  // 6-month anniversary maintenance check. See packages/db/src/tierLifecycle.ts.
+  currentTierId String?
+  currentTier   MembershipTier? @relation(fields: [currentTierId], references: [id])
+  // Start of the customer's current 6-month tier cycle — reset every time their tier
+  // changes (promotion, successful renewal, or demotion). Due for a maintenance
+  // check once this is 6+ months old (Starbucks-Rewards-style anniversary window).
+  tierAnniversaryAt DateTime?
+  // Set the moment a customer is demoted for failing a maintenance check; while
+  // set, instant lifetimePoints-based promotion is disabled for this customer —
+  // otherwise they'd bounce straight back up on the very next cron run, since
+  // lifetimePoints never decreases. Cleared once they re-qualify for a higher
+  // tier the fair way, via renewed spend at an anniversary check.
+  demotedAt DateTime?
+  // Last time the quarterly tier-voucher bundle was granted; null = never.
+  lastTierVoucherGrantAt DateTime?
 
   otpCodes     OtpCode[]
   transactions PointTransaction[]
@@ -195,10 +214,33 @@ model MembershipTier {
   benefit   String?
   imageUrl  String?
   sortOrder Int      @default(0)
+  // Cumulative spend a customer must reach within their current 6-month
+  // tierAnniversaryAt window to renew this tier — null means no maintenance
+  // requirement (Bronze: always safe, never demoted below it).
+  maintenanceSpendThreshold Decimal? @db.Decimal(10, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  customersHere    Customer[]
+  voucherTemplates TierVoucherTemplate[]
+
   @@map("membership_tiers")
+}
+
+// Recipe: "tier X grants N copies of voucher Y every 3-month cycle" — the cron
+// job in tierLifecycle.ts reads these to build each customer's automatic grant.
+model TierVoucherTemplate {
+  id        String         @id @default(cuid())
+  tierId    String
+  tier      MembershipTier @relation(fields: [tierId], references: [id], onDelete: Cascade)
+  rewardId  String
+  reward    Reward         @relation(fields: [rewardId], references: [id])
+  quantity  Int // how many copies of this voucher are granted per cycle
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@map("tier_voucher_templates")
 }
 
 model OtpCode {
@@ -286,11 +328,14 @@ model Reward {
   imageUrl          String?
   discountPercent   Int? // e.g. 50 = "ลด 50%" — set only for discount-style vouchers
   discountMaxAmount Decimal?   @db.Decimal(10, 2) // e.g. 300 = "สูงสุด 300 บาท" — caps the discount above
+  discountAmount    Decimal?   @db.Decimal(10, 2) // e.g. 20 = "ลด 20 บาท" — flat-amount alternative to discountPercent
+  minSpendAmount    Decimal?   @db.Decimal(10, 2) // e.g. 200 = "ซื้อครบ 200 บาท" — display-only condition, staff apply it manually at the POS
   isActive          Boolean    @default(true)
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
-  redemptions Redemption[]
+  redemptions          Redemption[]
+  tierVoucherTemplates TierVoucherTemplate[]
 
   @@map("rewards")
 }

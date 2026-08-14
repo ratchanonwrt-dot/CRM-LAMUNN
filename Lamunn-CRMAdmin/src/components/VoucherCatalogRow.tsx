@@ -15,10 +15,12 @@ interface Voucher {
   imageUrl: string | null;
   discountPercent: number | null;
   discountMaxAmount: number | null;
+  discountAmount: number | null;
+  minSpendAmount: number | null;
   isActive: boolean;
 }
 
-export default function VoucherCatalogRow({ voucher }: { voucher: Voucher }) {
+export default function VoucherCatalogRow({ voucher, autoTierNames = [] }: { voucher: Voucher; autoTierNames?: string[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(voucher.name);
@@ -27,6 +29,8 @@ export default function VoucherCatalogRow({ voucher }: { voucher: Voucher }) {
   const [imageUrl, setImageUrl] = useState<string | null>(voucher.imageUrl);
   const [discountPercent, setDiscountPercent] = useState(voucher.discountPercent === null ? "" : String(voucher.discountPercent));
   const [discountMaxAmount, setDiscountMaxAmount] = useState(voucher.discountMaxAmount === null ? "" : String(voucher.discountMaxAmount));
+  const [discountAmount, setDiscountAmount] = useState(voucher.discountAmount === null ? "" : String(voucher.discountAmount));
+  const [minSpendAmount, setMinSpendAmount] = useState(voucher.minSpendAmount === null ? "" : String(voucher.minSpendAmount));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageSaving, setImageSaving] = useState(false);
@@ -46,6 +50,8 @@ export default function VoucherCatalogRow({ voucher }: { voucher: Voucher }) {
         imageUrl,
         discountPercent: discountPercent === "" ? null : discountPercent,
         discountMaxAmount: discountMaxAmount === "" ? null : discountMaxAmount,
+        discountAmount: discountAmount === "" ? null : discountAmount,
+        minSpendAmount: minSpendAmount === "" ? null : minSpendAmount,
       }),
     });
     const data = await res.json();
@@ -92,11 +98,18 @@ export default function VoucherCatalogRow({ voucher }: { voucher: Voucher }) {
             </div>
           )}
         </td>
-        <td className="px-4 py-2">{voucher.name}</td>
+        <td className="px-4 py-2">
+          {voucher.name}
+          {autoTierNames.length > 0 && (
+            <p className="mt-0.5 text-xs font-normal text-brand-600">🔄 แจกอัตโนมัติทุก 3 เดือนให้ระดับ: {autoTierNames.join(", ")}</p>
+          )}
+        </td>
         <td className="px-4 py-2 text-gray-500">
           {voucher.discountPercent !== null
             ? `ลด ${voucher.discountPercent}%${voucher.discountMaxAmount ? ` สูงสุด ${voucher.discountMaxAmount.toLocaleString("th-TH")} บ.` : ""}`
-            : "-"}
+            : voucher.discountAmount !== null
+              ? `ลด ${voucher.discountAmount.toLocaleString("th-TH")} บ.${voucher.minSpendAmount ? ` (ซื้อครบ ${voucher.minSpendAmount.toLocaleString("th-TH")} บ.)` : ""}`
+              : "-"}
         </td>
         <td className="px-4 py-2 text-gray-500">{voucher.stock === null ? "ไม่จำกัด" : voucher.stock}</td>
         <td className="px-4 py-2">
@@ -134,6 +147,25 @@ export default function VoucherCatalogRow({ voucher }: { voucher: Voucher }) {
                   placeholder="ลดสูงสุด (บาท)"
                   value={discountMaxAmount}
                   onChange={(e) => setDiscountMaxAmount(e.target.value)}
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <p className="text-xs text-gray-400">หรือกำหนดส่วนลดแบบจำนวนเงินคงที่แทน % ด้านบน:</p>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="ลด (บาท) เช่น 20"
+                  value={discountAmount}
+                  onChange={(e) => setDiscountAmount(e.target.value)}
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="ซื้อครบ (บาท) เช่น 200"
+                  value={minSpendAmount}
+                  onChange={(e) => setMinSpendAmount(e.target.value)}
                   className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
                 />
               </div>

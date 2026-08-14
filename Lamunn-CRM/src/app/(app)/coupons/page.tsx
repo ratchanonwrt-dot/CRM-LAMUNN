@@ -65,12 +65,17 @@ export default async function CouponsPage() {
                   )}
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-800">{r.reward?.name ?? r.rewardName}</h3>
-                    {r.reward?.discountPercent != null && (
+                    {r.reward?.discountPercent != null ? (
                       <p className="mt-0.5 text-xs font-medium text-amber-600">
                         {t("discountBadge", { percent: r.reward.discountPercent })}
                         {r.reward.discountMaxAmount ? ` · ${t("discountMaxNote", { amount: Number(r.reward.discountMaxAmount).toLocaleString(locale === "th" ? "th-TH" : "en-US") })}` : ""}
                       </p>
-                    )}
+                    ) : r.reward?.discountAmount != null ? (
+                      <p className="mt-0.5 text-xs font-medium text-amber-600">
+                        {t("discountAmountBadge", { amount: Number(r.reward.discountAmount).toLocaleString(locale === "th" ? "th-TH" : "en-US") })}
+                        {r.reward.minSpendAmount ? ` · ${t("minSpendNote", { amount: Number(r.reward.minSpendAmount).toLocaleString(locale === "th" ? "th-TH" : "en-US") })}` : ""}
+                      </p>
+                    ) : null}
                     <p className="mt-0.5 text-xs text-gray-400">{r.pointsSpent > 0 ? `${t("usedPrefix")} ${r.pointsSpent} ${t("pointsUnit")}` : t("freeGiftLabel")}</p>
                     <p
                       className={

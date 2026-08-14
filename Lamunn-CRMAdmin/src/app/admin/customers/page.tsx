@@ -14,7 +14,7 @@ function isSortField(v: string | undefined): v is SortField {
 export default async function CustomersPage({ searchParams }: { searchParams: { sort?: string; dir?: string } }) {
   const user = await requirePageRole("customers");
   const [customers, purchaseStats, branches] = await Promise.all([
-    prisma.customer.findMany(),
+    prisma.customer.findMany({ include: { currentTier: true } }),
     prisma.pointTransaction.groupBy({
       by: ["customerId"],
       where: { type: "EARN" },
@@ -37,7 +37,14 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
     const purchaseCount = stats?._count ?? 0;
     const totalSpend = Number(stats?._sum.amount ?? 0);
     return {
-      customer: { id: c.id, name: c.name, phone: c.phone, dateOfBirth: c.dateOfBirth, pointsBalance: c.pointsBalance },
+      customer: {
+        id: c.id,
+        name: c.name,
+        phone: c.phone,
+        dateOfBirth: c.dateOfBirth,
+        pointsBalance: c.pointsBalance,
+        currentTierName: c.currentTier?.name ?? null,
+      },
       age: c.dateOfBirth ? differenceInYears(now, c.dateOfBirth) : null,
       totalSpend,
       purchaseCount,
@@ -91,6 +98,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
               <th className="px-4 py-2">เบอร์โทร</th>
               <th className="px-4 py-2">วันเกิด</th>
               <SortableHeader field="age" label="อายุ" currentSort={sort} currentDir={dir} />
+              <th className="px-4 py-2">ระดับปัจจุบัน</th>
               <SortableHeader field="pointsBalance" label="แต้มสะสม" currentSort={sort} currentDir={dir} />
               <SortableHeader field="totalSpend" label="ยอดซื้อสะสม (บาท)" currentSort={sort} currentDir={dir} />
               <SortableHeader field="purchaseCount" label="จำนวนครั้งที่ซื้อ" currentSort={sort} currentDir={dir} />
@@ -102,7 +110,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
           <tbody>
             {enriched.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={11} className="px-4 py-6 text-center text-gray-400">
                   ยังไม่มีลูกค้าในระบบ
                 </td>
               </tr>

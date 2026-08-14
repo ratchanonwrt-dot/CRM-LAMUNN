@@ -8,6 +8,14 @@ interface RewardOption {
   stock: number | null;
   discountPercent: number | null;
   discountMaxAmount: number | null;
+  discountAmount: number | null;
+  minSpendAmount: number | null;
+}
+
+function describeDiscount(r: RewardOption): string {
+  if (r.discountPercent) return `ลด ${r.discountPercent}%${r.discountMaxAmount ? ` สูงสุด ${r.discountMaxAmount.toLocaleString("th-TH")} บ.` : ""}`;
+  if (r.discountAmount) return `ลด ${r.discountAmount.toLocaleString("th-TH")} บ.${r.minSpendAmount ? ` (ซื้อครบ ${r.minSpendAmount.toLocaleString("th-TH")} บ.)` : ""}`;
+  return "";
 }
 
 export default function VoucherForm({ rewards }: { rewards: RewardOption[] }) {
@@ -65,19 +73,19 @@ export default function VoucherForm({ rewards }: { rewards: RewardOption[] }) {
       <div>
         <label className="mb-1 block text-xs text-gray-500">ของรางวัล</label>
         <select value={rewardId} onChange={(e) => setRewardId(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-          {rewards.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-              {r.discountPercent ? ` — ลด ${r.discountPercent}%${r.discountMaxAmount ? ` สูงสุด ${r.discountMaxAmount.toLocaleString("th-TH")} บ.` : ""}` : ""}
-              {r.stock !== null ? ` (เหลือ ${r.stock})` : ""}
-            </option>
-          ))}
+          {rewards.map((r) => {
+            const discount = describeDiscount(r);
+            return (
+              <option key={r.id} value={r.id}>
+                {r.name}
+                {discount ? ` — ${discount}` : ""}
+                {r.stock !== null ? ` (เหลือ ${r.stock})` : ""}
+              </option>
+            );
+          })}
         </select>
-        {selectedReward?.discountPercent ? (
-          <p className="mt-1 text-xs text-amber-600">
-            วอเชอร์ส่วนลด {selectedReward.discountPercent}%
-            {selectedReward.discountMaxAmount ? ` (สูงสุด ${selectedReward.discountMaxAmount.toLocaleString("th-TH")} บาท)` : ""}
-          </p>
+        {selectedReward && describeDiscount(selectedReward) ? (
+          <p className="mt-1 text-xs text-amber-600">วอเชอร์{describeDiscount(selectedReward)}</p>
         ) : null}
       </div>
       <div>

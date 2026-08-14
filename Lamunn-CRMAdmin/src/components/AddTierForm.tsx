@@ -10,6 +10,7 @@ export default function AddTierForm() {
   const [name, setName] = useState("");
   const [minPoints, setMinPoints] = useState("");
   const [benefit, setBenefit] = useState("");
+  const [maintenanceSpendThreshold, setMaintenanceSpendThreshold] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,7 +23,13 @@ export default function AddTierForm() {
     const res = await fetch("/api/admin/tiers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, minPoints, benefit: benefit || undefined, imageUrl: imageUrl || undefined }),
+      body: JSON.stringify({
+        name,
+        minPoints,
+        benefit: benefit || undefined,
+        imageUrl: imageUrl || undefined,
+        maintenanceSpendThreshold: maintenanceSpendThreshold || undefined,
+      }),
     });
     const data = await res.json();
     setLoading(false);
@@ -33,6 +40,7 @@ export default function AddTierForm() {
     setName("");
     setMinPoints("");
     setBenefit("");
+    setMaintenanceSpendThreshold("");
     setImageUrl(null);
     router.refresh();
   }
@@ -48,6 +56,14 @@ export default function AddTierForm() {
         <input required type="number" min="0" placeholder="แต้มขั้นต่ำ" value={minPoints} onChange={(e) => setMinPoints(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
         <input placeholder="สิทธิประโยชน์ (Benefit)" value={benefit} onChange={(e) => setBenefit(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
       </div>
+      <input
+        type="number"
+        min="0"
+        placeholder="ยอดซื้อสะสมที่ต้องรักษาไว้ทุก 6 เดือน (ว่าง = ไม่มีเกณฑ์)"
+        value={maintenanceSpendThreshold}
+        onChange={(e) => setMaintenanceSpendThreshold(e.target.value)}
+        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm md:w-1/2"
+      />
       <ImageUploadField
         value={imageUrl}
         onChange={setImageUrl}

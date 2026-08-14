@@ -13,6 +13,8 @@ export default function AddVoucherForm() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState("");
   const [discountMaxAmount, setDiscountMaxAmount] = useState("");
+  const [discountAmount, setDiscountAmount] = useState("");
+  const [minSpendAmount, setMinSpendAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
@@ -31,6 +33,8 @@ export default function AddVoucherForm() {
         imageUrl: imageUrl || undefined,
         discountPercent: discountPercent || undefined,
         discountMaxAmount: discountMaxAmount || undefined,
+        discountAmount: discountAmount || undefined,
+        minSpendAmount: minSpendAmount || undefined,
       }),
     });
     const data = await res.json();
@@ -45,6 +49,8 @@ export default function AddVoucherForm() {
     setImageUrl(null);
     setDiscountPercent("");
     setDiscountMaxAmount("");
+    setDiscountAmount("");
+    setMinSpendAmount("");
     router.refresh();
   }
 
@@ -72,6 +78,25 @@ export default function AddVoucherForm() {
           placeholder="ลดสูงสุด (บาท)"
           value={discountMaxAmount}
           onChange={(e) => setDiscountMaxAmount(e.target.value)}
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        />
+      </div>
+      <p className="text-xs text-gray-400">หรือกำหนดส่วนลดแบบจำนวนเงินคงที่แทน % ด้านบน:</p>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <input
+          type="number"
+          min="0"
+          placeholder="ลด (บาท) เช่น 20"
+          value={discountAmount}
+          onChange={(e) => setDiscountAmount(e.target.value)}
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        />
+        <input
+          type="number"
+          min="0"
+          placeholder="ซื้อครบ (บาท) เช่น 200"
+          value={minSpendAmount}
+          onChange={(e) => setMinSpendAmount(e.target.value)}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
         />
       </div>

@@ -11,6 +11,8 @@ const schema = z.object({
   imageUrl: z.string().url().nullable().optional(),
   discountPercent: z.coerce.number().int().min(1).max(100).nullable().optional(),
   discountMaxAmount: z.coerce.number().min(0).nullable().optional(),
+  discountAmount: z.coerce.number().min(0).nullable().optional(),
+  minSpendAmount: z.coerce.number().min(0).nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {

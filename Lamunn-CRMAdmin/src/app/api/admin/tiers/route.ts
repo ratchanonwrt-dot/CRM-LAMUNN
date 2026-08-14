@@ -9,6 +9,7 @@ const schema = z.object({
   benefit: z.string().optional(),
   imageUrl: z.string().url().optional(),
   sortOrder: z.coerce.number().int().optional(),
+  maintenanceSpendThreshold: z.coerce.number().min(0).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest) {
       benefit: parsed.data.benefit,
       imageUrl: parsed.data.imageUrl,
       sortOrder: parsed.data.sortOrder ?? parsed.data.minPoints,
+      maintenanceSpendThreshold: parsed.data.maintenanceSpendThreshold ?? null,
     },
   });
 

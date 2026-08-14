@@ -44,7 +44,13 @@ export default async function RedeemedPage({ params }: { params: { id: string } 
                   ? ` (${t("discountMaxNote", { amount: Number(redemption.reward.discountMaxAmount).toLocaleString(locale === "th" ? "th-TH" : "en-US") })})`
                   : ""
               }`
-            : ` · ${t("usedPrefix")} ${redemption.pointsSpent} ${t("pointsUnit")}`}
+            : redemption.reward?.discountAmount != null
+              ? ` · ${t("discountAmountBadge", { amount: Number(redemption.reward.discountAmount).toLocaleString(locale === "th" ? "th-TH" : "en-US") })}${
+                  redemption.reward.minSpendAmount
+                    ? ` (${t("minSpendNote", { amount: Number(redemption.reward.minSpendAmount).toLocaleString(locale === "th" ? "th-TH" : "en-US") })})`
+                    : ""
+                }`
+              : ` · ${t("usedPrefix")} ${redemption.pointsSpent} ${t("pointsUnit")}`}
         </p>
 
         {qrDataUrl && (

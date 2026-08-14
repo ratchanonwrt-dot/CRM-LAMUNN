@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/reconcile-voided-bills",
       "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/cron/tier-lifecycle",
+      "schedule": "30 21 * * *"
     }
   ]
 }

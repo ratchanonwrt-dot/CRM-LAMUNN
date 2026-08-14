@@ -11,6 +11,7 @@ interface Customer {
   phone: string | null;
   dateOfBirth: Date | null;
   pointsBalance: number;
+  currentTierName: string | null;
 }
 
 interface Branch {
@@ -108,6 +109,13 @@ export default function CustomerRow({
         <td className="px-4 py-2 text-gray-500">{customer.phone ?? "-"}</td>
         <td className="px-4 py-2 text-gray-500">{customer.dateOfBirth ? format(customer.dateOfBirth, "d MMM yyyy") : "-"}</td>
         <td className="px-4 py-2 text-gray-500">{age ?? "-"}</td>
+        <td className="px-4 py-2">
+          {customer.currentTierName ? (
+            <span className="rounded-full bg-fuchsia-50 px-2.5 py-1 text-xs font-medium text-fuchsia-700">{customer.currentTierName}</span>
+          ) : (
+            <span className="text-xs text-gray-400">-</span>
+          )}
+        </td>
         <td className="px-4 py-2 font-medium text-brand-700">{customer.pointsBalance}</td>
         <td className="px-4 py-2 text-gray-500">{totalSpend.toLocaleString("th-TH", { maximumFractionDigits: 0 })}</td>
         <td className="px-4 py-2 text-gray-500">{purchaseCount}</td>
@@ -135,7 +143,7 @@ export default function CustomerRow({
 
       {mode === "manual" && (
         <tr className="border-t border-gray-100 bg-gray-50">
-          <td colSpan={10} className="px-4 py-3">
+          <td colSpan={11} className="px-4 py-3">
             <form onSubmit={handleManualEarn} className="flex flex-wrap items-end gap-3">
               <div>
                 <label className="mb-1 block text-xs text-gray-500">ยอดซื้อ (บาท)</label>
@@ -197,7 +205,7 @@ export default function CustomerRow({
 
       {mode === "adjust" && (
         <tr className="border-t border-gray-100 bg-gray-50">
-          <td colSpan={10} className="px-4 py-3">
+          <td colSpan={11} className="px-4 py-3">
             <form onSubmit={handleAdjust} className="flex flex-wrap items-end gap-3">
               <div>
                 <label className="mb-1 block text-xs text-gray-500">จำนวนแต้ม (ติดลบ = หัก)</label>
