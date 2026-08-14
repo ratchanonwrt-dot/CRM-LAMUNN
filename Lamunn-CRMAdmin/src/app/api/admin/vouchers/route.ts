@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma, logAudit } from "@lamunn/db";
+import { Prisma, prisma, logAudit } from "@lamunn/db";
 import { requireStaff } from "@/lib/requireStaff";
 
 // Creates a VOUCHER-kind catalog item — separate from POST /api/admin/rewards
@@ -16,6 +16,7 @@ const schema = z.object({
   discountMaxAmount: z.coerce.number().min(0).optional(),
   discountAmount: z.coerce.number().min(0).optional(),
   minSpendAmount: z.coerce.number().min(0).optional(),
+  autoTrigger: z.enum(["WELCOME", "NEXT_PURCHASE", "BIRTHDAY_MONTH"]).nullish(),
 });
 
 export async function POST(req: NextRequest) {
@@ -26,20 +27,29 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });
 
-  const voucher = await prisma.reward.create({
-    data: {
-      kind: "VOUCHER",
-      name: parsed.data.name,
-      description: parsed.data.description,
-      pointsCost: null,
-      stock: parsed.data.stock ?? null,
-      imageUrl: parsed.data.imageUrl,
-      discountPercent: parsed.data.discountPercent ?? null,
-      discountMaxAmount: parsed.data.discountMaxAmount ?? null,
-      discountAmount: parsed.data.discountAmount ?? null,
-      minSpendAmount: parsed.data.minSpendAmount ?? null,
-    },
-  });
+  let voucher;
+  try {
+    voucher = await prisma.reward.create({
+      data: {
+        kind: "VOUCHER",
+        name: parsed.data.name,
+        description: parsed.data.description,
+        pointsCost: null,
+        stock: parsed.data.stock ?? null,
+        imageUrl: parsed.data.imageUrl,
+        discountPercent: parsed.data.discountPercent ?? null,
+        discountMaxAmount: parsed.data.discountMaxAmount ?? null,
+        discountAmount: parsed.data.discountAmount ?? null,
+        minSpendAmount: parsed.data.minSpendAmount ?? null,
+        autoTrigger: parsed.data.autoTrigger ?? null,
+      },
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return NextResponse.json({ error: "มีวอเชอร์อื่นตั้งเป็นคูปองอัตโนมัติประเภทนี้อยู่แล้ว — ยกเลิกที่วอเชอร์เดิมก่อน" }, { status: 409 });
+    }
+    throw e;
+  }
 
   await logAudit({
     staffId: staff.staffId,

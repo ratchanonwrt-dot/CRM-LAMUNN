@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma, logAudit } from "@lamunn/db";
+import { Prisma, prisma, logAudit } from "@lamunn/db";
 import { requireStaff } from "@/lib/requireStaff";
 
 const schema = z.object({
@@ -13,6 +13,7 @@ const schema = z.object({
   discountMaxAmount: z.coerce.number().min(0).nullable().optional(),
   discountAmount: z.coerce.number().min(0).nullable().optional(),
   minSpendAmount: z.coerce.number().min(0).nullable().optional(),
+  autoTrigger: z.enum(["WELCOME", "NEXT_PURCHASE", "BIRTHDAY_MONTH"]).nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -23,7 +24,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
-  const voucher = await prisma.reward.update({ where: { id: params.id, kind: "VOUCHER" }, data: parsed.data });
+  let voucher;
+  try {
+    voucher = await prisma.reward.update({ where: { id: params.id, kind: "VOUCHER" }, data: parsed.data });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return NextResponse.json({ error: "มีวอเชอร์อื่นตั้งเป็นคูปองอัตโนมัติประเภทนี้อยู่แล้ว — ยกเลิกที่วอเชอร์เดิมก่อน" }, { status: 409 });
+    }
+    throw e;
+  }
 
   await logAudit({
     staffId: staff.staffId,

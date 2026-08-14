@@ -16,6 +16,14 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+type AutoTrigger = "WELCOME" | "NEXT_PURCHASE" | "BIRTHDAY_MONTH";
+
+const AUTO_TRIGGER_LABELS: Record<AutoTrigger, string> = {
+  WELCOME: "🔄 แจกอัตโนมัติให้สมาชิกใหม่ทุกคนตอนสมัคร",
+  NEXT_PURCHASE: "🔄 แจกอัตโนมัติหลังลูกค้าใช้คูปองต้อนรับสมาชิกใหม่",
+  BIRTHDAY_MONTH: "🔄 แจกอัตโนมัติให้ลูกค้าตอนเข้าเดือนเกิด (ปีละครั้ง)",
+};
+
 interface Voucher {
   id: string;
   name: string;
@@ -27,6 +35,7 @@ interface Voucher {
   discountAmount: number | null;
   minSpendAmount: number | null;
   isActive: boolean;
+  autoTrigger: AutoTrigger | null;
 }
 
 export default function VoucherCatalogRow({ voucher, autoTierNames = [] }: { voucher: Voucher; autoTierNames?: string[] }) {
@@ -40,6 +49,7 @@ export default function VoucherCatalogRow({ voucher, autoTierNames = [] }: { vou
   const [discountMaxAmount, setDiscountMaxAmount] = useState(voucher.discountMaxAmount === null ? "" : String(voucher.discountMaxAmount));
   const [discountAmount, setDiscountAmount] = useState(voucher.discountAmount === null ? "" : String(voucher.discountAmount));
   const [minSpendAmount, setMinSpendAmount] = useState(voucher.minSpendAmount === null ? "" : String(voucher.minSpendAmount));
+  const [autoTrigger, setAutoTrigger] = useState<AutoTrigger | "">(voucher.autoTrigger ?? "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageSaving, setImageSaving] = useState(false);
@@ -61,6 +71,7 @@ export default function VoucherCatalogRow({ voucher, autoTierNames = [] }: { vou
         discountMaxAmount: discountMaxAmount === "" ? null : discountMaxAmount,
         discountAmount: discountAmount === "" ? null : discountAmount,
         minSpendAmount: minSpendAmount === "" ? null : minSpendAmount,
+        autoTrigger: autoTrigger === "" ? null : autoTrigger,
       }),
     });
     const data = await res.json();
@@ -112,6 +123,7 @@ export default function VoucherCatalogRow({ voucher, autoTierNames = [] }: { vou
           {autoTierNames.length > 0 && (
             <p className="mt-0.5 text-xs font-normal text-brand-600">🔄 แจกอัตโนมัติทุก 3 เดือนให้ระดับ: {autoTierNames.join(", ")}</p>
           )}
+          {voucher.autoTrigger && <p className="mt-0.5 text-xs font-normal text-brand-600">{AUTO_TRIGGER_LABELS[voucher.autoTrigger]}</p>}
         </td>
         <td className="px-4 py-2 text-gray-500">
           {voucher.discountPercent !== null
@@ -200,7 +212,7 @@ export default function VoucherCatalogRow({ voucher, autoTierNames = [] }: { vou
                 </div>
               </div>
 
-              <div className="md:w-1/4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <Field label="จำนวนคงเหลือ (ว่าง = ไม่จำกัด)">
                   <input
                     type="number"
@@ -210,6 +222,18 @@ export default function VoucherCatalogRow({ voucher, autoTierNames = [] }: { vou
                     onChange={(e) => setStock(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                   />
+                </Field>
+                <Field label="ตั้งเป็นคูปองอัตโนมัติ (ไม่บังคับ)">
+                  <select
+                    value={autoTrigger}
+                    onChange={(e) => setAutoTrigger(e.target.value as AutoTrigger | "")}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    <option value="">ไม่ตั้ง — แจกด้วยมือเท่านั้น</option>
+                    <option value="WELCOME">ต้อนรับสมาชิกใหม่ (ตอนสมัคร)</option>
+                    <option value="NEXT_PURCHASE">ซื้อครั้งถัดไป (หลังใช้คูปองต้อนรับ)</option>
+                    <option value="BIRTHDAY_MONTH">เดือนเกิด (ปีละครั้ง)</option>
+                  </select>
                 </Field>
               </div>
               <div>

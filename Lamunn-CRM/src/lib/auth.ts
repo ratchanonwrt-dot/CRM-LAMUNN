@@ -1,6 +1,6 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { prisma } from "@lamunn/db";
+import { prisma, grantWelcomeCouponIfNeeded } from "@lamunn/db";
 import { verifyOtp } from "@/lib/otp";
 
 const lineLoginConfigured = Boolean(process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET);
@@ -79,9 +79,11 @@ export const authOptions: NextAuthOptions = {
         });
         token.userType = "customer";
         token.customerId = customer.id;
+        await grantWelcomeCouponIfNeeded(customer.id);
       } else if (user && account?.provider === "customer-otp") {
         token.userType = "customer";
         token.customerId = user.id;
+        await grantWelcomeCouponIfNeeded(user.id);
       }
       return token;
     },

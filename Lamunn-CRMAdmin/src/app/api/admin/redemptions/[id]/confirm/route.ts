@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@lamunn/db";
+import { prisma, grantNextPurchaseCouponIfWelcomeUsed } from "@lamunn/db";
 import { requireStaff } from "@/lib/requireStaff";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -25,6 +25,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     where: { id: params.id },
     data: { status: "COMPLETED", branchId, fulfilledByStaffId: staff.staffId },
   });
+
+  await grantNextPurchaseCouponIfWelcomeUsed(updated.id);
 
   return NextResponse.json({ ok: true, redemption: updated });
 }

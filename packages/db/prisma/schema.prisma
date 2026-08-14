@@ -318,6 +318,15 @@ enum RewardKind {
   VOUCHER // admin-only: keyed to a specific customer by phone from /admin/vouchers, never self-service
 }
 
+// Marks a voucher as the one auto-granted by a specific customer-lifecycle event
+// (see packages/db/src/autoCoupons.ts). @unique so at most one active mapping can
+// exist per trigger at a time — admin must clear the old one before reassigning.
+enum RewardAutoTrigger {
+  WELCOME // granted once, the first time a Customer row is created
+  NEXT_PURCHASE // granted once a customer's WELCOME redemption is confirmed (COMPLETED)
+  BIRTHDAY_MONTH // granted once per year when the current month matches Customer.dateOfBirth's month
+}
+
 model Reward {
   id                String     @id @default(cuid())
   kind              RewardKind @default(REWARD)
@@ -331,6 +340,7 @@ model Reward {
   discountAmount    Decimal?   @db.Decimal(10, 2) // e.g. 20 = "ลด 20 บาท" — flat-amount alternative to discountPercent
   minSpendAmount    Decimal?   @db.Decimal(10, 2) // e.g. 200 = "ซื้อครบ 200 บาท" — display-only condition, staff apply it manually at the POS
   isActive          Boolean    @default(true)
+  autoTrigger       RewardAutoTrigger? @unique // null = not an auto-granted coupon; see grantAutoCoupons in autoCoupons.ts
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 

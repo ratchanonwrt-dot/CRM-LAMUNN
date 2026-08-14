@@ -5,6 +5,7 @@ import { verifyQrPayload } from "@lamunn/db";
 import { resolvePointRule, calculatePoints } from "@lamunn/db";
 import { computeExpiryDate } from "@lamunn/db";
 import { lookupPosBill } from "@lamunn/db";
+import { grantWelcomeCouponIfNeeded } from "@lamunn/db";
 
 // No login required: the customer just scans the receipt QR and types their phone
 // number. Low friction by design — see prisma/schema.prisma / project plan for the
@@ -128,6 +129,7 @@ export async function POST(req: NextRequest) {
     customer = await prisma.customer.create({
       data: { phone, name, dateOfBirth: parsedDob, dateOfBirthConfirmedAt: new Date(), gender, pdpaConsentedAt: new Date(), tosConsentedAt: new Date() },
     });
+    await grantWelcomeCouponIfNeeded(customer.id);
   }
   const customerId = customer.id;
 

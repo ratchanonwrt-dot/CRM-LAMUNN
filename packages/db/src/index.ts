@@ -5,6 +5,7 @@ export * from "./expiry";
 export * from "./settings";
 export * from "./tiers";
 export * from "./tierLifecycle";
+export * from "./autoCoupons";
 export * from "./audit";
 export * from "./permissions";
 export * from "./b2b";

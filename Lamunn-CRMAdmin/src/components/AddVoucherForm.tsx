@@ -14,6 +14,8 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+type AutoTrigger = "WELCOME" | "NEXT_PURCHASE" | "BIRTHDAY_MONTH";
+
 export default function AddVoucherForm() {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -24,6 +26,7 @@ export default function AddVoucherForm() {
   const [discountMaxAmount, setDiscountMaxAmount] = useState("");
   const [discountAmount, setDiscountAmount] = useState("");
   const [minSpendAmount, setMinSpendAmount] = useState("");
+  const [autoTrigger, setAutoTrigger] = useState<AutoTrigger | "">("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
@@ -44,6 +47,7 @@ export default function AddVoucherForm() {
         discountMaxAmount: discountMaxAmount || undefined,
         discountAmount: discountAmount || undefined,
         minSpendAmount: minSpendAmount || undefined,
+        autoTrigger: autoTrigger || undefined,
       }),
     });
     const data = await res.json();
@@ -60,6 +64,7 @@ export default function AddVoucherForm() {
     setDiscountMaxAmount("");
     setDiscountAmount("");
     setMinSpendAmount("");
+    setAutoTrigger("");
     router.refresh();
   }
 
@@ -131,7 +136,7 @@ export default function AddVoucherForm() {
         </div>
       </div>
 
-      <div className="md:w-1/4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Field label="จำนวนคงเหลือ (ว่าง = ไม่จำกัด)">
           <input
             type="number"
@@ -141,6 +146,18 @@ export default function AddVoucherForm() {
             onChange={(e) => setStock(e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
           />
+        </Field>
+        <Field label="ตั้งเป็นคูปองอัตโนมัติ (ไม่บังคับ)">
+          <select
+            value={autoTrigger}
+            onChange={(e) => setAutoTrigger(e.target.value as AutoTrigger | "")}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="">ไม่ตั้ง — แจกด้วยมือเท่านั้น</option>
+            <option value="WELCOME">ต้อนรับสมาชิกใหม่ (ตอนสมัคร)</option>
+            <option value="NEXT_PURCHASE">ซื้อครั้งถัดไป (หลังใช้คูปองต้อนรับ)</option>
+            <option value="BIRTHDAY_MONTH">เดือนเกิด (ปีละครั้ง)</option>
+          </select>
         </Field>
       </div>
       <ImageUploadField
