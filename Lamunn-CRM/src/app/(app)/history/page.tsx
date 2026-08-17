@@ -33,7 +33,7 @@ export default async function HistoryPage() {
     prisma.customer.findUnique({ where: { id: customerId } }),
     expireOldPoints(customerId),
   ]);
-  if (!customerCheck?.name || !customerCheck.dateOfBirthConfirmedAt) redirect("/onboarding?callbackUrl=/history");
+  if (!customerCheck?.firstName || !customerCheck.lastName || !customerCheck.dateOfBirthConfirmedAt) redirect("/onboarding?callbackUrl=/history");
 
   const [transactions, settings] = await Promise.all([
     prisma.pointTransaction.findMany({

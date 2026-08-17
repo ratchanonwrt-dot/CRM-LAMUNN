@@ -14,7 +14,8 @@ import { grantWelcomeCouponIfNeeded } from "@lamunn/db";
 const schema = z.object({
   qr: z.string().min(1),
   phone: z.string().min(1),
-  name: z.string().min(1).optional(),
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
   dateOfBirth: z.string().min(1).optional(), // ISO date string, e.g. "1998-04-12"
   gender: z.enum(["FEMALE", "MALE", "LGBTQ", "UNSPECIFIED"]).optional(),
   consented: z.literal(true).optional(),
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง", code: "MALFORMED" }, { status: 400 });
   }
-  const { qr, phone, name, dateOfBirth, gender, consented, tosConsented } = parsed.data;
+  const { qr, phone, firstName, lastName, dateOfBirth, gender, consented, tosConsented } = parsed.data;
 
   const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? undefined;
   const userAgent = req.headers.get("user-agent") ?? undefined;
@@ -117,7 +118,7 @@ export async function POST(req: NextRequest) {
   // Resolve the customer by phone — this is the "login-free" identification step.
   let customer = await prisma.customer.findUnique({ where: { phone } });
   if (!customer) {
-    if (!name || !dateOfBirth || !consented || !tosConsented) {
+    if (!firstName || !lastName || !dateOfBirth || !consented || !tosConsented) {
       // New phone number: ask the frontend to collect name + date of birth + consent first
       // (this doubles as this customer's sign-up), then resubmit.
       return NextResponse.json({ error: "ลูกค้าใหม่ กรุณากรอกชื่อและวันเกิด", code: "NEEDS_PROFILE" }, { status: 400 });
@@ -127,7 +128,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "วันเกิดไม่ถูกต้อง", code: "MALFORMED" }, { status: 400 });
     }
     customer = await prisma.customer.create({
-      data: { phone, name, dateOfBirth: parsedDob, dateOfBirthConfirmedAt: new Date(), gender, pdpaConsentedAt: new Date(), tosConsentedAt: new Date() },
+      data: { phone, firstName, lastName, dateOfBirth: parsedDob, dateOfBirthConfirmedAt: new Date(), gender, pdpaConsentedAt: new Date(), tosConsentedAt: new Date() },
     });
     await grantWelcomeCouponIfNeeded(customer.id);
   }

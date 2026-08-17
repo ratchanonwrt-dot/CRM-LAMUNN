@@ -18,7 +18,7 @@ export default async function DashboardPage() {
     prisma.customer.findUnique({ where: { id: customerId } }),
     expireOldPoints(customerId),
   ]);
-  if (!customerCheck?.name || !customerCheck.dateOfBirthConfirmedAt) redirect("/onboarding?callbackUrl=/dashboard");
+  if (!customerCheck?.firstName || !customerCheck.lastName || !customerCheck.dateOfBirthConfirmedAt) redirect("/onboarding?callbackUrl=/dashboard");
 
   const [customer, expirySummary, settings, tiers] = await Promise.all([
     prisma.customer.findUnique({ where: { id: customerId }, include: { currentTier: true } }),

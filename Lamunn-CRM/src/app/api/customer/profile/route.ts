@@ -5,7 +5,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@lamunn/db";
 
 const schema = z.object({
-  name: z.string().min(1),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
   dateOfBirth: z.string().min(1),
   gender: z.enum(["FEMALE", "MALE", "LGBTQ", "UNSPECIFIED"]).optional(),
   consented: z.literal(true).optional(),
@@ -47,7 +48,8 @@ export async function PATCH(req: NextRequest) {
   await prisma.customer.update({
     where: { id: session.user.customerId },
     data: {
-      name: parsed.data.name,
+      firstName: parsed.data.firstName,
+      lastName: parsed.data.lastName,
       gender: parsed.data.gender,
       ...(dobLocked ? {} : { dateOfBirth, dateOfBirthConfirmedAt: new Date() }),
       ...(customer.pdpaConsentedAt ? {} : { pdpaConsentedAt: new Date() }),

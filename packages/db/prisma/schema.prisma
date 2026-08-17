@@ -107,6 +107,7 @@ model StaffUser {
   email        String    @unique
   phone        String?
   passwordHash String
+  employeeCode String? // same code this staff member uses to log into IMS, for cross-referencing
   role         StaffRole @default(STAFF)
   branchId     String? // null when role = SUPER_ADMIN
   branch       Branch?   @relation(fields: [branchId], references: [id])
@@ -159,7 +160,8 @@ model RolePermission {
 
 model Customer {
   id             String    @id @default(cuid())
-  name           String?
+  firstName      String?
+  lastName       String?
   phone          String?   @unique
   lineUserId     String?   @unique
   email          String?

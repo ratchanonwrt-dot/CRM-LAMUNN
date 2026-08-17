@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, logAudit } from "@lamunn/db";
+import { prisma, logAudit, customerDisplayName } from "@lamunn/db";
 import { requireStaff } from "@/lib/requireStaff";
 
 // Undo a redemption that was mis-scanned/mis-confirmed by staff, whether it's
@@ -31,7 +31,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     action: "DELETE",
     entityType: "Redemption",
     entityId: redemption.id,
-    summary: `ลบรายการแลกรางวัล "${redemption.reward?.name ?? redemption.rewardName}" ของ ${redemption.customer.name ?? redemption.customer.phone ?? redemption.customerId}${
+    summary: `ลบรายการแลกรางวัล "${redemption.reward?.name ?? redemption.rewardName}" ของ ${customerDisplayName({ ...redemption.customer, phone: redemption.customer.phone ?? redemption.customerId })}${
       redemption.pointsSpent > 0 ? ` (คืน ${redemption.pointsSpent} แต้ม)` : ""
     }`,
   });

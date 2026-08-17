@@ -10,6 +10,7 @@ const schema = z.object({
   password: z.string().min(8),
   role: z.enum(["SUPER_ADMIN", "SUPERVISOR", "STAFF", "MARKETING"]),
   branchId: z.string().optional(),
+  employeeCode: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
         passwordHash,
         role: parsed.data.role,
         branchId: isHqRole ? null : parsed.data.branchId,
+        employeeCode: parsed.data.employeeCode || null,
       },
     });
     return NextResponse.json({ ok: true, staffId: created.id });

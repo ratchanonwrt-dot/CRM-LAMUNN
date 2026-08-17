@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma, resolvePointRule, calculatePoints, computeExpiryDate } from "@lamunn/db";
+import { prisma, resolvePointRule, calculatePoints, computeExpiryDate, customerDisplayName } from "@lamunn/db";
 import { requireStaff } from "@/lib/requireStaff";
 
 // Dedicated fast-entry flow: staff type a customer's phone + which branch, no need
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      customerName: customer.name ?? customer.phone,
+      customerName: customerDisplayName(customer),
       points,
       pointsBalance: updatedCustomer.pointsBalance,
     });

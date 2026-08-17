@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma, logAudit } from "@lamunn/db";
+import { prisma, logAudit, customerDisplayName } from "@lamunn/db";
 import { requireStaff } from "@/lib/requireStaff";
 
 // Grants a reward for free (no points deducted) to a specific customer by phone —
@@ -62,9 +62,9 @@ export async function POST(req: NextRequest) {
     action: "CREATE",
     entityType: "Redemption",
     entityId: redemption.id,
-    summary: `ออกวอเชอร์ "${reward.name}" ให้ ${customer.name ?? customer.phone}`,
+    summary: `ออกวอเชอร์ "${reward.name}" ให้ ${customerDisplayName(customer)}`,
     changes: { phone: parsed.data.phone, rewardId: reward.id },
   });
 
-  return NextResponse.json({ ok: true, redemptionId: redemption.id, customerName: customer.name ?? customer.phone });
+  return NextResponse.json({ ok: true, redemptionId: redemption.id, customerName: customerDisplayName(customer) });
 }

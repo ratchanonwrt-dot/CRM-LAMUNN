@@ -11,6 +11,7 @@ const schema = z.object({
   password: z.string().min(8).optional(),
   role: z.enum(["SUPER_ADMIN", "SUPERVISOR", "STAFF", "MARKETING"]).optional(),
   branchId: z.string().optional(),
+  employeeCode: z.string().nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -35,6 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (parsed.data.name !== undefined) data.name = parsed.data.name;
   if (parsed.data.email !== undefined) data.email = parsed.data.email;
   if (parsed.data.password) data.passwordHash = await bcrypt.hash(parsed.data.password, 10);
+  if (parsed.data.employeeCode !== undefined) data.employeeCode = parsed.data.employeeCode || null;
   if (parsed.data.role !== undefined) {
     data.role = parsed.data.role;
     data.branchId = isHqRole ? null : (parsed.data.branchId ?? target.branchId);

@@ -1,4 +1,4 @@
-import { prisma } from "@lamunn/db";
+import { prisma, customerDisplayName } from "@lamunn/db";
 import { requirePageRole } from "@/lib/requirePageRole";
 import CustomerAnalyticsDashboard from "@/components/CustomerAnalyticsDashboard";
 
@@ -33,7 +33,7 @@ export default async function CustomerAnalyticsPage() {
 
   const [customers, lastEarnByCustomer, redemptionStats] = await Promise.all([
     prisma.customer.findMany({
-      select: { id: true, name: true, phone: true, gender: true, dateOfBirth: true, createdAt: true, pointsBalance: true, lifetimePoints: true },
+      select: { id: true, firstName: true, lastName: true, phone: true, gender: true, dateOfBirth: true, createdAt: true, pointsBalance: true, lifetimePoints: true },
     }),
     prisma.pointTransaction.groupBy({ by: ["customerId"], where: { type: "EARN" }, _max: { createdAt: true } }),
     prisma.redemption.groupBy({ by: ["rewardName"], _count: true }),
@@ -99,7 +99,7 @@ export default async function CustomerAnalyticsPage() {
   const topCustomers = [...customers]
     .sort((a, b) => b.lifetimePoints - a.lifetimePoints)
     .slice(0, 10)
-    .map((c) => ({ label: c.name || c.phone || "-", value: c.lifetimePoints }));
+    .map((c) => ({ label: customerDisplayName(c), value: c.lifetimePoints }));
 
   // ---- Top rewards ----
   const topRewards = [...redemptionStats]

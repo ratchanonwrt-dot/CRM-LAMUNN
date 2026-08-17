@@ -21,7 +21,7 @@ export default async function RewardsPage() {
     prisma.customer.findUnique({ where: { id: customerId } }),
     expireOldPoints(customerId),
   ]);
-  if (!customerCheck?.name || !customerCheck.dateOfBirthConfirmedAt) redirect("/onboarding?callbackUrl=/rewards");
+  if (!customerCheck?.firstName || !customerCheck.lastName || !customerCheck.dateOfBirthConfirmedAt) redirect("/onboarding?callbackUrl=/rewards");
 
   const [rewards, customer, expirySummary, settings] = await Promise.all([
     prisma.reward.findMany({ where: { isActive: true, kind: "REWARD" }, orderBy: { pointsCost: "asc" } }),

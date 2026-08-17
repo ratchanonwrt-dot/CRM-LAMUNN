@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { format } from "date-fns";
-import { prisma } from "@lamunn/db";
+import { prisma, customerDisplayName } from "@lamunn/db";
 import { requirePageRole } from "@/lib/requirePageRole";
 import DeleteButton from "@/components/DeleteButton";
 
@@ -55,7 +55,7 @@ export default async function RedemptionsPage() {
               return (
                 <tr key={r.id} className="border-t border-gray-100">
                   <td className="px-4 py-2 text-gray-500">{format(r.createdAt, "d MMM yyyy HH:mm")}</td>
-                  <td className="px-4 py-2">{r.customer.name ?? r.customer.phone ?? "-"}</td>
+                  <td className="px-4 py-2">{customerDisplayName(r.customer)}</td>
                   <td className="px-4 py-2">{r.reward?.name ?? r.rewardName}</td>
                   <td className="px-4 py-2">{r.pointsSpent}</td>
                   <td className="px-4 py-2">
@@ -104,7 +104,7 @@ export default async function RedemptionsPage() {
             {history.map((r) => (
               <tr key={r.id} className="border-t border-gray-100">
                 <td className="px-4 py-2 text-gray-500">{format(r.updatedAt, "d MMM yyyy HH:mm")}</td>
-                <td className="px-4 py-2">{r.customer.name ?? r.customer.phone ?? "-"}</td>
+                <td className="px-4 py-2">{customerDisplayName(r.customer)}</td>
                 <td className="px-4 py-2">{r.reward?.name ?? r.rewardName}</td>
                 <td className="px-4 py-2">{r.pointsSpent}</td>
                 <td className="px-4 py-2 text-gray-500">{r.branch?.name ?? "-"}</td>

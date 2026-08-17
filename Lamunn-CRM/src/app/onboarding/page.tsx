@@ -15,17 +15,18 @@ export default async function OnboardingPage({ searchParams }: { searchParams: {
   if (!customer) redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
 
   // Already fully set up — nothing for this page to collect, so don't show it again.
-  if (customer.name && customer.dateOfBirthConfirmedAt) redirect(callbackUrl);
+  if (customer.firstName && customer.lastName && customer.dateOfBirthConfirmedAt) redirect(callbackUrl);
 
   const initial = {
-    name: customer.name ?? "",
+    firstName: customer.firstName ?? "",
+    lastName: customer.lastName ?? "",
     dateOfBirth: customer.dateOfBirth ? customer.dateOfBirth.toISOString().slice(0, 10) : "",
     gender: customer.gender ?? "",
     needsPdpaConsent: !customer.pdpaConsentedAt,
     needsTosConsent: !customer.tosConsentedAt,
     // If they already have a name (so this isn't a brand-new signup) but their DOB was
     // never confirmed, this is the one-time re-confirmation prompt, not first-time onboarding.
-    isReconfirm: !!customer.name && !customer.dateOfBirthConfirmedAt,
+    isReconfirm: !!(customer.firstName && customer.lastName) && !customer.dateOfBirthConfirmedAt,
   };
 
   return <OnboardingForm initial={initial} callbackUrl={callbackUrl} />;

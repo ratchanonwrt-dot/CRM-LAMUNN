@@ -24,6 +24,7 @@ export default function AddStaffForm({
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"SUPER_ADMIN" | "SUPERVISOR" | "STAFF" | "MARKETING">("STAFF");
   const [branchId, setBranchId] = useState(fixedBranchId ?? branches[0]?.id ?? "");
+  const [employeeCode, setEmployeeCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -40,6 +41,7 @@ export default function AddStaffForm({
         password,
         role,
         branchId: role === "SUPER_ADMIN" || role === "MARKETING" || role === "SUPERVISOR" ? undefined : branchId,
+        employeeCode: employeeCode || undefined,
       }),
     });
     const data = await res.json();
@@ -51,14 +53,16 @@ export default function AddStaffForm({
     setName("");
     setEmail("");
     setPassword("");
+    setEmployeeCode("");
     router.refresh();
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3 rounded-xl border border-gray-200 bg-white p-4 md:grid-cols-6">
+    <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3 rounded-xl border border-gray-200 bg-white p-4 md:grid-cols-7">
       <input required placeholder="ชื่อ-นามสกุล" value={name} onChange={(e) => setName(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
       <input required type="email" placeholder="อีเมล" value={email} onChange={(e) => setEmail(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
       <input required type="password" minLength={8} placeholder="รหัสผ่าน (8+ ตัว)" value={password} onChange={(e) => setPassword(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+      <input placeholder="รหัสพนักงาน (IMS)" value={employeeCode} onChange={(e) => setEmployeeCode(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
       {canChooseRole ? (
         <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
           <option value="STAFF">พนักงาน (Staff)</option>

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@lamunn/db";
+import { prisma, customerDisplayName } from "@lamunn/db";
 import ConfirmRedemptionButton from "@/components/ConfirmRedemptionButton";
 import { requirePageRole } from "@/lib/requirePageRole";
 
@@ -31,7 +31,7 @@ export default async function RedemptionConfirmPage({ params }: { params: { id: 
       <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-6">
         <div>
           <p className="text-xs text-gray-400">ลูกค้า</p>
-          <p className="font-medium text-gray-800">{redemption.customer.name ?? redemption.customer.phone ?? "-"}</p>
+          <p className="font-medium text-gray-800">{customerDisplayName(redemption.customer)}</p>
           {redemption.customer.phone && <p className="text-sm text-gray-500">{redemption.customer.phone}</p>}
         </div>
         <div>

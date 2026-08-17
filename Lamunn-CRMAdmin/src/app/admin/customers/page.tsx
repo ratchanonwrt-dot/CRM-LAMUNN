@@ -39,7 +39,9 @@ export default async function CustomersPage({ searchParams }: { searchParams: { 
     return {
       customer: {
         id: c.id,
-        name: c.name,
+        // name column shows just the name (phone has its own column below), so no
+        // phone-fallback here — that's what customerDisplayName is for elsewhere.
+        name: [c.firstName, c.lastName].filter(Boolean).join(" ") || null,
         phone: c.phone,
         dateOfBirth: c.dateOfBirth,
         pointsBalance: c.pointsBalance,

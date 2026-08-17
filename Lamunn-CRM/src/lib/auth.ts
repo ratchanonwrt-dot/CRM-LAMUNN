@@ -1,6 +1,6 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { prisma, grantWelcomeCouponIfNeeded } from "@lamunn/db";
+import { prisma, grantWelcomeCouponIfNeeded, customerDisplayName } from "@lamunn/db";
 import { verifyOtp } from "@/lib/otp";
 
 const lineLoginConfigured = Boolean(process.env.LINE_CHANNEL_ID && process.env.LINE_CHANNEL_SECRET);
@@ -64,7 +64,7 @@ export const authOptions: NextAuthOptions = {
           create: { phone: credentials.phone },
         });
 
-        return { id: customer.id, name: customer.name ?? credentials.phone };
+        return { id: customer.id, name: customerDisplayName(customer) };
       },
     }),
   ],
@@ -72,10 +72,13 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account }) {
       if (user && account?.provider === "line") {
         // First LINE sign-in: find or create the Customer by LINE user id.
+        // LINE only gives a single displayName string, no first/last split — best
+        // effort into firstName; lastName stays unset until the onboarding form
+        // (still gated on both being present) collects it properly.
         const customer = await prisma.customer.upsert({
           where: { lineUserId: user.id },
-          update: { name: user.name ?? undefined },
-          create: { lineUserId: user.id, name: user.name ?? undefined },
+          update: { firstName: user.name ?? undefined },
+          create: { lineUserId: user.id, firstName: user.name ?? undefined },
         });
         token.userType = "customer";
         token.customerId = customer.id;

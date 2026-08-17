@@ -6,7 +6,8 @@ import { useLocale } from "@/components/LanguageProvider";
 import LanguageSwitch from "@/components/LanguageSwitch";
 
 interface Initial {
-  name: string;
+  firstName: string;
+  lastName: string;
   dateOfBirth: string; // "" or "YYYY-MM-DD"
   gender: string;
   needsPdpaConsent: boolean;
@@ -18,7 +19,8 @@ export default function OnboardingForm({ initial, callbackUrl }: { initial: Init
   const { t } = useLocale();
   const router = useRouter();
 
-  const [name, setName] = useState(initial.name);
+  const [firstName, setFirstName] = useState(initial.firstName);
+  const [lastName, setLastName] = useState(initial.lastName);
   const [dateOfBirth, setDateOfBirth] = useState(initial.dateOfBirth);
   const [gender, setGender] = useState(initial.gender);
   const [consented, setConsented] = useState(!initial.needsPdpaConsent);
@@ -42,7 +44,8 @@ export default function OnboardingForm({ initial, callbackUrl }: { initial: Init
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name,
+        firstName,
+        lastName,
         dateOfBirth,
         gender: gender || undefined,
         consented: initial.needsPdpaConsent ? consented : undefined,
@@ -72,11 +75,20 @@ export default function OnboardingForm({ initial, callbackUrl }: { initial: Init
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">{t("nameLabel")}</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">{t("firstNameLabel")}</label>
           <input
             required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-4 py-3"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">{t("lastNameLabel")}</label>
+          <input
+            required
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-4 py-3"
           />
         </div>

@@ -20,7 +20,8 @@ export default function ScanClient({ logoUrl }: { logoUrl: string }) {
 
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [gender, setGender] = useState("");
   const [consented, setConsented] = useState(false);
@@ -28,7 +29,7 @@ export default function ScanClient({ logoUrl }: { logoUrl: string }) {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [state, setState] = useState<ScanState>({ status: "form" });
 
-  async function submit(extra?: { name: string; dateOfBirth: string; gender: string; consented: boolean; tosConsented: boolean }) {
+  async function submit(extra?: { firstName: string; lastName: string; dateOfBirth: string; gender: string; consented: boolean; tosConsented: boolean }) {
     setStep("submitting");
     const res = await fetch("/api/points/scan", {
       method: "POST",
@@ -63,7 +64,7 @@ export default function ScanClient({ logoUrl }: { logoUrl: string }) {
       return;
     }
     setProfileError(null);
-    submit({ name, dateOfBirth, gender, consented, tosConsented });
+    submit({ firstName, lastName, dateOfBirth, gender, consented, tosConsented });
   }
 
   return (
@@ -104,9 +105,16 @@ export default function ScanClient({ logoUrl }: { logoUrl: string }) {
           <p className="text-sm text-gray-500">{t("newCustomerDesc", { phone })}</p>
           <input
             required
-            placeholder={t("nameLabel")}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            placeholder={t("firstNameLabel")}
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            className="rounded-lg border border-gray-300 px-4 py-3 text-center"
+          />
+          <input
+            required
+            placeholder={t("lastNameLabel")}
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
             className="rounded-lg border border-gray-300 px-4 py-3 text-center"
           />
           <div className="text-left">

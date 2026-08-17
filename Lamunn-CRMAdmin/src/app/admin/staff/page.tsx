@@ -29,6 +29,7 @@ export default async function StaffPage() {
               <th className="px-4 py-2">อีเมล</th>
               <th className="px-4 py-2">บทบาท</th>
               <th className="px-4 py-2">สาขา</th>
+              <th className="px-4 py-2">รหัสพนักงาน (IMS)</th>
               <th className="px-4 py-2">สถานะ</th>
               <th className="px-4 py-2"></th>
             </tr>

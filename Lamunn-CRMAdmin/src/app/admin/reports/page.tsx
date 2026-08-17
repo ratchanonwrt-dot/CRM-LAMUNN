@@ -1,4 +1,4 @@
-import { prisma } from "@lamunn/db";
+import { prisma, customerDisplayName } from "@lamunn/db";
 import { format } from "date-fns";
 import { requirePageRole } from "@/lib/requirePageRole";
 
@@ -66,7 +66,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: { br
                 <td className="px-4 py-2 text-gray-500">{format(tx.createdAt, "d MMM yyyy HH:mm")}</td>
                 <td className="px-4 py-2">{typeLabel[tx.type] ?? tx.type}</td>
                 <td className="px-4 py-2 text-gray-500">{tx.branch?.code ?? "-"}</td>
-                <td className="px-4 py-2 text-gray-500">{tx.customer.name ?? tx.customer.phone ?? tx.customerId.slice(0, 8)}</td>
+                <td className="px-4 py-2 text-gray-500">{customerDisplayName({ ...tx.customer, phone: tx.customer.phone ?? tx.customerId.slice(0, 8) })}</td>
                 <td className="px-4 py-2 font-mono text-gray-500">{tx.receiptNo ?? "-"}</td>
                 <td className="px-4 py-2 text-gray-500">{tx.amount ? Number(tx.amount).toLocaleString() : "-"}</td>
                 <td className={tx.points >= 0 ? "px-4 py-2 font-medium text-brand-700" : "px-4 py-2 font-medium text-red-600"}>
