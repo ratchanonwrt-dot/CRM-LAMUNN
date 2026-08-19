@@ -9,16 +9,20 @@ function daysAgo(days: number): Date {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 }
 
-/** Highest tier whose maintenanceSpendThreshold the given window spend satisfies
- * (tiers with no threshold, e.g. Bronze, always qualify) — same "walk sorted
- * tiers, keep the last one that qualifies" shape as resolveTier(), just keyed on
- * spend-within-window instead of lifetime points. */
+/** Highest tier whose maintenanceSpendThreshold the given window spend satisfies.
+ * Only the floor tier (lowest minPoints, e.g. Bronze) is unconditionally safe when
+ * its threshold is unset — every other tier needs a real configured threshold to
+ * be reachable via spend. Without this, an admin who hasn't set a tier's threshold
+ * yet (null) would have that tier treated as "always qualifies", and the walk-up
+ * would sail straight past it to the next unset tier — in practice promoting
+ * everyone to the top tier while thresholds are still being configured. */
 function resolveMaintainedTier(windowSpend: number, tiers: MembershipTier[]): MembershipTier | null {
   const sorted = [...tiers].sort((a, b) => a.minPoints - b.minPoints);
-  let current: MembershipTier | null = null;
+  let current: MembershipTier | null = sorted[0] ?? null;
   for (const tier of sorted) {
+    if (tier.id === current?.id) continue;
     const threshold = tier.maintenanceSpendThreshold === null ? null : Number(tier.maintenanceSpendThreshold);
-    if (threshold === null || windowSpend >= threshold) current = tier;
+    if (threshold !== null && windowSpend >= threshold) current = tier;
   }
   return current;
 }
