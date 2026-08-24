@@ -134,7 +134,11 @@ export default function VoucherCatalogRow({ voucher, autoTierNames = [] }: { vou
         </td>
         <td className="px-4 py-2 text-gray-500">{voucher.stock === null ? "ไม่จำกัด" : voucher.stock}</td>
         <td className="px-4 py-2">
-          <ToggleActiveButton endpoint={`/api/admin/vouchers/${voucher.id}`} isActive={voucher.isActive} />
+          <ToggleActiveButton
+            endpoint={`/api/admin/vouchers/${voucher.id}`}
+            isActive={voucher.isActive}
+            confirmPinToDeactivate={voucher.autoTrigger ? "100000" : undefined}
+          />
         </td>
         <td className="px-4 py-2">
           <button onClick={() => setEditing((v) => !v)} className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
