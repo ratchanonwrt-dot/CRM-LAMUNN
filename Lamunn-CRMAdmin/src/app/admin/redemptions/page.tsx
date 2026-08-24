@@ -3,23 +3,34 @@ import { format } from "date-fns";
 import { prisma, customerDisplayName } from "@lamunn/db";
 import { requirePageRole } from "@/lib/requirePageRole";
 import DeleteButton from "@/components/DeleteButton";
+import RedemptionHistoryFilter from "@/components/RedemptionHistoryFilter";
 
 // Redemption.branchId is only set once a staff member confirms it (see confirm
 // route), so a PENDING redemption isn't tied to any branch yet — a customer can
 // walk into any branch to redeem, so every branch's staff sees the full queue.
-export default async function RedemptionsPage() {
+export default async function RedemptionsPage({ searchParams }: { searchParams: { rewardName?: string } }) {
   await requirePageRole("redemptions");
-  const [redemptions, history] = await Promise.all([
+  const rewardNameFilter = searchParams.rewardName || undefined;
+
+  const [redemptions, history, rewardNames] = await Promise.all([
     prisma.redemption.findMany({
       where: { status: "PENDING" },
       include: { reward: true, customer: true },
       orderBy: { createdAt: "asc" },
     }),
     prisma.redemption.findMany({
-      where: { status: "COMPLETED" },
-      include: { reward: true, customer: true, branch: true },
+      where: { status: "COMPLETED", ...(rewardNameFilter ? { rewardName: rewardNameFilter } : {}) },
+      include: { reward: true, customer: true, branch: true, fulfilledByStaff: true },
       orderBy: { updatedAt: "desc" },
-      take: 100,
+      // A filtered audit view needs the FULL matching history to cross-check a
+      // count against — only the unfiltered "everything" view caps at 100.
+      ...(rewardNameFilter ? {} : { take: 100 }),
+    }),
+    prisma.redemption.findMany({
+      where: { status: "COMPLETED" },
+      distinct: ["rewardName"],
+      select: { rewardName: true },
+      orderBy: { rewardName: "asc" },
     }),
   ]);
 
@@ -80,7 +91,12 @@ export default async function RedemptionsPage() {
         </table>
       </div>
 
-      <h2 className="mb-2 mt-10 text-lg font-semibold text-gray-800">ประวัติรางวัลที่ยืนยันแล้ว (ล่าสุด 100 รายการ)</h2>
+      <div className="mb-2 mt-10 flex flex-wrap items-end justify-between gap-3">
+        <h2 className="text-lg font-semibold text-gray-800">
+          ประวัติรางวัลที่ยืนยันแล้ว {rewardNameFilter ? `— ${rewardNameFilter} (${history.length} ครั้ง)` : "(ล่าสุด 100 รายการ)"}
+        </h2>
+        <RedemptionHistoryFilter rewardNames={rewardNames.map((r) => r.rewardName)} current={rewardNameFilter} />
+      </div>
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-gray-500">
@@ -90,13 +106,14 @@ export default async function RedemptionsPage() {
               <th className="px-4 py-2">รางวัล</th>
               <th className="px-4 py-2">แต้ม</th>
               <th className="px-4 py-2">สาขา</th>
+              <th className="px-4 py-2">พนักงานที่ยืนยัน</th>
               <th className="px-4 py-2"></th>
             </tr>
           </thead>
           <tbody>
             {history.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-gray-400">
                   ยังไม่มีประวัติ
                 </td>
               </tr>
@@ -108,6 +125,7 @@ export default async function RedemptionsPage() {
                 <td className="px-4 py-2">{r.reward?.name ?? r.rewardName}</td>
                 <td className="px-4 py-2">{r.pointsSpent}</td>
                 <td className="px-4 py-2 text-gray-500">{r.branch?.name ?? "-"}</td>
+                <td className="px-4 py-2 text-gray-500">{r.fulfilledByStaff?.name ?? "-"}</td>
                 <td className="px-4 py-2">
                   <DeleteButton
                     endpoint={`/api/admin/redemptions/${r.id}`}
