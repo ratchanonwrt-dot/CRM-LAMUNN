@@ -38,11 +38,15 @@ const roleLabel: Record<string, string> = {
   MARKETING: "การตลาด (Marketing)",
 };
 
-// Section headers give a clear visual split between the retail/storefront
-// membership system (branch-facing) and the separate B2B/Catering system, per
-// request — the two must never look like one flat, undifferentiated list.
+// Section headers give a clear visual split so the nav never reads as one long
+// undifferentiated list — retail's old single 13-item bucket got split into 4
+// focused groups (overview/reports, day-to-day ops, loyalty-program setup,
+// master data), on top of the pre-existing retail vs B2B/Catering vs system split.
 const SECTIONS = [
-  { key: "retail", label: "ระบบสมาชิกหน้าร้าน" },
+  { key: "overview", label: "ภาพรวม & รายงาน" },
+  { key: "operations", label: "ดำเนินการหน้าร้าน" },
+  { key: "loyalty", label: "ตั้งค่าระบบสมาชิก" },
+  { key: "masterdata", label: "ข้อมูลหลัก" },
   { key: "b2b", label: "B2B / Catering" },
   { key: "system", label: "ระบบ" },
 ] as const;
@@ -52,21 +56,26 @@ type SectionKey = (typeof SECTIONS)[number]["key"];
 // gated outside the dynamic permission system (role-permissions itself is
 // SUPER_ADMIN-only and hardcoded, so a role can never edit its own access away).
 const allLinks: { href: string; label: string; icon: typeof LayoutDashboard; color: string; feature: FeatureKey | null; section: SectionKey; superAdminOnly?: boolean }[] = [
-  { href: "/admin", label: "ภาพรวม", icon: LayoutDashboard, color: "bg-sky-100 text-sky-400", feature: "overview", section: "retail" },
-  { href: "/admin/reports", label: "รายงาน", icon: BarChart3, color: "bg-cyan-100 text-cyan-400", feature: "reports", section: "retail" },
-  { href: "/admin/enter-points", label: "กรอกคะแนน", icon: Coins, color: "bg-yellow-100 text-yellow-500", feature: "enterPoints", section: "retail" },
-  { href: "/admin/branches", label: "สาขา", icon: Building2, color: "bg-violet-100 text-violet-400", feature: "branches", section: "retail" },
-  { href: "/admin/customer-analytics", label: "Dashboard ลูกค้า", icon: PieChart, color: "bg-lime-100 text-lime-500", feature: "customerAnalytics", section: "retail" },
-  { href: "/admin/tiers", label: "ระดับสมาชิก", icon: Award, color: "bg-fuchsia-100 text-fuchsia-400", feature: "tiers", section: "retail" },
-  { href: "/admin/point-rules", label: "กติกาสะสมแต้ม", icon: Percent, color: "bg-orange-100 text-orange-400", feature: "pointRules", section: "retail" },
-  { href: "/admin/rewards", label: "รางวัล", icon: Gift, color: "bg-emerald-100 text-emerald-400", feature: "rewards", section: "retail" },
-  { href: "/admin/vouchers", label: "Voucher", icon: Ticket, color: "bg-amber-100 text-amber-500", feature: "vouchers", section: "retail" },
-  { href: "/admin/scan-redemption", label: "สแกน QR ยืนยันแลกรางวัล", icon: Camera, color: "bg-lime-100 text-lime-500", feature: "scanRedemption", section: "retail" },
-  { href: "/admin/redemptions", label: "ยืนยันแลกรางวัล", icon: QrCode, color: "bg-teal-100 text-teal-400", feature: "redemptions", section: "retail" },
-  { href: "/admin/redemptions/history", label: "ประวัติการแลกรางวัล", icon: ClipboardList, color: "bg-teal-100 text-teal-400", feature: "redemptions", section: "retail" },
-  { href: "/admin/customers", label: "ลูกค้า", icon: UserRound, color: "bg-pink-100 text-pink-400", feature: "customers", section: "retail" },
+  { href: "/admin", label: "ภาพรวม", icon: LayoutDashboard, color: "bg-sky-100 text-sky-400", feature: "overview", section: "overview" },
+  { href: "/admin/reports", label: "รายงาน", icon: BarChart3, color: "bg-cyan-100 text-cyan-400", feature: "reports", section: "overview" },
+  { href: "/admin/customer-analytics", label: "Dashboard ลูกค้า", icon: PieChart, color: "bg-lime-100 text-lime-500", feature: "customerAnalytics", section: "overview" },
+
+  { href: "/admin/enter-points", label: "กรอกคะแนน", icon: Coins, color: "bg-yellow-100 text-yellow-500", feature: "enterPoints", section: "operations" },
+  { href: "/admin/scan-redemption", label: "สแกน QR ยืนยันแลกรางวัล", icon: Camera, color: "bg-lime-100 text-lime-500", feature: "scanRedemption", section: "operations" },
+  { href: "/admin/redemptions", label: "ยืนยันแลกรางวัล", icon: QrCode, color: "bg-teal-100 text-teal-400", feature: "redemptions", section: "operations" },
+  { href: "/admin/redemptions/history", label: "ประวัติการแลกรางวัล", icon: ClipboardList, color: "bg-teal-100 text-teal-400", feature: "redemptions", section: "operations" },
+
+  { href: "/admin/tiers", label: "ระดับสมาชิก", icon: Award, color: "bg-fuchsia-100 text-fuchsia-400", feature: "tiers", section: "loyalty" },
+  { href: "/admin/point-rules", label: "กติกาสะสมแต้ม", icon: Percent, color: "bg-orange-100 text-orange-400", feature: "pointRules", section: "loyalty" },
+  { href: "/admin/rewards", label: "รางวัล", icon: Gift, color: "bg-emerald-100 text-emerald-400", feature: "rewards", section: "loyalty" },
+  { href: "/admin/vouchers", label: "Voucher", icon: Ticket, color: "bg-amber-100 text-amber-500", feature: "vouchers", section: "loyalty" },
+
+  { href: "/admin/branches", label: "สาขา", icon: Building2, color: "bg-violet-100 text-violet-400", feature: "branches", section: "masterdata" },
+  { href: "/admin/customers", label: "ลูกค้า", icon: UserRound, color: "bg-pink-100 text-pink-400", feature: "customers", section: "masterdata" },
+
   { href: "/admin/b2b", label: "ลูกค้า B2B/Catering", icon: Briefcase, color: "bg-stone-100 text-stone-500", feature: "b2bCustomers", section: "b2b" },
   { href: "/admin/b2b/tiers", label: "ระดับ B2B/Catering", icon: Layers, color: "bg-stone-100 text-stone-500", feature: "b2bTiers", section: "b2b" },
+
   { href: "/admin/settings", label: "ตั้งค่าหน้าตาแอป", icon: Palette, color: "bg-rose-100 text-rose-400", feature: "settings", section: "system" },
   { href: "/admin/audit-log", label: "ประวัติการแก้ไข", icon: History, color: "bg-slate-100 text-slate-400", feature: "auditLog", section: "system" },
   { href: "/admin/staff", label: "พนักงาน", icon: Users, color: "bg-indigo-100 text-indigo-400", feature: "staff", section: "system" },
@@ -74,13 +83,13 @@ const allLinks: { href: string; label: string; icon: typeof LayoutDashboard; col
 ];
 
 function NavLinks({ links, pathname, onNavigate }: { links: typeof allLinks; pathname: string; onNavigate?: () => void }) {
+  const visibleSections = SECTIONS.filter((s) => links.some((l) => l.section === s.key));
   return (
     <nav className="flex flex-1 flex-col gap-1">
-      {SECTIONS.map((sectionDef) => {
+      {visibleSections.map((sectionDef, i) => {
         const sectionLinks = links.filter((l) => l.section === sectionDef.key);
-        if (sectionLinks.length === 0) return null;
         return (
-          <div key={sectionDef.key} className="mb-2">
+          <div key={sectionDef.key} className={clsx("mb-2", i > 0 && "border-t border-gray-100 pt-2")}>
             <p className="mb-1 mt-3 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 first:mt-0">{sectionDef.label}</p>
             {sectionLinks.map((link) => {
               const Icon = link.icon;
