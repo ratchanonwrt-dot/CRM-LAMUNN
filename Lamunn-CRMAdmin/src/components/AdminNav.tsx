@@ -27,6 +27,7 @@ import {
   LogOut,
   Menu,
   X,
+  ClipboardList,
 } from "lucide-react";
 import type { FeatureKey } from "@lamunn/db";
 
@@ -62,6 +63,7 @@ const allLinks: { href: string; label: string; icon: typeof LayoutDashboard; col
   { href: "/admin/vouchers", label: "Voucher", icon: Ticket, color: "bg-amber-100 text-amber-500", feature: "vouchers", section: "retail" },
   { href: "/admin/scan-redemption", label: "สแกน QR ยืนยันแลกรางวัล", icon: Camera, color: "bg-lime-100 text-lime-500", feature: "scanRedemption", section: "retail" },
   { href: "/admin/redemptions", label: "ยืนยันแลกรางวัล", icon: QrCode, color: "bg-teal-100 text-teal-400", feature: "redemptions", section: "retail" },
+  { href: "/admin/redemptions/history", label: "ประวัติการแลกรางวัล", icon: ClipboardList, color: "bg-teal-100 text-teal-400", feature: "redemptions", section: "retail" },
   { href: "/admin/customers", label: "ลูกค้า", icon: UserRound, color: "bg-pink-100 text-pink-400", feature: "customers", section: "retail" },
   { href: "/admin/b2b", label: "ลูกค้า B2B/Catering", icon: Briefcase, color: "bg-stone-100 text-stone-500", feature: "b2bCustomers", section: "b2b" },
   { href: "/admin/b2b/tiers", label: "ระดับ B2B/Catering", icon: Layers, color: "bg-stone-100 text-stone-500", feature: "b2bTiers", section: "b2b" },
