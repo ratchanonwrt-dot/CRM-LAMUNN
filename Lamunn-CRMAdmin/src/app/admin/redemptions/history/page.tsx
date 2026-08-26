@@ -114,13 +114,14 @@ export default async function RedemptionHistoryPage({
                 <th className="px-4 py-2">แต้ม</th>
                 <th className="px-4 py-2">สาขา</th>
                 <th className="px-4 py-2">พนักงานที่ยืนยัน</th>
+                <th className="px-4 py-2">เลขบิล POS</th>
                 <th className="px-4 py-2"></th>
               </tr>
             </thead>
             <tbody>
               {history.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-gray-400">
+                  <td colSpan={8} className="px-4 py-6 text-center text-gray-400">
                     ยังไม่มีประวัติตามตัวกรองนี้
                   </td>
                 </tr>
@@ -133,6 +134,7 @@ export default async function RedemptionHistoryPage({
                   <td className="px-4 py-2">{r.pointsSpent}</td>
                   <td className="px-4 py-2 text-gray-500">{r.branch?.name ?? "-"}</td>
                   <td className="px-4 py-2 text-gray-500">{r.fulfilledByStaff?.name ?? "-"}</td>
+                  <td className="px-4 py-2 font-mono text-gray-500">{r.posBillNo ?? "-"}</td>
                   <td className="px-4 py-2">
                     <DeleteButton
                       endpoint={`/api/admin/redemptions/${r.id}`}

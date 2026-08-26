@@ -21,9 +21,23 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: "วอเชอร์นี้หมดอายุแล้ว" }, { status: 409 });
   }
 
+  // Free vouchers (a discount applied at POS, not a points-purchased physical
+  // item) need a real bill number on record — it's the only thing that lets
+  // the fraud check catch a staff member keying more discount into POS than
+  // the voucher actually allows. Points-based reward pickups skip this.
+  const posBillNo = typeof body?.posBillNo === "string" ? body.posBillNo.trim() : "";
+  if (redemption.pointsSpent === 0 && !posBillNo) {
+    return NextResponse.json({ error: "กรุณากรอกเลขที่บิล POS ก่อนยืนยัน" }, { status: 400 });
+  }
+
   const updated = await prisma.redemption.update({
     where: { id: params.id },
-    data: { status: "COMPLETED", branchId, fulfilledByStaffId: staff.staffId },
+    data: {
+      status: "COMPLETED",
+      branchId,
+      fulfilledByStaffId: staff.staffId,
+      ...(posBillNo ? { posBillNo } : {}),
+    },
   });
 
   await grantNextPurchaseCouponIfWelcomeUsed(updated.id);

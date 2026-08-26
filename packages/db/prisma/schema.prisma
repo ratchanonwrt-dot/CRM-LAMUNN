@@ -366,6 +366,11 @@ model Redemption {
   branch             Branch?          @relation(fields: [branchId], references: [id])
   fulfilledByStaff   StaffUser?       @relation("FulfilledByStaff", fields: [fulfilledByStaffId], references: [id])
   fulfilledByStaffId String?
+  // POS bill number the staff member typed in at confirm time, for a free
+  // (pointsSpent=0) voucher only — lets the per-transaction fraud check in
+  // fraudCheck.ts look up that exact bill's real discount and catch a staff
+  // member keying more discount into POS than the voucher actually allows.
+  posBillNo          String?
   expiresAt          DateTime? // set only for granted vouchers with a deadline (see /admin/vouchers) — null means no expiry
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt

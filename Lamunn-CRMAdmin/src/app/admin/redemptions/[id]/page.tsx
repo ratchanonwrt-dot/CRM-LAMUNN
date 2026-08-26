@@ -62,6 +62,7 @@ export default async function RedemptionConfirmPage({ params }: { params: { id: 
           <ConfirmRedemptionButton
             redemptionId={redemption.id}
             branches={needsBranchPicker ? branches.map((b) => ({ id: b.id, name: b.name })) : undefined}
+            requiresPosBillNo={redemption.pointsSpent === 0}
           />
         )}
       </div>

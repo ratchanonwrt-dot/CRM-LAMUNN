@@ -1,4 +1,5 @@
 import { prisma } from "./client";
+import { customerDisplayName } from "./customerName";
 
 // How many days back a branch must have a POS bill for its data to be trusted
 // enough to actually compare — otherwise a branch on Wongnai (never synced
@@ -98,5 +99,83 @@ export async function getVoucherFraudCheck(options?: { days?: number }): Promise
 
   const statusRank = { mismatch: 0, no_data: 1, match: 2 } as const;
   rows.sort((a, b) => statusRank[a.status] - statusRank[b.status] || b.date.localeCompare(a.date));
+  return rows;
+}
+
+export interface PerTransactionFraudRow {
+  redemptionId: string;
+  branchName: string;
+  date: string;
+  customerName: string;
+  rewardName: string;
+  discountAmount: number;
+  posBillNo: string;
+  posDiscount: number | null; // null = no bill with this number found at this branch
+  staffName: string | null;
+  status: "match" | "over" | "under" | "not_found";
+}
+
+/**
+ * Precise, per-transaction version of the check above — only possible for
+ * confirmations where staff typed in the POS bill number (see the confirm
+ * route). Looks up that exact bill's real discount and compares it against
+ * what the voucher should have given, catching a staff member keying MORE
+ * discount into POS than the coupon actually allows (the aggregate check
+ * above can't see this: a bigger discount still counts as "≥ the coupon").
+ */
+export async function getPerTransactionFraudCheck(options?: { days?: number }): Promise<PerTransactionFraudRow[]> {
+  const days = options?.days ?? 14;
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const redemptions = await prisma.redemption.findMany({
+    where: {
+      status: "COMPLETED",
+      pointsSpent: 0,
+      posBillNo: { not: null },
+      updatedAt: { gte: since },
+      branchId: { not: null },
+      reward: { discountAmount: { not: null } },
+    },
+    include: { branch: true, reward: true, customer: true, fulfilledByStaff: true },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  const relevant = redemptions.filter((r) => r.branch && r.reward?.discountAmount && r.posBillNo);
+  if (relevant.length === 0) return [];
+
+  const branchCodes = [...new Set(relevant.map((r) => r.branch!.code))];
+
+  const posBills = await prisma.$queryRawUnsafe<{ branch_code: string; bill_no: string; discount: number }[]>(
+    `SELECT b.code as branch_code, pb.bill_no, pb.discount::float as discount
+     FROM public.pos_bills pb
+     JOIN public.branches b ON b.id = pb.branch_id
+     WHERE b.code = ANY($1::text[])`,
+    branchCodes
+  );
+  const billMap = new Map<string, number>();
+  for (const b of posBills) billMap.set(`${b.branch_code}|${b.bill_no}`, Number(b.discount));
+
+  const rows: PerTransactionFraudRow[] = relevant.map((r) => {
+    const discountAmount = Number(r.reward!.discountAmount);
+    const posDiscount = billMap.get(`${r.branch!.code}|${r.posBillNo}`) ?? null;
+    const status: PerTransactionFraudRow["status"] =
+      posDiscount === null ? "not_found" : posDiscount > discountAmount ? "over" : posDiscount < discountAmount ? "under" : "match";
+
+    return {
+      redemptionId: r.id,
+      branchName: r.branch!.name,
+      date: r.updatedAt.toISOString().slice(0, 10),
+      customerName: customerDisplayName(r.customer),
+      rewardName: r.rewardName,
+      discountAmount,
+      posBillNo: r.posBillNo!,
+      posDiscount,
+      staffName: r.fulfilledByStaff?.name ?? null,
+      status,
+    };
+  });
+
+  const rank = { over: 0, under: 1, not_found: 2, match: 3 } as const;
+  rows.sort((a, b) => rank[a.status] - rank[b.status] || b.date.localeCompare(a.date));
   return rows;
 }

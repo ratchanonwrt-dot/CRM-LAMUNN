@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { format } from "date-fns";
-import { getVoucherFraudCheck } from "@lamunn/db";
+import { getVoucherFraudCheck, getPerTransactionFraudCheck } from "@lamunn/db";
 import { requirePageRole } from "@/lib/requirePageRole";
-import { ArrowLeft, AlertTriangle, CheckCircle2, CircleHelp } from "lucide-react";
+import { ArrowLeft, AlertTriangle, AlertOctagon, CheckCircle2, CircleHelp, HelpCircle } from "lucide-react";
 
 const statusLabel = {
   mismatch: { text: "ต้องตรวจสอบ", className: "bg-red-50 text-red-600", Icon: AlertTriangle },
@@ -10,9 +10,17 @@ const statusLabel = {
   no_data: { text: "ไม่มีข้อมูล POS เทียบ", className: "bg-gray-100 text-gray-500", Icon: CircleHelp },
 } as const;
 
+const txStatusLabel = {
+  over: { text: "ส่วนลดเกินคูปอง", className: "bg-red-50 text-red-600", Icon: AlertOctagon },
+  under: { text: "ส่วนลดต่ำกว่าคูปอง", className: "bg-amber-50 text-amber-600", Icon: AlertTriangle },
+  not_found: { text: "ไม่พบบิลนี้ใน POS", className: "bg-gray-100 text-gray-500", Icon: HelpCircle },
+  match: { text: "ตรงกัน", className: "bg-brand-50 text-brand-700", Icon: CheckCircle2 },
+} as const;
+
 export default async function FraudCheckPage() {
   await requirePageRole("redemptions");
-  const rows = await getVoucherFraudCheck({ days: 14 });
+  const [rows, txRows] = await Promise.all([getVoucherFraudCheck({ days: 14 }), getPerTransactionFraudCheck({ days: 14 })]);
+  const txProblemCount = txRows.filter((r) => r.status === "over" || r.status === "under").length;
 
   const mismatchCount = rows.filter((r) => r.status === "mismatch").length;
   const noDataCount = rows.filter((r) => r.status === "no_data").length;
@@ -77,6 +85,61 @@ export default async function FraudCheckPage() {
                   </td>
                   <td className="px-4 py-2 font-medium text-gray-800">{r.crmConfirmedCount}</td>
                   <td className="px-4 py-2 font-medium text-gray-800">{r.posMatchingBillCount ?? "-"}</td>
+                  <td className="px-4 py-2">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${s.className}`}>
+                      <Icon size={12} />
+                      {s.text}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="mb-2 mt-10 text-lg font-semibold text-gray-800">
+        ตรวจสอบรายบิล (คีย์ส่วนลดเกิน/ต่ำกว่าคูปอง) {txProblemCount > 0 && <span className="text-red-600">— พบ {txProblemCount} รายการ</span>}
+      </h2>
+      <p className="mb-4 text-sm text-gray-500">
+        เช็คเฉพาะรายการที่พนักงานกรอกเลขที่บิล POS ตอนยืนยัน — เทียบส่วนลดจริงในบิลนั้นกับยอดที่คูปองควรให้ ตรงตัว ไม่ใช่แค่นับรวม
+      </p>
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-left text-gray-500">
+            <tr>
+              <th className="px-4 py-2">วันที่ยืนยัน</th>
+              <th className="px-4 py-2">สาขา</th>
+              <th className="px-4 py-2">ลูกค้า</th>
+              <th className="px-4 py-2">คูปอง</th>
+              <th className="px-4 py-2">เลขบิล</th>
+              <th className="px-4 py-2">ส่วนลดในบิล</th>
+              <th className="px-4 py-2">พนักงาน</th>
+              <th className="px-4 py-2">สถานะ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {txRows.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-4 py-6 text-center text-gray-400">
+                  ยังไม่มีรายการที่กรอกเลขบิลในช่วง 14 วันล่าสุด
+                </td>
+              </tr>
+            )}
+            {txRows.map((r) => {
+              const s = txStatusLabel[r.status];
+              const Icon = s.Icon;
+              return (
+                <tr key={r.redemptionId} className="border-t border-gray-100">
+                  <td className="px-4 py-2 text-gray-500">{format(new Date(`${r.date}T00:00:00`), "d MMM yyyy")}</td>
+                  <td className="px-4 py-2">{r.branchName}</td>
+                  <td className="px-4 py-2">{r.customerName}</td>
+                  <td className="px-4 py-2 text-gray-500">
+                    {r.rewardName} <span className="text-gray-400">(ควรลด {r.discountAmount} บ.)</span>
+                  </td>
+                  <td className="px-4 py-2 font-mono text-gray-500">{r.posBillNo}</td>
+                  <td className="px-4 py-2 font-medium text-gray-800">{r.posDiscount ?? "-"}</td>
+                  <td className="px-4 py-2 text-gray-500">{r.staffName ?? "-"}</td>
                   <td className="px-4 py-2">
                     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${s.className}`}>
                       <Icon size={12} />
