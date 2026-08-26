@@ -1,12 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Info } from "lucide-react";
 
 interface Branch {
   id: string;
   name: string;
 }
+
+type HelpLang = "th" | "en" | "my";
+
+const LANG_LABEL: Record<HelpLang, string> = { th: "ไทย", en: "English", my: "မြန်မာ" };
+
+const BILL_HELP: Record<HelpLang, { title: string; body: string; example: string }> = {
+  th: {
+    title: "เลขที่บิล POS",
+    body: "หลังจากคิดเงินลูกค้าที่ POS เสร็จแล้ว ให้กรอกเลขที่บิลจากใบเสร็จตรงนี้ ก่อนกดยืนยัน",
+    example: "ตัวอย่าง: เลขที่บิลบนใบเสร็จ เช่น 000123",
+  },
+  en: {
+    title: "POS bill number",
+    body: "After finishing the customer's payment at POS, type the bill number from the receipt here before confirming.",
+    example: "Example: the bill number printed on the receipt, e.g. 000123",
+  },
+  my: {
+    title: "POS ဘေလ်နံပါတ်",
+    body: "ဖောက်သည်ငွေရှင်းပြီးမှ ပြေစာပေါ်ရှိ ဘေလ်နံပါတ်ကို ဤနေရာတွင် ဖြည့်ပြီး အတည်ပြုပါ။",
+    example: "ဥပမာ - ပြေစာပေါ်ရှိ ဘေလ်နံပါတ် ဥပမာ 000123",
+  },
+};
+
+const LANG_STORAGE_KEY = "lamunn-admin-bill-help-lang";
 
 export default function ConfirmRedemptionButton({
   redemptionId,
@@ -26,6 +51,21 @@ export default function ConfirmRedemptionButton({
   const [posBillNo, setPosBillNo] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [helpLang, setHelpLang] = useState<HelpLang>("th");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LANG_STORAGE_KEY);
+      if (saved === "th" || saved === "en" || saved === "my") setHelpLang(saved);
+    } catch {}
+  }, []);
+
+  function chooseLang(lang: HelpLang) {
+    setHelpLang(lang);
+    try {
+      localStorage.setItem(LANG_STORAGE_KEY, lang);
+    } catch {}
+  }
 
   async function handleConfirm() {
     setError(null);
@@ -43,6 +83,8 @@ export default function ConfirmRedemptionButton({
     }
     router.refresh();
   }
+
+  const help = BILL_HELP[helpLang];
 
   return (
     <div className="mt-2 flex flex-col gap-2">
@@ -64,6 +106,30 @@ export default function ConfirmRedemptionButton({
       )}
       {requiresPosBillNo && (
         <div>
+          <div className="mb-2 rounded-lg bg-amber-50 p-3">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <p className="flex items-center gap-1 text-xs font-semibold text-amber-800">
+                <Info size={13} />
+                {help.title}
+              </p>
+              <div className="flex gap-1">
+                {(Object.keys(LANG_LABEL) as HelpLang[]).map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => chooseLang(lang)}
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                      helpLang === lang ? "bg-amber-600 text-white" : "bg-white text-amber-700"
+                    }`}
+                  >
+                    {LANG_LABEL[lang]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-amber-800">{help.body}</p>
+            <p className="mt-1 text-xs text-amber-600">{help.example}</p>
+          </div>
           <label className="mb-1 block text-xs text-gray-500">เลขที่บิล POS (บังคับกรอก — ใช้ตรวจสอบส่วนลดย้อนหลัง)</label>
           <input
             value={posBillNo}
