@@ -63,7 +63,15 @@ export default async function RedemptionHistoryPage({
         <ArrowLeft size={14} />
         กลับไปหน้ารอยืนยัน
       </Link>
-      <h1 className="mb-2 text-xl font-bold text-gray-800">ประวัติการแลกรางวัลทั้งหมด</h1>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-gray-800">ประวัติการแลกรางวัลทั้งหมด</h1>
+        <Link
+          href="/admin/redemptions/fraud-check"
+          className="rounded-full bg-red-50 px-3.5 py-2 text-xs font-medium text-red-600 hover:bg-red-100"
+        >
+          ตรวจสอบคูปองกับ POS →
+        </Link>
+      </div>
       <p className="mb-6 text-sm text-gray-500">
         ดูย้อนหลังว่าสาขาไหนแลกไปเท่าไหร่ วันไหนบ้าง โปรหรือคูปองอะไร และพนักงานคนไหนเป็นคนยืนยันให้ลูกค้าคนไหน
       </p>

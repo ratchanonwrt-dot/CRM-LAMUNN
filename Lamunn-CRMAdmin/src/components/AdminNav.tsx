@@ -28,6 +28,7 @@ import {
   Menu,
   X,
   ClipboardList,
+  ShieldAlert,
 } from "lucide-react";
 import type { FeatureKey } from "@lamunn/db";
 
@@ -64,6 +65,7 @@ const allLinks: { href: string; label: string; icon: typeof LayoutDashboard; col
   { href: "/admin/scan-redemption", label: "สแกน QR ยืนยันแลกรางวัล", icon: Camera, color: "bg-lime-100 text-lime-500", feature: "scanRedemption", section: "operations" },
   { href: "/admin/redemptions", label: "ยืนยันแลกรางวัล", icon: QrCode, color: "bg-teal-100 text-teal-400", feature: "redemptions", section: "operations" },
   { href: "/admin/redemptions/history", label: "ประวัติการแลกรางวัล", icon: ClipboardList, color: "bg-teal-100 text-teal-400", feature: "redemptions", section: "operations" },
+  { href: "/admin/redemptions/fraud-check", label: "ตรวจสอบคูปองกับ POS", icon: ShieldAlert, color: "bg-red-100 text-red-500", feature: "redemptions", section: "operations" },
 
   { href: "/admin/tiers", label: "ระดับสมาชิก", icon: Award, color: "bg-fuchsia-100 text-fuchsia-400", feature: "tiers", section: "loyalty" },
   { href: "/admin/point-rules", label: "กติกาสะสมแต้ม", icon: Percent, color: "bg-orange-100 text-orange-400", feature: "pointRules", section: "loyalty" },

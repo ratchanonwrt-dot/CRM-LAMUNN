@@ -1,0 +1,102 @@
+import { prisma } from "./client";
+
+// How many days back a branch must have a POS bill for its data to be trusted
+// enough to actually compare — otherwise a branch on Wongnai (never synced
+// here) or one whose sync silently stopped would show as "0 matching bills"
+// and get flagged as fraud for a totally unrelated reason.
+const POS_SYNC_STALE_DAYS = 3;
+
+export interface FraudCheckRow {
+  branchCode: string;
+  branchName: string;
+  date: string; // yyyy-mm-dd
+  rewardName: string;
+  discountAmount: number;
+  crmConfirmedCount: number;
+  posMatchingBillCount: number | null; // null = no comparable POS data (stale/no sync — e.g. Wongnai branch)
+  status: "match" | "mismatch" | "no_data";
+}
+
+/**
+ * Cross-checks free-voucher redemptions (pointsSpent=0, e.g. the welcome
+ * coupon or a tier bundle) confirmed in the CRM against the POS's own bills
+ * for a matching discount, per branch per day. Only meaningful for branches
+ * whose internal POS data actually syncs into this database (see
+ * POS_SYNC_STALE_DAYS) — branches on a separate system like Wongnai, or ones
+ * whose sync has stopped, show as "no_data" rather than a false mismatch.
+ */
+export async function getVoucherFraudCheck(options?: { days?: number }): Promise<FraudCheckRow[]> {
+  const days = options?.days ?? 14;
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const redemptions = await prisma.redemption.findMany({
+    where: {
+      status: "COMPLETED",
+      pointsSpent: 0,
+      updatedAt: { gte: since },
+      branchId: { not: null },
+      reward: { discountAmount: { not: null } },
+    },
+    include: { branch: true, reward: true },
+  });
+
+  type Group = { branchCode: string; branchName: string; date: string; rewardName: string; discountAmount: number; count: number };
+  const groups = new Map<string, Group>();
+  for (const r of redemptions) {
+    if (!r.branch || !r.reward?.discountAmount) continue;
+    const date = r.updatedAt.toISOString().slice(0, 10);
+    const discountAmount = Number(r.reward.discountAmount);
+    const key = `${r.branch.code}|${date}|${r.rewardName}`;
+    const existing = groups.get(key);
+    if (existing) existing.count++;
+    else groups.set(key, { branchCode: r.branch.code, branchName: r.branch.name, date, rewardName: r.rewardName, discountAmount, count: 1 });
+  }
+
+  const groupList = [...groups.values()];
+  if (groupList.length === 0) return [];
+
+  const branchCodes = [...new Set(groupList.map((g) => g.branchCode))];
+
+  const posBills = await prisma.$queryRawUnsafe<{ branch_code: string; bill_date: string; discount: number }[]>(
+    `SELECT b.code as branch_code, pb.bill_date::text as bill_date, pb.discount::float as discount
+     FROM public.pos_bills pb
+     JOIN public.branches b ON b.id = pb.branch_id
+     WHERE b.code = ANY($1::text[]) AND pb.bill_date >= $2::date`,
+    branchCodes,
+    since.toISOString().slice(0, 10)
+  );
+
+  const latestBillByBranch = new Map<string, string>();
+  for (const b of posBills) {
+    const cur = latestBillByBranch.get(b.branch_code);
+    if (!cur || b.bill_date > cur) latestBillByBranch.set(b.branch_code, b.bill_date);
+  }
+
+  const now = Date.now();
+  const rows: FraudCheckRow[] = groupList.map((g) => {
+    const latestSync = latestBillByBranch.get(g.branchCode);
+    const syncStaleDays = latestSync ? Math.floor((now - new Date(latestSync).getTime()) / 86400000) : Infinity;
+    const hasLiveSync = syncStaleDays <= POS_SYNC_STALE_DAYS;
+
+    const posCount = hasLiveSync
+      ? posBills.filter((b) => b.branch_code === g.branchCode && b.bill_date === g.date && b.discount >= g.discountAmount).length
+      : null;
+
+    const status: FraudCheckRow["status"] = !hasLiveSync ? "no_data" : posCount! >= g.count ? "match" : "mismatch";
+
+    return {
+      branchCode: g.branchCode,
+      branchName: g.branchName,
+      date: g.date,
+      rewardName: g.rewardName,
+      discountAmount: g.discountAmount,
+      crmConfirmedCount: g.count,
+      posMatchingBillCount: posCount,
+      status,
+    };
+  });
+
+  const statusRank = { mismatch: 0, no_data: 1, match: 2 } as const;
+  rows.sort((a, b) => statusRank[a.status] - statusRank[b.status] || b.date.localeCompare(a.date));
+  return rows;
+}
