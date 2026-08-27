@@ -29,6 +29,7 @@ import {
   X,
   ClipboardList,
   ShieldAlert,
+  ChevronDown,
 } from "lucide-react";
 import type { FeatureKey } from "@lamunn/db";
 
@@ -86,33 +87,52 @@ const allLinks: { href: string; label: string; icon: typeof LayoutDashboard; col
 
 function NavLinks({ links, pathname, onNavigate }: { links: typeof allLinks; pathname: string; onNavigate?: () => void }) {
   const visibleSections = SECTIONS.filter((s) => links.some((l) => l.section === s.key));
+  // Only the section holding the current page starts open — everything else
+  // stays collapsed to just its header, so the sidebar reads as a short list
+  // of categories instead of every sub-item dumped out at once.
+  const [openSection, setOpenSection] = useState<SectionKey | null>(
+    () => visibleSections.find((s) => links.some((l) => l.section === s.key && l.href === pathname))?.key ?? null
+  );
+
   return (
     <nav className="flex flex-1 flex-col gap-1">
       {visibleSections.map((sectionDef, i) => {
         const sectionLinks = links.filter((l) => l.section === sectionDef.key);
+        const isOpen = openSection === sectionDef.key;
         return (
-          <div key={sectionDef.key} className={clsx("mb-2", i > 0 && "border-t border-gray-100 pt-2")}>
-            <p className="mb-1 mt-3 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 first:mt-0">{sectionDef.label}</p>
-            {sectionLinks.map((link) => {
-              const Icon = link.icon;
-              const active = pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={onNavigate}
-                  className={clsx(
-                    "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition-colors",
-                    active ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-50"
-                  )}
-                >
-                  <span className={clsx("flex h-7 w-7 shrink-0 items-center justify-center rounded-full", link.color)}>
-                    <Icon size={15} strokeWidth={2.4} />
-                  </span>
-                  {link.label}
-                </Link>
-              );
-            })}
+          <div key={sectionDef.key} className={clsx("mb-1", i > 0 && "border-t border-gray-100 pt-1")}>
+            <button
+              type="button"
+              onClick={() => setOpenSection(isOpen ? null : sectionDef.key)}
+              className="mt-2 flex w-full items-center justify-between px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 hover:text-gray-600"
+            >
+              {sectionDef.label}
+              <ChevronDown size={13} className={clsx("transition-transform", isOpen && "rotate-180")} />
+            </button>
+            {isOpen && (
+              <div className="mt-1 flex flex-col gap-1">
+                {sectionLinks.map((link) => {
+                  const Icon = link.icon;
+                  const active = pathname === link.href;
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={onNavigate}
+                      className={clsx(
+                        "flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition-colors",
+                        active ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-50"
+                      )}
+                    >
+                      <span className={clsx("flex h-7 w-7 shrink-0 items-center justify-center rounded-full", link.color)}>
+                        <Icon size={15} strokeWidth={2.4} />
+                      </span>
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       })}
