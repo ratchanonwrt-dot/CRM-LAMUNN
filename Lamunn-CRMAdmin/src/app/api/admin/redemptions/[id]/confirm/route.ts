@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, grantNextPurchaseCouponIfWelcomeUsed } from "@lamunn/db";
+import { prisma, grantNextPurchaseCouponIfWelcomeUsed, verifyPosBillNo } from "@lamunn/db";
 import { requireStaff } from "@/lib/requireStaff";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const branchId = staff.branchId ?? body?.branchId;
   if (!branchId) return NextResponse.json({ error: "กรุณาเลือกสาขา" }, { status: 400 });
 
-  const redemption = await prisma.redemption.findUnique({ where: { id: params.id } });
+  const redemption = await prisma.redemption.findUnique({ where: { id: params.id }, include: { reward: true } });
   if (!redemption) return NextResponse.json({ error: "ไม่พบรายการแลกรางวัลนี้" }, { status: 404 });
   if (redemption.status !== "PENDING") {
     return NextResponse.json({ error: "รายการนี้ถูกยืนยันหรือยกเลิกไปแล้ว" }, { status: 409 });
@@ -42,5 +42,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   await grantNextPurchaseCouponIfWelcomeUsed(updated.id);
 
-  return NextResponse.json({ ok: true, redemption: updated });
+  // Real-time check against the branch's own POS data (when live) so staff
+  // see right away if the bill number doesn't exist or the discount doesn't
+  // match — instead of only finding out later on the fraud-check report.
+  let billVerification = null;
+  if (posBillNo && redemption.reward?.discountAmount != null) {
+    const branch = await prisma.branch.findUnique({ where: { id: branchId } });
+    if (branch) {
+      const result = await verifyPosBillNo(branch.code, posBillNo);
+      billVerification = { ...result, expectedDiscount: Number(redemption.reward.discountAmount) };
+    }
+  }
+
+  return NextResponse.json({ ok: true, redemption: updated, billVerification });
 }

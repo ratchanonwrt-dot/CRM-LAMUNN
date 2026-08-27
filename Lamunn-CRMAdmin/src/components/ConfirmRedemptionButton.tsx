@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Info } from "lucide-react";
+import { Info, CheckCircle2, AlertTriangle, AlertOctagon, HelpCircle } from "lucide-react";
 
 interface Branch {
   id: string;
@@ -52,6 +52,12 @@ export default function ConfirmRedemptionButton({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [helpLang, setHelpLang] = useState<HelpLang>("th");
+  const [verifyResult, setVerifyResult] = useState<{
+    hasLiveSync: boolean;
+    found: boolean;
+    posDiscount: number | null;
+    expectedDiscount: number;
+  } | null>(null);
 
   useEffect(() => {
     try {
@@ -81,7 +87,14 @@ export default function ConfirmRedemptionButton({
       setError(data.error ?? "ยืนยันไม่สำเร็จ");
       return;
     }
-    router.refresh();
+    if (data.billVerification) {
+      // Hold off on refresh — the parent page stops rendering this component
+      // the moment status flips to COMPLETED, which would wipe the banner
+      // before staff ever see it. Wait for them to acknowledge it instead.
+      setVerifyResult(data.billVerification);
+    } else {
+      router.refresh();
+    }
   }
 
   const help = BILL_HELP[helpLang];
@@ -139,14 +152,69 @@ export default function ConfirmRedemptionButton({
           />
         </div>
       )}
-      <button
-        onClick={handleConfirm}
-        disabled={loading || (branches && !branchId) || (requiresPosBillNo && !posBillNo.trim())}
-        className="rounded-lg bg-brand-600 px-4 py-3 font-medium text-white disabled:opacity-50"
-      >
-        {loading ? "กำลังยืนยัน..." : "ยืนยันแลกรางวัล"}
-      </button>
+      {!verifyResult && (
+        <button
+          onClick={handleConfirm}
+          disabled={loading || (branches && !branchId) || (requiresPosBillNo && !posBillNo.trim())}
+          className="rounded-lg bg-brand-600 px-4 py-3 font-medium text-white disabled:opacity-50"
+        >
+          {loading ? "กำลังยืนยัน..." : "ยืนยันแลกรางวัล"}
+        </button>
+      )}
       {error && <p className="text-sm text-red-600">{error}</p>}
+      {verifyResult && (
+        <>
+          <BillVerificationBanner result={verifyResult} />
+          <button onClick={() => router.refresh()} className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-600">
+            รับทราบ
+          </button>
+        </>
+      )}
     </div>
+  );
+}
+
+function BillVerificationBanner({
+  result,
+}: {
+  result: { hasLiveSync: boolean; found: boolean; posDiscount: number | null; expectedDiscount: number };
+}) {
+  if (!result.hasLiveSync) {
+    return (
+      <p className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2 text-xs text-gray-500">
+        <HelpCircle size={14} className="shrink-0" />
+        ยืนยันสำเร็จ — บันทึกเลขบิลไว้แล้ว (สาขานี้ยังไม่มีข้อมูล POS สดให้เทียบตอนนี้)
+      </p>
+    );
+  }
+  if (!result.found) {
+    return (
+      <p className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+        <AlertTriangle size={14} className="shrink-0" />
+        ยืนยันสำเร็จ แต่ <strong>ไม่พบเลขบิลนี้ใน POS</strong> — ตรวจสอบว่ากรอกเลขถูกต้องไหม
+      </p>
+    );
+  }
+  if (result.posDiscount! > result.expectedDiscount) {
+    return (
+      <p className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+        <AlertOctagon size={14} className="shrink-0" />
+        ส่วนลดในบิลนี้ ({result.posDiscount} บ.) <strong>มากกว่า</strong>ที่คูปองควรให้ ({result.expectedDiscount} บ.)
+      </p>
+    );
+  }
+  if (result.posDiscount! < result.expectedDiscount) {
+    return (
+      <p className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+        <AlertTriangle size={14} className="shrink-0" />
+        ส่วนลดในบิลนี้ ({result.posDiscount} บ.) <strong>น้อยกว่า</strong>ที่คูปองควรให้ ({result.expectedDiscount} บ.)
+      </p>
+    );
+  }
+  return (
+    <p className="flex items-center gap-1.5 rounded-lg bg-brand-50 px-3 py-2 text-xs font-medium text-brand-700">
+      <CheckCircle2 size={14} className="shrink-0" />
+      ตรวจสอบกับ POS แล้ว ส่วนลดตรงกัน ({result.posDiscount} บ.)
+    </p>
   );
 }

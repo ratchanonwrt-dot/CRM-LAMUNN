@@ -179,3 +179,37 @@ export async function getPerTransactionFraudCheck(options?: { days?: number }): 
   rows.sort((a, b) => rank[a.status] - rank[b.status] || b.date.localeCompare(a.date));
   return rows;
 }
+
+export interface BillVerification {
+  // false = this branch has no live POS data to check against right now (e.g.
+  // Wongnai, or sync gone stale) — the bill number is still recorded for a
+  // later manual check, we just can't say anything about it yet.
+  hasLiveSync: boolean;
+  found: boolean;
+  posDiscount: number | null;
+}
+
+/**
+ * Same lookup as getPerTransactionFraudCheck, but for exactly one bill at
+ * confirm time — lets the confirm route tell staff immediately whether the
+ * number they just typed matches a real POS bill and the right discount,
+ * instead of only surfacing it later on the fraud-check report.
+ */
+export async function verifyPosBillNo(branchCode: string, billNo: string): Promise<BillVerification> {
+  const latest = await prisma.$queryRawUnsafe<{ latest: string | null }[]>(
+    `SELECT MAX(pb.bill_date)::text as latest FROM public.pos_bills pb JOIN public.branches b ON b.id = pb.branch_id WHERE b.code = $1`,
+    branchCode
+  );
+  const latestDate = latest[0]?.latest;
+  const staleDays = latestDate ? Math.floor((Date.now() - new Date(latestDate).getTime()) / 86400000) : Infinity;
+  if (staleDays > POS_SYNC_STALE_DAYS) return { hasLiveSync: false, found: false, posDiscount: null };
+
+  const bill = await prisma.$queryRawUnsafe<{ discount: number }[]>(
+    `SELECT pb.discount::float as discount FROM public.pos_bills pb JOIN public.branches b ON b.id = pb.branch_id
+     WHERE b.code = $1 AND pb.bill_no = $2 LIMIT 1`,
+    branchCode,
+    billNo
+  );
+  if (bill.length === 0) return { hasLiveSync: true, found: false, posDiscount: null };
+  return { hasLiveSync: true, found: true, posDiscount: Number(bill[0].discount) };
+}
