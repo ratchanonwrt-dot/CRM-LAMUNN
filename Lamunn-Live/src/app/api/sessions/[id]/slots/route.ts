@@ -1,0 +1,35 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@lamunn/db-live";
+import { requireStaff, RECORDER_ROLES } from "@/lib/requireStaff";
+import { parseSlotBody } from "@/lib/validation";
+
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  const staff = await requireStaff(RECORDER_ROLES);
+  if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const session = await prisma.liveSession.findUnique({ where: { id: params.id } });
+  if (!session) return NextResponse.json({ error: "ไม่พบรอบไลฟ์" }, { status: 404 });
+
+  const body = await req.json();
+  const { data, errors } = parseSlotBody(body, false);
+  if (errors.length) return NextResponse.json({ error: errors.join(", ") }, { status: 400 });
+
+  const streamer = await prisma.streamer.findUnique({ where: { id: data.streamerId! } });
+  if (!streamer) return NextResponse.json({ error: "ไม่พบคนไลฟ์ที่เลือก" }, { status: 400 });
+
+  const slot = await prisma.liveSlot.create({
+    data: {
+      sessionId: params.id,
+      streamerId: data.streamerId!,
+      startTime: data.startTime!,
+      endTime: data.endTime!,
+      viewers: data.viewers!,
+      peakViewers: data.peakViewers ?? null,
+      sales: data.sales ?? 0,
+      orders: data.orders ?? null,
+      note: data.note ?? null,
+    },
+    include: { streamer: true },
+  });
+  return NextResponse.json({ slot });
+}

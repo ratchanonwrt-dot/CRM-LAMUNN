@@ -1,0 +1,123 @@
+// Prisma schema — Lamunn Live (บันทึกยอดคนดู / ยอดขาย / คนไลฟ์ ต่อช่วงเวลา เพื่อวิเคราะห์)
+// Lives in its own Postgres schema ("lamunn_live") inside the same Supabase project used by
+// Lamunn-CRM / -Finance / -Catering — kept separate so these tables never mix with the others.
+
+generator client {
+  provider = "prisma-client-js"
+  // Own output path so this client never clobbers @lamunn/db, @lamunn/db-finance or
+  // @lamunn/db-catering's generated clients (see packages/db-catering/prisma/schema.prisma).
+  output   = "../node_modules/.prisma/client-live"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum StaffRole {
+  SUPER_ADMIN // ทำได้ทุกอย่าง รวมถึงจัดการผู้ใช้งาน
+  MANAGER     // บันทึก/แก้ไขข้อมูลไลฟ์ได้ทุกอย่าง ยกเว้นจัดการผู้ใช้งาน
+  STAFF       // บันทึกยอดได้ (คนหน้างานกรอกตัวเลข) แต่แก้ตั้งค่า/ลบไม่ได้
+}
+
+model StaffUser {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         StaffRole @default(STAFF)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessionsCreated LiveSession[]
+
+  @@map("staff_users")
+}
+
+// คนไลฟ์ — แยกจาก StaffUser เพราะคนไลฟ์ไม่จำเป็นต้องมีบัญชีเข้าระบบ
+model Streamer {
+  id        String   @id @default(cuid())
+  name      String
+  nickname  String?
+  // รหัสพนักงานในระบบ HRM (lamunn-hrm) — ยังไม่ใช้ตอนนี้ เตรียมไว้สำหรับลิงก์ทำจ่ายเงินรายสัปดาห์ในอนาคต
+  hrEmployeeId String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  slots LiveSlot[]
+
+  @@map("streamers")
+}
+
+// ช่องทางที่ไลฟ์ เช่น TikTok, Facebook, Shopee Live
+model Channel {
+  id        String   @id @default(cuid())
+  name      String
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions LiveSession[]
+
+  @@map("channels")
+}
+
+// รอบไลฟ์ 1 รอบ (1 วัน 1 ช่องทาง) — ตัวเลขจริงอยู่ใน LiveSlot ที่แบ่งเป็นช่วงเวลา
+model LiveSession {
+  id String @id @default(cuid())
+
+  date DateTime @db.Date
+
+  channelId String?
+  channel   Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+
+  title     String? // ชื่อรอบ/แคมเปญ เช่น "9.9 Mega Sale"
+  startTime String? // "HH:mm" — เก็บเป็นข้อความเหมือนแอปอื่นในบริษัท ไม่ผูก timezone
+  endTime   String?
+  note      String?
+
+  createdByStaffId String?
+  createdByStaff   StaffUser? @relation(fields: [createdByStaffId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  slots LiveSlot[]
+
+  @@index([date])
+  @@map("live_sessions")
+}
+
+// ช่วงเวลาในรอบไลฟ์ — แกนหลักของการวิเคราะห์ "ช่วงไหน / ใครไลฟ์ / คนดูเท่าไหร่ / ขายได้เท่าไหร่"
+model LiveSlot {
+  id String @id @default(cuid())
+
+  sessionId String
+  session   LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  streamerId String
+  streamer   Streamer @relation(fields: [streamerId], references: [id])
+
+  startTime String // "HH:mm"
+  endTime   String // "HH:mm" (ถ้าน้อยกว่า startTime ถือว่าข้ามเที่ยงคืน)
+
+  viewers     Int   // ยอดคนดูเฉลี่ย/ตัวแทนของช่วงนี้
+  peakViewers Int?  // ยอดคนดูสูงสุดในช่วงนี้ (ถ้ามี)
+  sales       Float @default(0) // ยอดขาย (บาท) ในช่วงนี้
+  orders      Int?  // จำนวนออเดอร์ในช่วงนี้ (ถ้ามี)
+  note        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sessionId])
+  @@index([streamerId])
+  @@map("live_slots")
+}
