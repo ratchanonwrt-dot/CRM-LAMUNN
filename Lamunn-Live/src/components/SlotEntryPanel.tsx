@@ -50,11 +50,17 @@ function sortSlots(slots: SlotData[]): SlotData[] {
 export default function SlotEntryPanel({
   sessionId,
   sessionStart,
+  postUrl,
+  defaultRange,
+  defaultStreamerId,
   streamers,
   initialSlots,
 }: {
-  sessionId: string;
-  sessionStart: string | null;
+  sessionId?: string; // โหมดรอบไลฟ์: โพสต์ไปที่ /api/sessions/{id}/slots
+  sessionStart?: string | null;
+  postUrl?: string; // โหมดกะ: โพสต์ไปที่ /api/shifts/{id}/slots
+  defaultRange?: { start: string; end: string }; // เวลาเริ่ม/จบที่เติมให้ (ช่วงของกะ)
+  defaultStreamerId?: string;
   streamers: StreamerOpt[];
   initialSlots: SlotData[];
 }) {
@@ -66,11 +72,12 @@ export default function SlotEntryPanel({
 
   function defaultsForNew(current: SlotData[]): FormState {
     const last = current[current.length - 1];
-    const start = last ? last.endTime : (sessionStart ?? "");
+    const start = last ? last.endTime : (defaultRange?.start ?? sessionStart ?? "");
     const startMin = timeToMinutes(start);
-    const end = startMin === null ? "" : minutesToTime(startMin + 60);
+    // ช่วงแรกของกะ = ทั้งกะ (กรอกครั้งเดียวจบ) ช่วงถัดไป = +1 ชม. จากช่วงก่อน
+    const end = !last && defaultRange ? defaultRange.end : startMin === null ? "" : minutesToTime(startMin + 60);
     return {
-      streamerId: last?.streamerId ?? streamers.find((s) => s.isActive)?.id ?? "",
+      streamerId: last?.streamerId ?? defaultStreamerId ?? streamers.find((s) => s.isActive)?.id ?? "",
       startTime: start,
       endTime: end,
       viewers: "",
@@ -137,7 +144,7 @@ export default function SlotEntryPanel({
     };
     const res = editingId
       ? await fetch(`/api/slots/${editingId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
-      : await fetch(`/api/sessions/${sessionId}/slots`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      : await fetch(postUrl ?? `/api/sessions/${sessionId}/slots`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     setSaving(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

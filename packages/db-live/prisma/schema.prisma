@@ -33,6 +33,7 @@ model StaffUser {
   updatedAt    DateTime  @updatedAt
 
   sessionsCreated LiveSession[]
+  shiftsCreated   LiveShift[]
 
   @@map("staff_users")
 }
@@ -50,7 +51,8 @@ model Streamer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  slots LiveSlot[]
+  slots  LiveSlot[]
+  shifts LiveShift[]
 
   @@map("streamers")
 }
@@ -65,6 +67,7 @@ model Channel {
   updatedAt DateTime @updatedAt
 
   sessions LiveSession[]
+  shifts   LiveShift[]
 
   @@map("channels")
 }
@@ -105,6 +108,10 @@ model LiveSlot {
   streamerId String
   streamer   Streamer @relation(fields: [streamerId], references: [id])
 
+  // กะที่ช่วงนี้สังกัด (ถ้ากรอกยอดผ่านหน้ากะ) — ใช้รวมยอดขาย/ชั่วโมงเพื่อคิดค่าคอมมิชชั่น
+  shiftId String?
+  shift   LiveShift? @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+
   startTime String // "HH:mm"
   endTime   String // "HH:mm" (ถ้าน้อยกว่า startTime ถือว่าข้ามเที่ยงคืน)
 
@@ -119,5 +126,47 @@ model LiveSlot {
 
   @@index([sessionId])
   @@index([streamerId])
+  @@index([shiftId])
   @@map("live_slots")
+}
+
+// กะไลฟ์ที่วางแผนไว้ — "ใครไลฟ์ วันไหน กี่โมงถึงกี่โมง" (ช่องเวลาเริ่มต้นของแต่ละวัน 10:00-00:00)
+// ยอดจริงหลังไลฟ์เสร็จกรอกเป็น LiveSlot ที่ผูกกับกะนี้ แล้วนำมาคิดค่าคอมมิชชั่น
+model LiveShift {
+  id String @id @default(cuid())
+
+  date DateTime @db.Date
+
+  streamerId String
+  streamer   Streamer @relation(fields: [streamerId], references: [id])
+
+  channelId String?
+  channel   Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+
+  startTime String // "HH:mm"
+  endTime   String // "HH:mm" — "00:00" หมายถึงเที่ยงคืน (จบวัน)
+  note      String?
+
+  createdByStaffId String?
+  createdByStaff   StaffUser? @relation(fields: [createdByStaffId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  slots LiveSlot[]
+
+  @@index([date])
+  @@index([streamerId])
+  @@map("live_shifts")
+}
+
+// อัตราค่าตอบแทนคนไลฟ์ (แถวเดียว id = "default") — แก้ได้จากหน้าค่าคอมมิชชั่น
+model PaySetting {
+  id            String   @id @default("default")
+  shippingPct   Float    @default(20)  // หักค่าส่ง/ค่าส่งออกจากยอดขายก่อน (%)
+  commissionPct Float    @default(4)   // คอมมิชชั่นจากยอดหลังหัก (%)
+  minHourly     Float    @default(250) // ขั้นต่ำต่อชั่วโมง (บาท) — ถ้าคอมมิชชั่นไม่ถึงต้องจ่ายเท่านี้
+  updatedAt     DateTime @updatedAt
+
+  @@map("pay_settings")
 }

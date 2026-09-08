@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import clsx from "clsx";
-import { LayoutDashboard, Radio, BarChart3, Users, Tv, UserCog, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Radio, BarChart3, Wallet, Users, Tv, UserCog, LogOut, Menu, X } from "lucide-react";
 
 const roleLabel: Record<string, string> = {
   SUPER_ADMIN: "ผู้ดูแลระบบสูงสุด",
@@ -18,8 +18,10 @@ const EDITOR_ROLES = ["SUPER_ADMIN", "MANAGER"];
 
 const mainLinks = [
   { href: "/dashboard", label: "ภาพรวม", icon: LayoutDashboard, color: "bg-sky-100 text-sky-500", roles: ALL_ROLES },
+  { href: "/schedule", label: "ตารางไลฟ์", icon: CalendarDays, color: "bg-amber-100 text-amber-600", roles: ALL_ROLES },
   { href: "/sessions", label: "บันทึกรอบไลฟ์", icon: Radio, color: "bg-rose-100 text-rose-500", roles: ALL_ROLES },
   { href: "/analysis", label: "วิเคราะห์", icon: BarChart3, color: "bg-blue-100 text-blue-500", roles: ALL_ROLES },
+  { href: "/commission", label: "ค่าคอมมิชชั่น", icon: Wallet, color: "bg-emerald-100 text-emerald-600", roles: ALL_ROLES },
 ];
 
 const otherLinks = [
@@ -40,7 +42,7 @@ export default function Nav({ role, name }: { role: string; name: string }) {
 
   function renderLink(link: (typeof mainLinks)[number], small?: boolean) {
     const Icon = link.icon;
-    const active = pathname === link.href || pathname.startsWith(link.href + "/");
+    const active = pathname === link.href || pathname.startsWith(link.href + "/") || (link.href === "/schedule" && pathname.startsWith("/shifts/"));
     return (
       <Link
         key={link.href}

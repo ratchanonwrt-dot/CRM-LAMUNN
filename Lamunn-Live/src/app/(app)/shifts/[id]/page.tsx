@@ -1,0 +1,138 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import clsx from "clsx";
+import { prisma } from "@lamunn/db-live";
+import { requirePageRole } from "@/lib/requirePageRole";
+import { getPaySettings } from "@/lib/paySettings";
+import { computePay } from "@/lib/pay";
+import { toRange, isoDate, weekStartOf } from "@/lib/schedule";
+import { formatBaht, formatHours, formatNum, formatThaiDate, slotHours, thaiDays } from "@/lib/format";
+import ShiftResultsForm from "@/components/ShiftResultsForm";
+import ShiftEditForm from "@/components/ShiftEditForm";
+import DeleteShiftButton from "@/components/DeleteShiftButton";
+
+export default async function ShiftDetailPage({ params }: { params: { id: string } }) {
+  await requirePageRole();
+
+  const shift = await prisma.liveShift.findUnique({
+    where: { id: params.id },
+    include: {
+      streamer: true,
+      channel: true,
+      slots: { include: { streamer: true }, orderBy: [{ startTime: "asc" }, { createdAt: "asc" }] },
+    },
+  });
+  if (!shift) notFound();
+
+  const [settings, streamers, channels] = await Promise.all([
+    getPaySettings(),
+    prisma.streamer.findMany({ where: { OR: [{ isActive: true }, { id: shift.streamerId }] }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+    prisma.channel.findMany({ where: { OR: [{ isActive: true }, { id: shift.channelId ?? "" }] }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+  ]);
+
+  const range = toRange(shift.startTime, shift.endTime);
+  const plannedHours = range ? (range.e - range.s) / 60 : 0;
+  const actualHours = shift.slots.reduce((a, s) => a + slotHours(s.startTime, s.endTime), 0);
+  const sales = shift.slots.reduce((a, s) => a + s.sales, 0);
+  const hasResults = shift.slots.length > 0;
+  const pay = computePay(sales, hasResults ? actualHours : plannedHours, settings);
+  const weekParam = isoDate(weekStartOf(shift.date));
+
+  const rows: { label: string; value: string; sub?: string; strong?: boolean; tone?: string }[] = [
+    { label: "ยอดขายที่กรอก", value: `${formatBaht(pay.sales)} ฿` },
+    { label: `หักค่าส่ง ${formatNum(settings.shippingPct, 2)}%`, value: `− ${formatBaht(pay.sales - pay.net)} ฿` },
+    { label: "ยอดหลังหัก", value: `${formatBaht(pay.net)} ฿` },
+    { label: `คอมมิชชั่น ${formatNum(settings.commissionPct, 2)}%`, value: `${formatBaht(pay.commission)} ฿` },
+    {
+      label: `ขั้นต่ำ ${formatBaht(settings.minHourly)} ฿ × ${formatNum(pay.hours, 2)} ชม.`,
+      value: `${formatBaht(pay.minPay)} ฿`,
+      sub: hasResults ? "ชั่วโมงจากช่วงที่กรอกจริง" : "ชั่วโมงตามที่วางกะไว้ (ยังไม่กรอกยอด)",
+    },
+  ];
+
+  return (
+    <div className="mx-auto max-w-5xl">
+      <Link href={`/schedule?week=${weekParam}`} className="text-sm text-gray-400 hover:text-gray-600">
+        ← ตารางไลฟ์
+      </Link>
+      <div className="mb-5 mt-2 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-gray-800">
+            {shift.streamer.name} <span className="text-base font-medium text-gray-400">· {shift.startTime}–{shift.endTime}</span>
+          </h1>
+          <p className="text-sm text-gray-500">
+            {formatThaiDate(shift.date)} ({thaiDays[shift.date.getUTCDay()]}) · {shift.channel?.name ?? "ไม่ระบุช่องทาง"} · วางไว้ {formatHours(plannedHours)}
+            {hasResults && <> · ไลฟ์จริง {formatHours(actualHours)}</>}
+          </p>
+          {shift.note && <p className="mt-1 text-sm text-gray-500">📝 {shift.note}</p>}
+        </div>
+        <DeleteShiftButton shiftId={shift.id} weekParam={weekParam} />
+      </div>
+
+      {/* ค่าตอบแทน */}
+      <section className={clsx("mb-6 rounded-xl border bg-white p-5", pay.hitMinimum && hasResults ? "border-amber-300" : "border-gray-200")}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-[260px] flex-1">
+            <h2 className="text-sm font-semibold text-gray-700">ค่าตอบแทนกะนี้</h2>
+            <dl className="mt-3 space-y-1.5 text-sm">
+              {rows.map((r) => (
+                <div key={r.label} className="flex items-baseline justify-between gap-3">
+                  <dt className="text-gray-500">
+                    {r.label}
+                    {r.sub && <span className="block text-[11px] text-gray-400">{r.sub}</span>}
+                  </dt>
+                  <dd className="tabular-nums text-gray-800">{r.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+          <div className="w-full rounded-xl bg-gray-50 p-4 sm:w-64">
+            <p className="text-[11px] text-gray-400">ต้องจ่ายคนไลฟ์</p>
+            <p className="text-2xl font-bold tabular-nums text-gray-800">{formatBaht(pay.pay)} ฿</p>
+            {!hasResults ? (
+              <p className="mt-1 text-xs text-gray-400">ประมาณการจากขั้นต่ำ — กรอกยอดขายด้านล่างเพื่อคิดจริง</p>
+            ) : pay.hitMinimum ? (
+              <div className="mt-2 space-y-1 text-xs">
+                <p className="rounded-md bg-amber-100 px-2 py-1 text-amber-800">คอมมิชชั่นไม่ถึงขั้นต่ำ จ่ายตามขั้นต่ำแทน (เพิ่ม {formatBaht(pay.topUp)} ฿)</p>
+                <p className="text-gray-600">
+                  คิดเป็นคอมมิชชั่นจริง <span className="font-semibold text-gray-800">{pay.effectivePct === null ? "-" : `${formatNum(pay.effectivePct, 1)}%`}</span> ของยอดหลังหัก
+                </p>
+                <p className="text-gray-400">ยอดขายต้องถึง {formatBaht(pay.breakEvenSales)} ฿ คอม {formatNum(settings.commissionPct, 2)}% จึงจะพอดีขั้นต่ำ</p>
+              </div>
+            ) : (
+              <p className="mt-1 text-xs text-emerald-700">จ่ายตามคอมมิชชั่น {formatNum(settings.commissionPct, 2)}% (เกินขั้นต่ำ {formatBaht(pay.commission - pay.minPay)} ฿)</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <h2 className="mb-2 text-sm font-semibold text-gray-700">กรอกยอดหลังไลฟ์เสร็จ</h2>
+      <p className="mb-3 text-xs text-gray-400">
+        กรอกคนดูเฉลี่ยของแต่ละชั่วโมงในกะ (ระบบเฉลี่ยทั้งกะให้) และยอดขายรวมทั้งกะ — ยอดขายรวมถูกนำไปคิดค่าตอบแทนด้านบน ส่วนตัวเลขรายชั่วโมงไปเข้าหน้าวิเคราะห์
+      </p>
+      <ShiftResultsForm
+        shiftId={shift.id}
+        startTime={shift.startTime}
+        endTime={shift.endTime}
+        settings={{ shippingPct: settings.shippingPct, commissionPct: settings.commissionPct, minHourly: settings.minHourly }}
+        existing={shift.slots.map((s) => ({ startTime: s.startTime, endTime: s.endTime, viewers: s.viewers, sales: s.sales, peakViewers: s.peakViewers, orders: s.orders }))}
+      />
+
+      <div className="mt-8">
+        <ShiftEditForm
+          shift={{
+            id: shift.id,
+            date: isoDate(shift.date),
+            streamerId: shift.streamerId,
+            channelId: shift.channelId,
+            startTime: shift.startTime,
+            endTime: shift.endTime,
+            note: shift.note,
+          }}
+          streamers={streamers.map((s) => ({ id: s.id, name: s.name }))}
+          channels={channels.map((c) => ({ id: c.id, name: c.name }))}
+        />
+      </div>
+    </div>
+  );
+}
