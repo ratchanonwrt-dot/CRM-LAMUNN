@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@lamunn/db-live";
 import { requireStaff, EDITOR_ROLES } from "@/lib/requireStaff";
+import { PALETTE_KEYS } from "@/lib/schedule";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const staff = await requireStaff(EDITOR_ROLES);
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { name, nickname, note, hrEmployeeId, phone, lineId, sortOrder, isActive } = body;
+  const { name, nickname, note, hrEmployeeId, phone, lineId, color, sortOrder, isActive } = body;
+  if (color !== undefined && color !== null && !PALETTE_KEYS.includes(color)) return NextResponse.json({ error: "สีไม่ถูกต้อง" }, { status: 400 });
 
   const streamer = await prisma.streamer.update({
     where: { id: params.id },
@@ -18,6 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(hrEmployeeId !== undefined ? { hrEmployeeId: hrEmployeeId ? String(hrEmployeeId).trim() : null } : {}),
       ...(phone !== undefined ? { phone: phone ? String(phone).trim() : null } : {}),
       ...(lineId !== undefined ? { lineId: lineId ? String(lineId).trim() : null } : {}),
+      ...(color !== undefined ? { color } : {}),
       ...(sortOrder !== undefined ? { sortOrder: Number(sortOrder) || 0 } : {}),
       ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
     },

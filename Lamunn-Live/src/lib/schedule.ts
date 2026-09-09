@@ -67,19 +67,52 @@ export function todayTH(): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
-/** สีประจำคนไลฟ์ — กำหนดตามลำดับในรายชื่อ (คงที่ ไม่เปลี่ยนตามสัปดาห์) ใช้คู่กับชื่อเสมอ ไม่ใช้สีเดี่ยว ๆ */
-export const STREAMER_COLORS = [
-  "bg-rose-100 border-rose-300 text-rose-900",
-  "bg-sky-100 border-sky-300 text-sky-900",
-  "bg-amber-100 border-amber-300 text-amber-900",
-  "bg-emerald-100 border-emerald-300 text-emerald-900",
-  "bg-violet-100 border-violet-300 text-violet-900",
-  "bg-orange-100 border-orange-300 text-orange-900",
-  "bg-teal-100 border-teal-300 text-teal-900",
-  "bg-fuchsia-100 border-fuchsia-300 text-fuchsia-900",
+/**
+ * สีประจำคนไลฟ์ — เก็บเป็นชื่อสี (key) ใน Streamer.color เลือกได้ในหน้าคนไลฟ์
+ * ใช้คู่กับชื่อเสมอ ไม่ใช้สีเดี่ยว ๆ บอกตัวตน (class ต้องเขียนเต็มให้ Tailwind เก็บได้)
+ */
+export const STREAMER_PALETTE: { key: string; label: string; block: string; dot: string }[] = [
+  { key: "rose", label: "ชมพูแดง", block: "bg-rose-100 border-rose-300 text-rose-900", dot: "bg-rose-400" },
+  { key: "sky", label: "ฟ้า", block: "bg-sky-100 border-sky-300 text-sky-900", dot: "bg-sky-400" },
+  { key: "amber", label: "เหลือง", block: "bg-amber-100 border-amber-300 text-amber-900", dot: "bg-amber-400" },
+  { key: "emerald", label: "เขียว", block: "bg-emerald-100 border-emerald-300 text-emerald-900", dot: "bg-emerald-400" },
+  { key: "violet", label: "ม่วง", block: "bg-violet-100 border-violet-300 text-violet-900", dot: "bg-violet-400" },
+  { key: "orange", label: "ส้ม", block: "bg-orange-100 border-orange-300 text-orange-900", dot: "bg-orange-400" },
+  { key: "teal", label: "เขียวน้ำทะเล", block: "bg-teal-100 border-teal-300 text-teal-900", dot: "bg-teal-400" },
+  { key: "fuchsia", label: "บานเย็น", block: "bg-fuchsia-100 border-fuchsia-300 text-fuchsia-900", dot: "bg-fuchsia-400" },
+  { key: "lime", label: "เขียวมะนาว", block: "bg-lime-100 border-lime-300 text-lime-900", dot: "bg-lime-400" },
+  { key: "indigo", label: "น้ำเงิน", block: "bg-indigo-100 border-indigo-300 text-indigo-900", dot: "bg-indigo-400" },
+  { key: "pink", label: "ชมพู", block: "bg-pink-100 border-pink-300 text-pink-900", dot: "bg-pink-400" },
+  { key: "cyan", label: "ฟ้าอมเขียว", block: "bg-cyan-100 border-cyan-300 text-cyan-900", dot: "bg-cyan-400" },
+  { key: "red", label: "แดง", block: "bg-red-100 border-red-300 text-red-900", dot: "bg-red-500" },
+  { key: "blue", label: "น้ำเงินเข้ม", block: "bg-blue-100 border-blue-300 text-blue-900", dot: "bg-blue-500" },
+  { key: "yellow", label: "เหลืองสด", block: "bg-yellow-100 border-yellow-300 text-yellow-900", dot: "bg-yellow-400" },
+  { key: "stone", label: "น้ำตาลเทา", block: "bg-stone-200 border-stone-400 text-stone-900", dot: "bg-stone-500" },
 ];
 export const STREAMER_COLOR_FALLBACK = "bg-gray-100 border-gray-300 text-gray-800";
+export const PALETTE_KEYS = STREAMER_PALETTE.map((p) => p.key);
 
-export function streamerColor(index: number): string {
-  return index >= 0 && index < STREAMER_COLORS.length ? STREAMER_COLORS[index] : STREAMER_COLOR_FALLBACK;
+export function streamerColor(key: string | null | undefined): string {
+  return STREAMER_PALETTE.find((p) => p.key === key)?.block ?? STREAMER_COLOR_FALLBACK;
+}
+
+export function streamerDot(key: string | null | undefined): string {
+  return STREAMER_PALETTE.find((p) => p.key === key)?.dot ?? "bg-gray-400";
+}
+
+/** เลือกสีที่ยังไม่มีใครใช้ (หรือใช้น้อยที่สุด) จากรายการสีที่ใช้อยู่ */
+export function pickUnusedColor(used: (string | null | undefined)[]): string {
+  const count = new Map<string, number>();
+  for (const k of PALETTE_KEYS) count.set(k, 0);
+  for (const u of used) if (u && count.has(u)) count.set(u, (count.get(u) ?? 0) + 1);
+  let best = PALETTE_KEYS[0];
+  let min = Infinity;
+  for (const k of PALETTE_KEYS) {
+    const c = count.get(k) ?? 0;
+    if (c < min) {
+      min = c;
+      best = k;
+    }
+  }
+  return best;
 }

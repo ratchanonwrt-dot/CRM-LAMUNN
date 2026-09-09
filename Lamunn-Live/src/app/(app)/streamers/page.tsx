@@ -24,6 +24,7 @@ export default async function StreamersPage() {
           hrEmployeeId: s.hrEmployeeId,
           phone: s.phone,
           lineId: s.lineId,
+          color: s.color,
           sortOrder: s.sortOrder,
           isActive: s.isActive,
           slotCount: s._count.slots,

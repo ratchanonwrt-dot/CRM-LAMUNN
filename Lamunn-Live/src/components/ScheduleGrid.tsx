@@ -65,12 +65,12 @@ export default function ScheduleGrid({
   days,
   streamers,
   channels,
-  colorIndex,
+  colors,
 }: {
   days: GridDay[];
   streamers: Option[];
   channels: Option[];
-  colorIndex: Record<string, number>; // streamerId -> index สี
+  colors: Record<string, string>; // streamerId -> ชื่อสี (palette key)
 }) {
   const router = useRouter();
   const [form, setForm] = useState<FormState | null>(null);
@@ -190,7 +190,7 @@ export default function ScheduleGrid({
                       href={`/shifts/${s.id}`}
                       className={clsx(
                         "absolute inset-x-1 overflow-hidden rounded-lg border px-1.5 py-1 text-[11px] leading-tight shadow-sm transition hover:shadow-md",
-                        streamerColor(colorIndex[s.streamerId] ?? -1)
+                        streamerColor(colors[s.streamerId])
                       )}
                       style={{ top: top + 1, height: Math.max(bottom - top - 2, 18) }}
                       title={`${s.streamerName} ${s.startTime}–${s.endTime}${s.channelName ? ` · ${s.channelName}` : ""}${s.hasResults ? ` · ขาย ${formatBaht(s.sales)} ฿` : " · ยังไม่กรอกยอด"}`}
@@ -237,12 +237,12 @@ export default function ScheduleGrid({
       </div>
 
       {/* ตำนานสี */}
-      {Object.keys(colorIndex).length > 0 && (
+      {Object.keys(colors).length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {streamers
-            .filter((s) => colorIndex[s.id] !== undefined)
+            .filter((s) => colors[s.id] !== undefined)
             .map((s) => (
-              <span key={s.id} className={clsx("rounded-md border px-2 py-0.5 text-[11px]", streamerColor(colorIndex[s.id]))}>
+              <span key={s.id} className={clsx("rounded-md border px-2 py-0.5 text-[11px]", streamerColor(colors[s.id]))}>
                 {s.name}
               </span>
             ))}

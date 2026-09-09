@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import clsx from "clsx";
+import { STREAMER_PALETTE, streamerColor, streamerDot } from "@/lib/schedule";
 
 interface StreamerRow {
   id: string;
@@ -11,12 +13,29 @@ interface StreamerRow {
   hrEmployeeId: string | null;
   phone: string | null;
   lineId: string | null;
+  color: string | null;
   sortOrder: number;
   isActive: boolean;
   slotCount: number;
 }
 
 const inputCls = "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white";
+
+function ColorPicker({ value, onChange, size = "h-6 w-6" }: { value: string | null; onChange: (k: string) => void; size?: string }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {STREAMER_PALETTE.map((p) => (
+        <button
+          key={p.key}
+          type="button"
+          title={p.label}
+          onClick={() => onChange(p.key)}
+          className={clsx("rounded-full border-2 transition", size, p.dot, value === p.key ? "border-gray-800 scale-110" : "border-transparent hover:scale-110")}
+        />
+      ))}
+    </div>
+  );
+}
 
 function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
   const [editing, setEditing] = useState(false);
@@ -26,6 +45,7 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
   const [hrEmployeeId, setHrEmployeeId] = useState(s.hrEmployeeId ?? "");
   const [phone, setPhone] = useState(s.phone ?? "");
   const [lineId, setLineId] = useState(s.lineId ?? "");
+  const [color, setColor] = useState(s.color);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +87,10 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
             <input value={lineId} onChange={(e) => setLineId(e.target.value)} className={inputCls + " max-w-[150px]"} placeholder="LINE ID" />
             <input value={hrEmployeeId} onChange={(e) => setHrEmployeeId(e.target.value)} className={inputCls + " max-w-[150px]"} placeholder="รหัสพนักงาน HR" />
           </div>
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-xs text-gray-500">สีในตาราง</span>
+            <ColorPicker value={color} onChange={setColor} />
+          </div>
           {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
         </td>
         <td className="px-3 py-2 text-right text-gray-500">{s.slotCount}</td>
@@ -75,7 +99,7 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
             <button
               disabled={busy || !name.trim()}
               onClick={async () => {
-                if (await patch({ name, nickname, note, hrEmployeeId, phone, lineId })) setEditing(false);
+                if (await patch({ name, nickname, note, hrEmployeeId, phone, lineId, color })) setEditing(false);
               }}
               className="rounded-lg bg-brand-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
             >
@@ -93,7 +117,8 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
   return (
     <tr className="border-t border-gray-100">
       <td className="px-3 py-2 font-medium text-gray-800">
-        {s.name}
+        <span className={clsx("mr-1.5 inline-block h-3 w-3 rounded-full align-middle", streamerDot(s.color))} />
+        <span className={clsx("rounded-md border px-1.5 py-0.5", streamerColor(s.color))}>{s.name}</span>
         {s.nickname && <span className="ml-1.5 text-xs font-normal text-gray-400">({s.nickname})</span>}
         {s.hrEmployeeId && <span className="ml-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-normal text-gray-500">HR: {s.hrEmployeeId}</span>}
         {error && <p className="text-xs font-normal text-red-600">{error}</p>}
@@ -141,6 +166,7 @@ export default function StreamerManager({ streamers }: { streamers: StreamerRow[
   const [nickname, setNickname] = useState("");
   const [phone, setPhone] = useState("");
   const [lineId, setLineId] = useState("");
+  const [color, setColor] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -148,7 +174,7 @@ export default function StreamerManager({ streamers }: { streamers: StreamerRow[
     e.preventDefault();
     setSaving(true);
     setError(null);
-    const res = await fetch("/api/streamers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, nickname, phone, lineId }) });
+    const res = await fetch("/api/streamers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, nickname, phone, lineId, color }) });
     setSaving(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -159,6 +185,7 @@ export default function StreamerManager({ streamers }: { streamers: StreamerRow[
     setNickname("");
     setPhone("");
     setLineId("");
+    setColor(null);
     router.refresh();
   }
 
@@ -180,6 +207,10 @@ export default function StreamerManager({ streamers }: { streamers: StreamerRow[
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500">LINE ID</label>
           <input value={lineId} onChange={(e) => setLineId(e.target.value)} className={inputCls + " w-40"} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-500">สีในตาราง (ไม่เลือก = ระบบเลือกสีที่ยังว่างให้)</label>
+          <ColorPicker value={color} onChange={setColor} />
         </div>
         <button type="submit" disabled={saving} className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
           {saving ? "กำลังเพิ่ม..." : "+ เพิ่มคนไลฟ์"}

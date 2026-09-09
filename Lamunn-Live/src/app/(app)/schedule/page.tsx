@@ -1,7 +1,7 @@
 import { prisma } from "@lamunn/db-live";
 import { requirePageRole } from "@/lib/requirePageRole";
 import { parseDateOnly } from "@/lib/validation";
-import { addDays, freeRanges, isoDate, todayTH, toRange, weekStartOf } from "@/lib/schedule";
+import { addDays, freeRanges, isoDate, pickUnusedColor, todayTH, toRange, weekStartOf } from "@/lib/schedule";
 import { formatThaiDateShort, thaiDaysShort } from "@/lib/format";
 import WeekPicker from "@/components/WeekPicker";
 import ScheduleGrid, { type GridDay } from "@/components/ScheduleGrid";
@@ -26,11 +26,19 @@ export default async function SchedulePage({ searchParams }: { searchParams: { w
     prisma.channel.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
   ]);
 
-  // สีประจำคน: ตามลำดับรายชื่อ (คงที่ทุกสัปดาห์) — รวมคนที่ปิดใช้งานแล้วแต่ยังมีกะในสัปดาห์นี้
+  // สีประจำคนจาก Streamer.color (ตั้งได้ในหน้าคนไลฟ์) — คนที่ยังไม่มีสีจะได้สีที่ยังไม่ซ้ำชั่วคราว
   const allStreamers = [...streamers];
   for (const s of shifts) if (!allStreamers.some((x) => x.id === s.streamerId)) allStreamers.push(s.streamer);
-  const colorIndex: Record<string, number> = {};
-  allStreamers.forEach((s, i) => (colorIndex[s.id] = i));
+  const colors: Record<string, string> = {};
+  const used: string[] = allStreamers.map((s) => s.color).filter((c): c is string => !!c);
+  for (const s of allStreamers) {
+    if (s.color) colors[s.id] = s.color;
+    else {
+      const c = pickUnusedColor(used);
+      colors[s.id] = c;
+      used.push(c);
+    }
+  }
 
   const days: GridDay[] = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(weekStart, i);
@@ -83,7 +91,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: { w
         days={days}
         streamers={allStreamers.map((s) => ({ id: s.id, name: s.isActive ? s.name : `${s.name} (ปิดใช้งาน)` }))}
         channels={channels.map((c) => ({ id: c.id, name: c.name }))}
-        colorIndex={colorIndex}
+        colors={colors}
       />
     </div>
   );
