@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import TimeSelect from "@/components/TimeSelect";
 import clsx from "clsx";
 import { formatBaht, formatHours, formatNum, slotHours, timeToMinutes } from "@/lib/format";
 
@@ -234,11 +235,11 @@ export default function SlotEntryPanel({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-500">เริ่ม</label>
-            <input type="time" required value={form.startTime} onChange={(e) => set("startTime", e.target.value)} className={inputCls} />
+            <TimeSelect value={form.startTime} onChange={(v) => set("startTime", v)} required />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-500">ถึง</label>
-            <input type="time" required value={form.endTime} onChange={(e) => set("endTime", e.target.value)} className={inputCls} />
+            <TimeSelect value={form.endTime} onChange={(v) => set("endTime", v)} required />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-500">คนดู (เฉลี่ย)</label>

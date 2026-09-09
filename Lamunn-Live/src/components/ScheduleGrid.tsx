@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import TimeSelect from "@/components/TimeSelect";
 import clsx from "clsx";
 import { Plus, X } from "lucide-react";
 import { DAY_START_MIN, DAY_END_MIN, PREFERRED_START_MIN, minutesToLabel, streamerColor } from "@/lib/schedule";
@@ -289,7 +290,7 @@ export default function ScheduleGrid({
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-500">เวลาเริ่ม</label>
-                <input type="time" required step={1800} value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className={inputCls} />
+                <TimeSelect value={form.startTime} onChange={(v) => setForm({ ...form, startTime: v })} required minuteStep={30} />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-500">ไลฟ์กี่ชั่วโมง</label>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import TimeSelect from "@/components/TimeSelect";
 
 const inputCls = "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white";
 
@@ -56,11 +57,11 @@ export default function NewSessionForm({ channels, defaultDate }: { channels: { 
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500">เวลาเริ่มไลฟ์ (ประมาณ)</label>
-          <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className={inputCls} />
+          <TimeSelect value={startTime} onChange={(v) => setStartTime(v)} />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500">เวลาจบไลฟ์ (เติมทีหลังได้)</label>
-          <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={inputCls} />
+          <TimeSelect value={endTime} onChange={(v) => setEndTime(v)} />
         </div>
         <div className="sm:col-span-2">
           <label className="mb-1 block text-xs font-medium text-gray-500">ชื่อรอบ / แคมเปญ (ถ้ามี)</label>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import TimeSelect from "@/components/TimeSelect";
 
 const inputCls = "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white";
 
@@ -76,11 +77,11 @@ export default function ShiftEditForm({ shift, streamers, channels }: { shift: S
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500">เริ่ม</label>
-          <input type="time" required value={startTime} onChange={(e) => setStartTime(e.target.value)} className={inputCls} />
+          <TimeSelect value={startTime} onChange={(v) => setStartTime(v)} required minuteStep={30} />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500">ถึง</label>
-          <input type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className={inputCls} />
+          <TimeSelect value={endTime} onChange={(v) => setEndTime(v)} required minuteStep={30} />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500">ช่องทาง</label>
