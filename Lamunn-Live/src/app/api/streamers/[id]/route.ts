@@ -7,7 +7,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { name, nickname, note, hrEmployeeId, sortOrder, isActive } = body;
+  const { name, nickname, note, hrEmployeeId, phone, lineId, sortOrder, isActive } = body;
 
   const streamer = await prisma.streamer.update({
     where: { id: params.id },
@@ -16,6 +16,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(nickname !== undefined ? { nickname: nickname ? String(nickname).trim() : null } : {}),
       ...(note !== undefined ? { note: note ? String(note).trim() : null } : {}),
       ...(hrEmployeeId !== undefined ? { hrEmployeeId: hrEmployeeId ? String(hrEmployeeId).trim() : null } : {}),
+      ...(phone !== undefined ? { phone: phone ? String(phone).trim() : null } : {}),
+      ...(lineId !== undefined ? { lineId: lineId ? String(lineId).trim() : null } : {}),
       ...(sortOrder !== undefined ? { sortOrder: Number(sortOrder) || 0 } : {}),
       ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
     },

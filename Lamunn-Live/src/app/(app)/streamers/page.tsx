@@ -22,6 +22,8 @@ export default async function StreamersPage() {
           nickname: s.nickname,
           note: s.note,
           hrEmployeeId: s.hrEmployeeId,
+          phone: s.phone,
+          lineId: s.lineId,
           sortOrder: s.sortOrder,
           isActive: s.isActive,
           slotCount: s._count.slots,

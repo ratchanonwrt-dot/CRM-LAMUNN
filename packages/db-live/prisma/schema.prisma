@@ -45,6 +45,8 @@ model Streamer {
   nickname  String?
   // รหัสพนักงานในระบบ HRM (lamunn-hrm) — ยังไม่ใช้ตอนนี้ เตรียมไว้สำหรับลิงก์ทำจ่ายเงินรายสัปดาห์ในอนาคต
   hrEmployeeId String?
+  phone   String? // เบอร์โทรติดต่อ
+  lineId  String? // LINE ID
   isActive  Boolean  @default(true)
   sortOrder Int      @default(0)
   note      String?

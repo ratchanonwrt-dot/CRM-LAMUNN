@@ -24,6 +24,8 @@ export async function POST(req: NextRequest) {
       nickname: body.nickname ? String(body.nickname).trim() : null,
       note: body.note ? String(body.note).trim() : null,
       hrEmployeeId: body.hrEmployeeId ? String(body.hrEmployeeId).trim() : null,
+      phone: body.phone ? String(body.phone).trim() : null,
+      lineId: body.lineId ? String(body.lineId).trim() : null,
       sortOrder: Number.isFinite(Number(body.sortOrder)) ? Number(body.sortOrder) : 0,
     },
   });

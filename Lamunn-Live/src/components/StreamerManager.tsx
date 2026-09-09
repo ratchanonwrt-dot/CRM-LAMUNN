@@ -9,6 +9,8 @@ interface StreamerRow {
   nickname: string | null;
   note: string | null;
   hrEmployeeId: string | null;
+  phone: string | null;
+  lineId: string | null;
   sortOrder: number;
   isActive: boolean;
   slotCount: number;
@@ -22,6 +24,8 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
   const [nickname, setNickname] = useState(s.nickname ?? "");
   const [note, setNote] = useState(s.note ?? "");
   const [hrEmployeeId, setHrEmployeeId] = useState(s.hrEmployeeId ?? "");
+  const [phone, setPhone] = useState(s.phone ?? "");
+  const [lineId, setLineId] = useState(s.lineId ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,11 +58,13 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
   if (editing) {
     return (
       <tr className="border-t border-gray-100 bg-brand-50/40">
-        <td className="px-3 py-2" colSpan={2}>
+        <td className="px-3 py-2" colSpan={3}>
           <div className="flex flex-wrap gap-2">
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls + " max-w-[180px]"} placeholder="ชื่อ" />
             <input value={nickname} onChange={(e) => setNickname(e.target.value)} className={inputCls + " max-w-[140px]"} placeholder="ชื่อเล่น" />
             <input value={note} onChange={(e) => setNote(e.target.value)} className={inputCls + " max-w-[220px]"} placeholder="หมายเหตุ" />
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls + " max-w-[150px]"} placeholder="เบอร์โทร" inputMode="tel" />
+            <input value={lineId} onChange={(e) => setLineId(e.target.value)} className={inputCls + " max-w-[150px]"} placeholder="LINE ID" />
             <input value={hrEmployeeId} onChange={(e) => setHrEmployeeId(e.target.value)} className={inputCls + " max-w-[150px]"} placeholder="รหัสพนักงาน HR" />
           </div>
           {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
@@ -69,7 +75,7 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
             <button
               disabled={busy || !name.trim()}
               onClick={async () => {
-                if (await patch({ name, nickname, note, hrEmployeeId })) setEditing(false);
+                if (await patch({ name, nickname, note, hrEmployeeId, phone, lineId })) setEditing(false);
               }}
               className="rounded-lg bg-brand-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
             >
@@ -91,6 +97,16 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
         {s.nickname && <span className="ml-1.5 text-xs font-normal text-gray-400">({s.nickname})</span>}
         {s.hrEmployeeId && <span className="ml-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-normal text-gray-500">HR: {s.hrEmployeeId}</span>}
         {error && <p className="text-xs font-normal text-red-600">{error}</p>}
+      </td>
+      <td className="px-3 py-2 text-gray-600">
+        {s.phone || s.lineId ? (
+          <div className="text-xs leading-5">
+            {s.phone && <p className="tabular-nums">📞 {s.phone}</p>}
+            {s.lineId && <p>LINE: {s.lineId}</p>}
+          </div>
+        ) : (
+          <span className="text-xs text-gray-300">ยังไม่กรอก</span>
+        )}
       </td>
       <td className="px-3 py-2 text-gray-500">{s.note ?? ""}</td>
       <td className="px-3 py-2 text-right text-gray-500">{s.slotCount}</td>
@@ -123,6 +139,8 @@ export default function StreamerManager({ streamers }: { streamers: StreamerRow[
   const router = useRouter();
   const [name, setName] = useState("");
   const [nickname, setNickname] = useState("");
+  const [phone, setPhone] = useState("");
+  const [lineId, setLineId] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -130,7 +148,7 @@ export default function StreamerManager({ streamers }: { streamers: StreamerRow[
     e.preventDefault();
     setSaving(true);
     setError(null);
-    const res = await fetch("/api/streamers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, nickname }) });
+    const res = await fetch("/api/streamers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, nickname, phone, lineId }) });
     setSaving(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -139,6 +157,8 @@ export default function StreamerManager({ streamers }: { streamers: StreamerRow[
     }
     setName("");
     setNickname("");
+    setPhone("");
+    setLineId("");
     router.refresh();
   }
 
@@ -153,6 +173,14 @@ export default function StreamerManager({ streamers }: { streamers: StreamerRow[
           <label className="mb-1 block text-xs font-medium text-gray-500">ชื่อเล่น (ถ้ามี)</label>
           <input value={nickname} onChange={(e) => setNickname(e.target.value)} className={inputCls + " w-40"} />
         </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-500">เบอร์โทร</label>
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls + " w-40"} inputMode="tel" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-500">LINE ID</label>
+          <input value={lineId} onChange={(e) => setLineId(e.target.value)} className={inputCls + " w-40"} />
+        </div>
         <button type="submit" disabled={saving} className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
           {saving ? "กำลังเพิ่ม..." : "+ เพิ่มคนไลฟ์"}
         </button>
@@ -160,10 +188,11 @@ export default function StreamerManager({ streamers }: { streamers: StreamerRow[
       </form>
 
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-[760px] text-sm">
           <thead className="bg-gray-50 text-left text-gray-500">
             <tr>
               <th className="px-3 py-2">ชื่อ</th>
+              <th className="px-3 py-2">ติดต่อ</th>
               <th className="px-3 py-2">หมายเหตุ</th>
               <th className="px-3 py-2 text-right">ช่วงที่บันทึก</th>
               <th className="px-3 py-2">สถานะ</th>
@@ -176,7 +205,7 @@ export default function StreamerManager({ streamers }: { streamers: StreamerRow[
             ))}
             {streamers.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-gray-400">
                   ยังไม่มีคนไลฟ์ — เพิ่มชื่อด้านบนก่อน แล้วค่อยไปบันทึกรอบไลฟ์
                 </td>
               </tr>
