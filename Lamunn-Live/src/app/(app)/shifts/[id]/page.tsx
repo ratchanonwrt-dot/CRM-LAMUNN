@@ -69,6 +69,23 @@ export default async function ShiftDetailPage({ params }: { params: { id: string
         <DeleteShiftButton shiftId={shift.id} weekParam={weekParam} />
       </div>
 
+      {/* แก้ไขวัน/เวลา/คนไลฟ์ของกะ — เห็นทันที ไม่ต้องกดเปิด */}
+      <div className="mb-6">
+        <ShiftEditForm
+          shift={{
+            id: shift.id,
+            date: isoDate(shift.date),
+            streamerId: shift.streamerId,
+            channelId: shift.channelId,
+            startTime: shift.startTime,
+            endTime: shift.endTime,
+            note: shift.note,
+          }}
+          streamers={streamers.map((s) => ({ id: s.id, name: s.name }))}
+          channels={channels.map((c) => ({ id: c.id, name: c.name }))}
+        />
+      </div>
+
       {/* ค่าตอบแทน */}
       <section className={clsx("mb-6 rounded-xl border bg-white p-5", pay.hitMinimum && hasResults ? "border-amber-300" : "border-gray-200")}>
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -111,6 +128,7 @@ export default async function ShiftDetailPage({ params }: { params: { id: string
         กรอกคนดูเฉลี่ยของแต่ละชั่วโมงในกะ (ระบบเฉลี่ยทั้งกะให้) และยอดขายรวมทั้งกะ — ยอดขายรวมถูกนำไปคิดค่าตอบแทนด้านบน ส่วนตัวเลขรายชั่วโมงไปเข้าหน้าวิเคราะห์
       </p>
       <ShiftResultsForm
+        key={`${shift.startTime}-${shift.endTime}`}
         shiftId={shift.id}
         startTime={shift.startTime}
         endTime={shift.endTime}
@@ -118,21 +136,6 @@ export default async function ShiftDetailPage({ params }: { params: { id: string
         existing={shift.slots.map((s) => ({ startTime: s.startTime, endTime: s.endTime, viewers: s.viewers, sales: s.sales, peakViewers: s.peakViewers, orders: s.orders }))}
       />
 
-      <div className="mt-8">
-        <ShiftEditForm
-          shift={{
-            id: shift.id,
-            date: isoDate(shift.date),
-            streamerId: shift.streamerId,
-            channelId: shift.channelId,
-            startTime: shift.startTime,
-            endTime: shift.endTime,
-            note: shift.note,
-          }}
-          streamers={streamers.map((s) => ({ id: s.id, name: s.name }))}
-          channels={channels.map((c) => ({ id: c.id, name: c.name }))}
-        />
-      </div>
     </div>
   );
 }

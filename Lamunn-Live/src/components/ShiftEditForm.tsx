@@ -2,9 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import clsx from "clsx";
 import TimeSelect from "@/components/TimeSelect";
+import { toRange, minutesToLabel, DAY_END_MIN } from "@/lib/schedule";
+import { timeToMinutes } from "@/lib/format";
 
 const inputCls = "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white";
+const HOUR_CHOICES = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
 
 interface ShiftData {
   id: string;
@@ -16,28 +20,52 @@ interface ShiftData {
   note: string | null;
 }
 
+function endFromStart(startTime: string, hours: number): { endTime: string; crossesMidnight: boolean } {
+  const s = timeToMinutes(startTime);
+  if (s === null || !(hours > 0)) return { endTime: "", crossesMidnight: false };
+  const e = s + Math.round(hours * 60);
+  return { endTime: minutesToLabel(e), crossesMidnight: e > DAY_END_MIN };
+}
+
+/** แก้ไขกะแบบเห็นทันทีบนหน้ากะ — เวลาเลือกเป็น "เริ่ม + กี่ชั่วโมง" เหมือนตอนลงตาราง */
 export default function ShiftEditForm({ shift, streamers, channels }: { shift: ShiftData; streamers: { id: string; name: string }[]; channels: { id: string; name: string }[] }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const initialHours = (() => {
+    const r = toRange(shift.startTime, shift.endTime);
+    return r ? (r.e - r.s) / 60 : 3;
+  })();
   const [date, setDate] = useState(shift.date);
   const [streamerId, setStreamerId] = useState(shift.streamerId);
   const [channelId, setChannelId] = useState(shift.channelId ?? "");
   const [startTime, setStartTime] = useState(shift.startTime);
-  const [endTime, setEndTime] = useState(shift.endTime);
+  const [hours, setHours] = useState(String(initialHours));
   const [note, setNote] = useState(shift.note ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const derived = endFromStart(startTime, Number(hours));
+  const dirty =
+    date !== shift.date ||
+    streamerId !== shift.streamerId ||
+    channelId !== (shift.channelId ?? "") ||
+    startTime !== shift.startTime ||
+    derived.endTime !== shift.endTime ||
+    note !== (shift.note ?? "");
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!derived.endTime) {
+      setError("กรุณาเลือกเวลาเริ่มและจำนวนชั่วโมง");
+      return;
+    }
     setSaving(true);
     setError(null);
     setSaved(false);
     const res = await fetch(`/api/shifts/${shift.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date, streamerId, channelId: channelId || null, startTime, endTime, note }),
+      body: JSON.stringify({ date, streamerId, channelId: channelId || null, startTime, endTime: derived.endTime, note }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -49,18 +77,9 @@ export default function ShiftEditForm({ shift, streamers, channels }: { shift: S
     router.refresh();
   }
 
-  if (!open) {
-    return (
-      <button onClick={() => setOpen(true)} className="text-sm text-gray-400 hover:text-brand-600">
-        แก้ไขกะ (วันที่ / คนไลฟ์ / เวลา / ช่องทาง)
-      </button>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-gray-200 bg-white p-5">
-      <h2 className="mb-4 text-sm font-semibold text-gray-700">แก้ไขกะ</h2>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
+    <form onSubmit={handleSubmit} className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500">วันที่</label>
           <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
@@ -76,12 +95,12 @@ export default function ShiftEditForm({ shift, streamers, channels }: { shift: S
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">เริ่ม</label>
-          <TimeSelect value={startTime} onChange={(v) => setStartTime(v)} required minuteStep={30} />
+          <label className="mb-1 block text-xs font-medium text-gray-500">เวลาเริ่ม</label>
+          <TimeSelect value={startTime} onChange={setStartTime} required minuteStep={30} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">ถึง</label>
-          <TimeSelect value={endTime} onChange={(v) => setEndTime(v)} required minuteStep={30} />
+          <label className="mb-1 block text-xs font-medium text-gray-500">ไลฟ์กี่ชั่วโมง</label>
+          <input type="number" inputMode="decimal" min={0.5} max={24} step={0.5} required value={hours} onChange={(e) => setHours(e.target.value)} className={inputCls} />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500">ช่องทาง</label>
@@ -99,15 +118,44 @@ export default function ShiftEditForm({ shift, streamers, channels }: { shift: S
           <input value={note} onChange={(e) => setNote(e.target.value)} className={inputCls} />
         </div>
       </div>
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-      {saved && <p className="mt-3 text-sm text-emerald-600">บันทึกแล้ว</p>}
-      <div className="mt-4 flex gap-2">
-        <button type="submit" disabled={saving} className="rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-medium text-white shadow-md shadow-brand-600/20 hover:bg-brand-700 disabled:opacity-50">
-          {saving ? "กำลังบันทึก..." : "บันทึก"}
+
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {HOUR_CHOICES.map((h) => (
+          <button
+            key={h}
+            type="button"
+            onClick={() => setHours(String(h))}
+            className={clsx(
+              "rounded-lg border px-2.5 py-1 text-xs tabular-nums",
+              Number(hours) === h ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+            )}
+          >
+            {h} ชม.
+          </button>
+        ))}
+        <span className="ml-2 text-xs text-gray-500">
+          {derived.endTime ? (
+            <>
+              กะนี้ <span className="font-semibold tabular-nums text-gray-800">{startTime}–{derived.endTime}</span>
+              {derived.crossesMidnight && <span className="text-gray-400"> (ข้ามเที่ยงคืน นับเป็นวันเดิม)</span>}
+            </>
+          ) : (
+            "เลือกเวลาเริ่มและจำนวนชั่วโมง"
+          )}
+        </span>
+      </div>
+
+      <div className="mt-3 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={saving || !dirty}
+          className="rounded-xl bg-brand-600 px-5 py-2 text-sm font-medium text-white shadow-md shadow-brand-600/20 hover:bg-brand-700 disabled:opacity-40 disabled:shadow-none"
+        >
+          {saving ? "กำลังบันทึก..." : "บันทึกการแก้ไขกะ"}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-50">
-          ปิด
-        </button>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {saved && !dirty && <p className="text-sm text-emerald-600">บันทึกแล้ว</p>}
+        {dirty && !saving && <p className="text-xs text-amber-700">มีการแก้ไขที่ยังไม่ได้บันทึก</p>}
       </div>
     </form>
   );
