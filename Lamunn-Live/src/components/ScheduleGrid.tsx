@@ -43,12 +43,12 @@ const inputCls = "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 
 /** ตัวเลือกจำนวนชั่วโมง — กดทีเดียวแทนการเลื่อนหาเวลาจบ */
 const HOUR_CHOICES = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
 
-/** เวลาจบ = เริ่ม + ชั่วโมง (เกินเที่ยงคืนตัดที่ 00:00) และคืนจำนวนชั่วโมงที่ได้จริง */
-function endFromStart(startTime: string, hours: number): { endTime: string; hours: number } {
+/** เวลาจบ = เริ่ม + ชั่วโมง — ข้ามเที่ยงคืนได้ (เช่น 22:00 + 3 ชม. = 01:00) และยังนับเป็นกะของวันเดิม */
+function endFromStart(startTime: string, hours: number): { endTime: string; hours: number; crossesMidnight: boolean } {
   const s = timeToMinutes(startTime);
-  if (s === null || !(hours > 0)) return { endTime: "", hours: 0 };
-  const e = Math.min(s + Math.round(hours * 60), DAY_END_MIN);
-  return { endTime: minutesToLabel(e), hours: (e - s) / 60 };
+  if (s === null || !(hours > 0)) return { endTime: "", hours: 0, crossesMidnight: false };
+  const e = s + Math.round(hours * 60);
+  return { endTime: minutesToLabel(e), hours: (e - s) / 60, crossesMidnight: e > DAY_END_MIN };
 }
 
 interface FormState {
@@ -87,7 +87,7 @@ export default function ScheduleGrid({
       day?.free[0];
     if (gap && (startMin === undefined || s < gap.s || s >= gap.e)) s = Math.max(gap.s, startMin === undefined ? Math.min(PREFERRED_START_MIN, gap.e - 60) : gap.s);
     // ค่าเริ่มต้น 3 ชม. แต่ไม่เกินช่องว่างที่เหลือ
-    const maxHours = gap ? (gap.e - s) / 60 : (DAY_END_MIN - s) / 60;
+    const maxHours = gap && gap.e < DAY_END_MIN ? (gap.e - s) / 60 : 24; // ช่องว่างท้ายวันไม่จำกัด เพราะข้ามเที่ยงคืนได้
     const hours = Math.max(0.5, Math.min(3, maxHours));
     setError(null);
     setForm({
@@ -326,7 +326,7 @@ export default function ScheduleGrid({
                   {derived?.endTime ? (
                     <>
                       กะนี้ <span className="font-semibold tabular-nums text-gray-800">{form.startTime}–{derived.endTime}</span>
-                      {derived.hours !== Number(form.hours) && <span className="text-amber-700"> (ตัดที่เที่ยงคืน เหลือ {derived.hours} ชม.)</span>}
+                      {derived.crossesMidnight && <span className="text-gray-400"> (ข้ามเที่ยงคืน — ยังนับเป็นกะของวันนี้)</span>}
                     </>
                   ) : (
                     "เลือกเวลาเริ่มและจำนวนชั่วโมง"
