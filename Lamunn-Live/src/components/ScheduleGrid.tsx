@@ -189,14 +189,14 @@ export default function ScheduleGrid({
                       data-shift
                       href={`/shifts/${s.id}`}
                       className={clsx(
-                        "absolute inset-x-1 overflow-hidden rounded-lg border px-1.5 py-1 text-[11px] leading-tight shadow-sm transition hover:shadow-md",
+                        "absolute inset-x-1 overflow-hidden rounded-lg border-2 px-1.5 py-1 text-[11px] leading-tight shadow-sm transition hover:shadow-md",
                         streamerColor(colors[s.streamerId])
                       )}
                       style={{ top: top + 1, height: Math.max(bottom - top - 2, 18) }}
                       title={`${s.streamerName} ${s.startTime}–${s.endTime}${s.channelName ? ` · ${s.channelName}` : ""}${s.hasResults ? ` · ขาย ${formatBaht(s.sales)} ฿` : " · ยังไม่กรอกยอด"}`}
                     >
-                      <p className="truncate font-semibold">{s.streamerName}</p>
-                      <p className="truncate opacity-80">
+                      <p className="truncate text-[13px] font-bold leading-tight">{s.streamerName}</p>
+                      <p className="truncate text-[11px] opacity-80">
                         {s.startTime}–{s.endTime}
                         {spills && " ↗"}
                       </p>
@@ -242,7 +242,7 @@ export default function ScheduleGrid({
           {streamers
             .filter((s) => colors[s.id] !== undefined)
             .map((s) => (
-              <span key={s.id} className={clsx("rounded-md border px-2 py-0.5 text-[11px]", streamerColor(colors[s.id]))}>
+              <span key={s.id} className={clsx("rounded-md border-2 px-2.5 py-0.5 text-xs font-semibold", streamerColor(colors[s.id]))}>
                 {s.name}
               </span>
             ))}

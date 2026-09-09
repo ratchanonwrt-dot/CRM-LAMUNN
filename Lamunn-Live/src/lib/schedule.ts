@@ -72,22 +72,22 @@ export function todayTH(): Date {
  * ใช้คู่กับชื่อเสมอ ไม่ใช้สีเดี่ยว ๆ บอกตัวตน (class ต้องเขียนเต็มให้ Tailwind เก็บได้)
  */
 export const STREAMER_PALETTE: { key: string; label: string; block: string; dot: string }[] = [
-  { key: "rose", label: "ชมพูแดง", block: "bg-rose-100 border-rose-300 text-rose-900", dot: "bg-rose-400" },
-  { key: "sky", label: "ฟ้า", block: "bg-sky-100 border-sky-300 text-sky-900", dot: "bg-sky-400" },
-  { key: "amber", label: "เหลือง", block: "bg-amber-100 border-amber-300 text-amber-900", dot: "bg-amber-400" },
-  { key: "emerald", label: "เขียว", block: "bg-emerald-100 border-emerald-300 text-emerald-900", dot: "bg-emerald-400" },
-  { key: "violet", label: "ม่วง", block: "bg-violet-100 border-violet-300 text-violet-900", dot: "bg-violet-400" },
-  { key: "orange", label: "ส้ม", block: "bg-orange-100 border-orange-300 text-orange-900", dot: "bg-orange-400" },
-  { key: "teal", label: "เขียวน้ำทะเล", block: "bg-teal-100 border-teal-300 text-teal-900", dot: "bg-teal-400" },
-  { key: "fuchsia", label: "บานเย็น", block: "bg-fuchsia-100 border-fuchsia-300 text-fuchsia-900", dot: "bg-fuchsia-400" },
-  { key: "lime", label: "เขียวมะนาว", block: "bg-lime-100 border-lime-300 text-lime-900", dot: "bg-lime-400" },
-  { key: "indigo", label: "น้ำเงิน", block: "bg-indigo-100 border-indigo-300 text-indigo-900", dot: "bg-indigo-400" },
-  { key: "pink", label: "ชมพู", block: "bg-pink-100 border-pink-300 text-pink-900", dot: "bg-pink-400" },
-  { key: "cyan", label: "ฟ้าอมเขียว", block: "bg-cyan-100 border-cyan-300 text-cyan-900", dot: "bg-cyan-400" },
-  { key: "red", label: "แดง", block: "bg-red-100 border-red-300 text-red-900", dot: "bg-red-500" },
-  { key: "blue", label: "น้ำเงินเข้ม", block: "bg-blue-100 border-blue-300 text-blue-900", dot: "bg-blue-500" },
-  { key: "yellow", label: "เหลืองสด", block: "bg-yellow-100 border-yellow-300 text-yellow-900", dot: "bg-yellow-400" },
-  { key: "stone", label: "น้ำตาลเทา", block: "bg-stone-200 border-stone-400 text-stone-900", dot: "bg-stone-500" },
+  { key: "rose", label: "ชมพูแดง", block: "bg-rose-200 border-rose-400 text-rose-950", dot: "bg-rose-400" },
+  { key: "sky", label: "ฟ้า", block: "bg-sky-200 border-sky-400 text-sky-950", dot: "bg-sky-400" },
+  { key: "amber", label: "เหลือง", block: "bg-amber-200 border-amber-400 text-amber-950", dot: "bg-amber-400" },
+  { key: "emerald", label: "เขียว", block: "bg-emerald-200 border-emerald-400 text-emerald-950", dot: "bg-emerald-400" },
+  { key: "violet", label: "ม่วง", block: "bg-violet-200 border-violet-400 text-violet-950", dot: "bg-violet-400" },
+  { key: "orange", label: "ส้ม", block: "bg-orange-200 border-orange-400 text-orange-950", dot: "bg-orange-400" },
+  { key: "teal", label: "เขียวน้ำทะเล", block: "bg-teal-200 border-teal-400 text-teal-950", dot: "bg-teal-400" },
+  { key: "fuchsia", label: "บานเย็น", block: "bg-fuchsia-200 border-fuchsia-400 text-fuchsia-950", dot: "bg-fuchsia-400" },
+  { key: "lime", label: "เขียวมะนาว", block: "bg-lime-200 border-lime-400 text-lime-950", dot: "bg-lime-400" },
+  { key: "indigo", label: "น้ำเงิน", block: "bg-indigo-200 border-indigo-400 text-indigo-950", dot: "bg-indigo-400" },
+  { key: "pink", label: "ชมพู", block: "bg-pink-200 border-pink-400 text-pink-950", dot: "bg-pink-400" },
+  { key: "cyan", label: "ฟ้าอมเขียว", block: "bg-cyan-200 border-cyan-400 text-cyan-950", dot: "bg-cyan-400" },
+  { key: "red", label: "แดง", block: "bg-red-200 border-red-400 text-red-950", dot: "bg-red-500" },
+  { key: "blue", label: "น้ำเงินเข้ม", block: "bg-blue-200 border-blue-400 text-blue-950", dot: "bg-blue-500" },
+  { key: "yellow", label: "เหลืองสด", block: "bg-yellow-200 border-yellow-400 text-yellow-950", dot: "bg-yellow-400" },
+  { key: "stone", label: "น้ำตาลเทา", block: "bg-stone-300 border-stone-500 text-stone-950", dot: "bg-stone-500" },
 ];
 export const STREAMER_COLOR_FALLBACK = "bg-gray-100 border-gray-300 text-gray-800";
 export const PALETTE_KEYS = STREAMER_PALETTE.map((p) => p.key);
