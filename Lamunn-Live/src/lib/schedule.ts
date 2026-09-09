@@ -1,7 +1,9 @@
 import { timeToMinutes } from "@/lib/format";
 
-/** ช่องเวลาของแต่ละวัน: 00:00 - 23:59 (เที่ยงคืนถัดไป = นาทีที่ 1440) */
-export const DAY_START_MIN = 0;
+/** ตารางไลฟ์เปิด 10:00 - 01:00 (ของวันถัดไป) — กะยังนับเป็นวันที่เริ่ม */
+export const DAY_START_MIN = 10 * 60;
+/** ขอบล่างของตาราง = 01:00 วันถัดไป (นาทีที่ 1500) */
+export const GRID_END_MIN = 25 * 60;
 /** เวลาที่แนะนำให้เริ่มลงกะเมื่อกดปุ่ม "ลงกะใหม่" โดยไม่ได้คลิกช่อง */
 export const PREFERRED_START_MIN = 10 * 60;
 export const DAY_END_MIN = 24 * 60;
@@ -30,7 +32,7 @@ export function minutesToLabel(m: number): string {
 }
 
 /** ช่วงที่ยังว่างในหน้าต่าง [dayStart, dayEnd) หลังหักกะที่ลงไว้แล้ว */
-export function freeRanges(taken: MinuteRange[], dayStart = DAY_START_MIN, dayEnd = DAY_END_MIN): MinuteRange[] {
+export function freeRanges(taken: MinuteRange[], dayStart = DAY_START_MIN, dayEnd = GRID_END_MIN): MinuteRange[] {
   const sorted = [...taken].sort((a, b) => a.s - b.s);
   const out: MinuteRange[] = [];
   let cursor = dayStart;

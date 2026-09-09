@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import TimeSelect from "@/components/TimeSelect";
 import clsx from "clsx";
 import { Plus, X } from "lucide-react";
-import { DAY_START_MIN, DAY_END_MIN, PREFERRED_START_MIN, minutesToLabel, streamerColor } from "@/lib/schedule";
+import { DAY_START_MIN, DAY_END_MIN, GRID_END_MIN, PREFERRED_START_MIN, minutesToLabel, streamerColor } from "@/lib/schedule";
 import { formatBaht, formatHours, timeToMinutes } from "@/lib/format";
 
 export interface GridShift {
@@ -36,9 +36,9 @@ interface Option {
   name: string;
 }
 
-const HOUR_PX = 28;
-const HOURS = Array.from({ length: (DAY_END_MIN - DAY_START_MIN) / 60 + 1 }, (_, i) => DAY_START_MIN + i * 60);
-const COL_HEIGHT = ((DAY_END_MIN - DAY_START_MIN) / 60) * HOUR_PX;
+const HOUR_PX = 34;
+const HOURS = Array.from({ length: (GRID_END_MIN - DAY_START_MIN) / 60 + 1 }, (_, i) => DAY_START_MIN + i * 60);
+const COL_HEIGHT = ((GRID_END_MIN - DAY_START_MIN) / 60) * HOUR_PX;
 const inputCls = "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white";
 /** ตัวเลือกจำนวนชั่วโมง — กดทีเดียวแทนการเลื่อนหาเวลาจบ */
 const HOUR_CHOICES = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
@@ -87,7 +87,7 @@ export default function ScheduleGrid({
       day?.free[0];
     if (gap && (startMin === undefined || s < gap.s || s >= gap.e)) s = Math.max(gap.s, startMin === undefined ? Math.min(PREFERRED_START_MIN, gap.e - 60) : gap.s);
     // ค่าเริ่มต้น 3 ชม. แต่ไม่เกินช่องว่างที่เหลือ
-    const maxHours = gap && gap.e < DAY_END_MIN ? (gap.e - s) / 60 : 24; // ช่องว่างท้ายวันไม่จำกัด เพราะข้ามเที่ยงคืนได้
+    const maxHours = gap && gap.e < GRID_END_MIN ? (gap.e - s) / 60 : 24; // ช่องว่างท้ายตารางไม่จำกัด เพราะข้ามเที่ยงคืนได้
     const hours = Math.max(0.5, Math.min(3, maxHours));
     setError(null);
     setForm({
@@ -134,7 +134,7 @@ export default function ScheduleGrid({
     if ((ev.target as HTMLElement).closest("[data-shift]")) return;
     const rect = ev.currentTarget.getBoundingClientRect();
     const minutes = DAY_START_MIN + ((ev.clientY - rect.top) / HOUR_PX) * 60;
-    openNew(day.date, Math.max(DAY_START_MIN, Math.min(DAY_END_MIN - 30, minutes)));
+    openNew(day.date, Math.max(DAY_START_MIN, Math.min(GRID_END_MIN - 30, minutes)));
   }
 
   return (
@@ -164,7 +164,7 @@ export default function ScheduleGrid({
             <div className="relative" style={{ height: COL_HEIGHT }}>
               {HOURS.map((h) => (
                 <span key={h} className="absolute right-2 -translate-y-1/2 text-[10px] tabular-nums text-gray-400" style={{ top: ((h - DAY_START_MIN) / 60) * HOUR_PX }}>
-                  {h === DAY_END_MIN ? "23:59" : minutesToLabel(h)}
+                  {minutesToLabel(h)}
                 </span>
               ))}
             </div>
@@ -181,8 +181,8 @@ export default function ScheduleGrid({
                 ))}
                 {d.shifts.map((s) => {
                   const top = (Math.max(s.s, DAY_START_MIN) - DAY_START_MIN) / 60 * HOUR_PX;
-                  const bottom = (Math.min(s.e, DAY_END_MIN) - DAY_START_MIN) / 60 * HOUR_PX;
-                  const spills = s.e > DAY_END_MIN || s.s < DAY_START_MIN;
+                  const bottom = (Math.min(s.e, GRID_END_MIN) - DAY_START_MIN) / 60 * HOUR_PX;
+                  const spills = s.e > GRID_END_MIN || s.s < DAY_START_MIN;
                   return (
                     <a
                       key={s.id}
