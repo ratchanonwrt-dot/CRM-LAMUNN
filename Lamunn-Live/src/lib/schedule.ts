@@ -1,7 +1,9 @@
 import { timeToMinutes } from "@/lib/format";
 
-/** ช่องเวลาเริ่มต้นของแต่ละวัน: 10:00 - 00:00 (เที่ยงคืน = นาทีที่ 1440) */
-export const DAY_START_MIN = 10 * 60;
+/** ช่องเวลาของแต่ละวัน: 00:00 - 23:59 (เที่ยงคืนถัดไป = นาทีที่ 1440) */
+export const DAY_START_MIN = 0;
+/** เวลาที่แนะนำให้เริ่มลงกะเมื่อกดปุ่ม "ลงกะใหม่" โดยไม่ได้คลิกช่อง */
+export const PREFERRED_START_MIN = 10 * 60;
 export const DAY_END_MIN = 24 * 60;
 
 export interface MinuteRange {

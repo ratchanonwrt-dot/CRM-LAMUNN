@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Plus, X } from "lucide-react";
-import { DAY_START_MIN, DAY_END_MIN, minutesToLabel, streamerColor } from "@/lib/schedule";
-import { formatBaht, formatHours } from "@/lib/format";
+import { DAY_START_MIN, DAY_END_MIN, PREFERRED_START_MIN, minutesToLabel, streamerColor } from "@/lib/schedule";
+import { formatBaht, formatHours, timeToMinutes } from "@/lib/format";
 
 export interface GridShift {
   id: string;
@@ -35,10 +35,20 @@ interface Option {
   name: string;
 }
 
-const HOUR_PX = 34;
+const HOUR_PX = 28;
 const HOURS = Array.from({ length: (DAY_END_MIN - DAY_START_MIN) / 60 + 1 }, (_, i) => DAY_START_MIN + i * 60);
 const COL_HEIGHT = ((DAY_END_MIN - DAY_START_MIN) / 60) * HOUR_PX;
 const inputCls = "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white";
+/** ตัวเลือกจำนวนชั่วโมง — กดทีเดียวแทนการเลื่อนหาเวลาจบ */
+const HOUR_CHOICES = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
+
+/** เวลาจบ = เริ่ม + ชั่วโมง (เกินเที่ยงคืนตัดที่ 00:00) และคืนจำนวนชั่วโมงที่ได้จริง */
+function endFromStart(startTime: string, hours: number): { endTime: string; hours: number } {
+  const s = timeToMinutes(startTime);
+  if (s === null || !(hours > 0)) return { endTime: "", hours: 0 };
+  const e = Math.min(s + Math.round(hours * 60), DAY_END_MIN);
+  return { endTime: minutesToLabel(e), hours: (e - s) / 60 };
+}
 
 interface FormState {
   id: string | null;
@@ -46,7 +56,7 @@ interface FormState {
   streamerId: string;
   channelId: string;
   startTime: string;
-  endTime: string;
+  hours: string; // จำนวนชั่วโมง (ข้อความจากช่องกรอก)
   note: string;
 }
 
@@ -68,11 +78,16 @@ export default function ScheduleGrid({
 
   function openNew(date: string, startMin?: number) {
     const day = days.find((d) => d.date === date);
-    // เริ่มที่จุดที่คลิก (ปัดเป็น 30 นาที) หรือช่องว่างแรกของวัน; จบที่สุดช่องว่างนั้น
-    let s = startMin !== undefined ? Math.floor(startMin / 30) * 30 : (day?.free[0]?.s ?? DAY_START_MIN);
-    const gap = day?.free.find((f) => s >= f.s && s < f.e) ?? day?.free.find((f) => f.s >= s);
-    if (gap && (startMin === undefined || s < gap.s)) s = gap.s;
-    const e = gap ? gap.e : Math.min(s + 180, DAY_END_MIN);
+    // เริ่มที่จุดที่คลิก (ปัดเป็น 30 นาที) หรือช่องว่างที่ครอบ 10:00 / ช่องว่างถัดไป / ช่องว่างแรกของวัน
+    let s = startMin !== undefined ? Math.floor(startMin / 30) * 30 : PREFERRED_START_MIN;
+    const gap =
+      day?.free.find((f) => s >= f.s && s < f.e) ??
+      day?.free.find((f) => f.s >= s) ??
+      day?.free[0];
+    if (gap && (startMin === undefined || s < gap.s || s >= gap.e)) s = Math.max(gap.s, startMin === undefined ? Math.min(PREFERRED_START_MIN, gap.e - 60) : gap.s);
+    // ค่าเริ่มต้น 3 ชม. แต่ไม่เกินช่องว่างที่เหลือ
+    const maxHours = gap ? (gap.e - s) / 60 : (DAY_END_MIN - s) / 60;
+    const hours = Math.max(0.5, Math.min(3, maxHours));
     setError(null);
     setForm({
       id: null,
@@ -80,7 +95,7 @@ export default function ScheduleGrid({
       streamerId: streamers[0]?.id ?? "",
       channelId: channels[0]?.id ?? "",
       startTime: minutesToLabel(s),
-      endTime: minutesToLabel(e),
+      hours: String(hours),
       note: "",
     });
   }
@@ -88,12 +103,17 @@ export default function ScheduleGrid({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form) return;
+    const { endTime } = endFromStart(form.startTime, Number(form.hours));
+    if (!endTime) {
+      setError("กรุณาเลือกเวลาเริ่มและจำนวนชั่วโมง");
+      return;
+    }
     setSaving(true);
     setError(null);
     const res = await fetch("/api/shifts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: form.date, streamerId: form.streamerId, channelId: form.channelId || null, startTime: form.startTime, endTime: form.endTime, note: form.note }),
+      body: JSON.stringify({ date: form.date, streamerId: form.streamerId, channelId: form.channelId || null, startTime: form.startTime, endTime, note: form.note }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -101,9 +121,13 @@ export default function ScheduleGrid({
       setError(body.error ?? "บันทึกไม่สำเร็จ");
       return;
     }
-    setForm(null);
+    const body = await res.json();
+    // ลงกะเสร็จ -> ไปหน้ากะทันที เพื่อกรอกคนดู/ยอดขายต่อได้เลย
+    router.push(`/shifts/${body.shift.id}`);
     router.refresh();
   }
+
+  const derived = form ? endFromStart(form.startTime, Number(form.hours)) : null;
 
   function onColumnClick(ev: React.MouseEvent<HTMLDivElement>, day: GridDay) {
     if ((ev.target as HTMLElement).closest("[data-shift]")) return;
@@ -139,7 +163,7 @@ export default function ScheduleGrid({
             <div className="relative" style={{ height: COL_HEIGHT }}>
               {HOURS.map((h) => (
                 <span key={h} className="absolute right-2 -translate-y-1/2 text-[10px] tabular-nums text-gray-400" style={{ top: ((h - DAY_START_MIN) / 60) * HOUR_PX }}>
-                  {minutesToLabel(h)}
+                  {h === DAY_END_MIN ? "23:59" : minutesToLabel(h)}
                 </span>
               ))}
             </div>
@@ -264,12 +288,49 @@ export default function ScheduleGrid({
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">เริ่ม</label>
+                <label className="mb-1 block text-xs font-medium text-gray-500">เวลาเริ่ม</label>
                 <input type="time" required step={1800} value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className={inputCls} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">ถึง (00:00 = เที่ยงคืน)</label>
-                <input type="time" required step={1800} value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className={inputCls} />
+                <label className="mb-1 block text-xs font-medium text-gray-500">ไลฟ์กี่ชั่วโมง</label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={0.5}
+                  max={24}
+                  step={0.5}
+                  required
+                  value={form.hours}
+                  onChange={(e) => setForm({ ...form, hours: e.target.value })}
+                  className={inputCls}
+                />
+              </div>
+              <div className="col-span-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {HOUR_CHOICES.map((h) => (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() => setForm({ ...form, hours: String(h) })}
+                      className={clsx(
+                        "rounded-lg border px-2.5 py-1 text-xs tabular-nums",
+                        Number(form.hours) === h ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                      )}
+                    >
+                      {h} ชม.
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs text-gray-500">
+                  {derived?.endTime ? (
+                    <>
+                      กะนี้ <span className="font-semibold tabular-nums text-gray-800">{form.startTime}–{derived.endTime}</span>
+                      {derived.hours !== Number(form.hours) && <span className="text-amber-700"> (ตัดที่เที่ยงคืน เหลือ {derived.hours} ชม.)</span>}
+                    </>
+                  ) : (
+                    "เลือกเวลาเริ่มและจำนวนชั่วโมง"
+                  )}
+                </p>
               </div>
               <div className="col-span-2">
                 <label className="mb-1 block text-xs font-medium text-gray-500">ช่องทาง</label>

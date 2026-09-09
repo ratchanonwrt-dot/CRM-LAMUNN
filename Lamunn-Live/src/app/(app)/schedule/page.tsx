@@ -72,7 +72,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: { w
         <div>
           <h1 className="text-xl font-bold text-gray-800">ตารางไลฟ์รายสัปดาห์</h1>
           <p className="text-sm text-gray-500">
-            ช่วงเวลาลงกะ 10:00–00:00 ทุกวัน · คลิกช่องว่างหรือปุ่มเวลาว่างเพื่อลงกะ · คลิกกะเพื่อกรอกยอด/ดูค่าคอม · สัปดาห์นี้ลงแล้ว{" "}
+            ลงกะได้ทั้งวัน 00:00–23:59 · คลิกช่องว่างหรือปุ่มเวลาว่างเพื่อลงกะ แล้วระบบพาไปหน้ากรอกยอดทันที · คลิกกะเดิมเพื่อกรอก/แก้ยอด · สัปดาห์นี้ลงแล้ว{" "}
             {totalHours ? `${totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)} ชม.` : "0 ชม."}
           </p>
         </div>
