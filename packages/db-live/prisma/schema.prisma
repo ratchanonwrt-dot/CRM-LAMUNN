@@ -95,7 +95,8 @@ model LiveSession {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  slots LiveSlot[]
+  slots  LiveSlot[]
+  shifts LiveShift[]
 
   @@index([date])
   @@map("live_sessions")
@@ -146,6 +147,10 @@ model LiveShift {
   channelId String?
   channel   Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
 
+  // รอบไลฟ์ (วัน+ช่องทาง) ที่กะนี้สังกัด — ผูกให้ตั้งแต่ตอนลงตาราง เพื่อให้หน้า "บันทึกรอบไลฟ์" เห็นกะที่วางไว้
+  sessionId String?
+  session   LiveSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
   startTime String // "HH:mm"
   endTime   String // "HH:mm" — "00:00" หมายถึงเที่ยงคืน (จบวัน)
   note      String?
@@ -160,6 +165,7 @@ model LiveShift {
 
   @@index([date])
   @@index([streamerId])
+  @@index([sessionId])
   @@map("live_shifts")
 }
 

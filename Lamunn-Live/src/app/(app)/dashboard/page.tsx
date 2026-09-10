@@ -20,7 +20,7 @@ export default async function DashboardPage() {
       include: { streamer: true, session: { include: { channel: true } } },
     }),
     prisma.liveSession.findMany({
-      include: { channel: true, slots: { include: { streamer: true } } },
+      include: { channel: true, slots: { include: { streamer: true } }, shifts: { include: { streamer: true } } },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       take: 6,
     }),
@@ -114,12 +114,15 @@ export default async function DashboardPage() {
                   const w = s.slots.reduce((x, sl) => x + (slotHours(sl.startTime, sl.endTime) || 0.25), 0);
                   const vw = s.slots.reduce((x, sl) => x + sl.viewers * (slotHours(sl.startTime, sl.endTime) || 0.25), 0);
                   const sales = s.slots.reduce((x, sl) => x + sl.sales, 0);
-                  const names = Array.from(new Set(s.slots.map((sl) => sl.streamer.name)));
+                  const names = Array.from(new Set(s.slots.length ? s.slots.map((sl) => sl.streamer.name) : s.shifts.map((sh) => sh.streamer.name)));
                   return (
                     <tr key={s.id} className="border-t border-gray-100 first:border-t-0">
                       <td className="px-3 py-2 font-medium text-gray-800">{formatThaiDateShort(s.date)}</td>
                       <td className="px-3 py-2 text-gray-500">{s.channel?.name ?? "-"}</td>
-                      <td className="px-3 py-2 text-gray-600">{names.length ? names.join(", ") : <span className="text-gray-300">ยังไม่บันทึก</span>}</td>
+                      <td className="px-3 py-2 text-gray-600">
+                        {names.length ? names.join(", ") : <span className="text-gray-300">ยังไม่บันทึก</span>}
+                        {!s.slots.length && s.shifts.length > 0 && <span className="ml-1 text-xs text-amber-700">(รอกรอก)</span>}
+                      </td>
                       <td className="px-3 py-2 text-right tabular-nums text-gray-800">{s.slots.length ? `${formatNum(vw / w)} คน` : ""}</td>
                       <td className="px-3 py-2 text-right tabular-nums text-gray-800">{s.slots.length ? `${formatBaht(sales)} ฿` : ""}</td>
                       <td className="px-3 py-2 text-right">

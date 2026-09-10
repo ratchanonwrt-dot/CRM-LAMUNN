@@ -3,6 +3,7 @@ import { prisma } from "@lamunn/db-live";
 import { requireStaff, RECORDER_ROLES } from "@/lib/requireStaff";
 import { parseDateOnly } from "@/lib/validation";
 import { parseShiftBody, checkShiftConflicts } from "@/lib/shiftValidation";
+import { attachShiftToSession } from "@/lib/shiftSession";
 
 export async function GET(req: NextRequest) {
   const staff = await requireStaff();
@@ -29,9 +30,8 @@ export async function POST(req: NextRequest) {
   const conflict = await checkShiftConflicts(parsed.data, null);
   if (conflict) return NextResponse.json({ error: conflict }, { status: 409 });
 
-  const shift = await prisma.liveShift.create({
-    data: { ...parsed.data, createdByStaffId: staff.staffId },
-    include: { streamer: true, channel: true, slots: true },
-  });
+  const created = await prisma.liveShift.create({ data: { ...parsed.data, createdByStaffId: staff.staffId } });
+  await attachShiftToSession(created.id, staff.staffId);
+  const shift = await prisma.liveShift.findUniqueOrThrow({ where: { id: created.id }, include: { streamer: true, channel: true, slots: true } });
   return NextResponse.json({ shift });
 }

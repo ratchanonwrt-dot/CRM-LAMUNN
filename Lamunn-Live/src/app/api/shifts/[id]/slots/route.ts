@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@lamunn/db-live";
 import { requireStaff, RECORDER_ROLES } from "@/lib/requireStaff";
 import { parseSlotBody } from "@/lib/validation";
+import { attachShiftToSession } from "@/lib/shiftSession";
 
 /** กรอกยอดจริงของกะ — สร้าง LiveSlot ผูกกับกะ และผูกกับรอบไลฟ์ (LiveSession) ของวัน/ช่องทางนั้น (สร้างให้ถ้ายังไม่มี) */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -19,16 +20,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const streamer = await prisma.streamer.findUnique({ where: { id: data.streamerId! } });
   if (!streamer) return NextResponse.json({ error: "ไม่พบคนไลฟ์ที่เลือก" }, { status: 400 });
 
-  let session = await prisma.liveSession.findFirst({ where: { date: shift.date, channelId: shift.channelId }, orderBy: { createdAt: "asc" } });
-  if (!session) {
-    session = await prisma.liveSession.create({
-      data: { date: shift.date, channelId: shift.channelId, createdByStaffId: staff.staffId },
-    });
-  }
+  const sessionId = await attachShiftToSession(shift.id, staff.staffId);
 
   const slot = await prisma.liveSlot.create({
     data: {
-      sessionId: session.id,
+      sessionId,
       shiftId: shift.id,
       streamerId: data.streamerId!,
       startTime: data.startTime!,

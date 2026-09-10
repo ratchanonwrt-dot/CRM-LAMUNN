@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@lamunn/db-live";
 import { requirePageRole } from "@/lib/requirePageRole";
-import { formatThaiDate, thaiDays } from "@/lib/format";
+import { formatBaht, formatThaiDate, thaiDays } from "@/lib/format";
 import SessionEditForm from "@/components/SessionEditForm";
 import SlotEntryPanel from "@/components/SlotEntryPanel";
 import DeleteSessionButton from "@/components/DeleteSessionButton";
@@ -15,6 +15,7 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
     include: {
       channel: true,
       createdByStaff: { select: { name: true } },
+      shifts: { include: { streamer: true, slots: { select: { id: true, sales: true } } }, orderBy: { startTime: "asc" } },
       slots: { include: { streamer: true }, orderBy: [{ startTime: "asc" }, { createdAt: "asc" }] },
     },
   });
@@ -53,6 +54,40 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
         </div>
         <DeleteSessionButton sessionId={session.id} />
       </div>
+
+      {session.shifts.length > 0 && (
+        <section className="mb-5 rounded-xl border border-gray-200 bg-white p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-700">กะที่วางไว้ในรอบนี้ ({session.shifts.length})</h2>
+            <Link href={`/schedule?week=${session.date.toISOString().slice(0, 10)}`} className="text-xs font-medium text-brand-600 hover:underline">
+              ไปตารางไลฟ์ →
+            </Link>
+          </div>
+          <ul className="divide-y divide-gray-100">
+            {session.shifts.map((sh) => {
+              const done = sh.slots.length > 0;
+              const sales = sh.slots.reduce((a, x) => a + x.sales, 0);
+              return (
+                <li key={sh.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                  <span>
+                    <span className="font-medium text-gray-800">{sh.streamer.name}</span>
+                    <span className="ml-2 tabular-nums text-gray-500">{sh.startTime}–{sh.endTime}</span>
+                    {done ? (
+                      <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">กรอกแล้ว · ขาย {formatBaht(sales)} ฿</span>
+                    ) : (
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">ยังไม่กรอกยอด</span>
+                    )}
+                  </span>
+                  <Link href={`/shifts/${sh.id}`} className="text-xs font-medium text-brand-600 hover:underline">
+                    {done ? "เปิดกะ / แก้ยอด" : "กรอกยอดกะนี้"}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-2 text-[11px] text-gray-400">ยอดที่กรอกจากหน้ากะจะมาอยู่ในตารางช่วงเวลาด้านล่างอัตโนมัติ (แก้ได้ทั้งสองที่)</p>
+        </section>
+      )}
 
       <SlotEntryPanel
         sessionId={session.id}

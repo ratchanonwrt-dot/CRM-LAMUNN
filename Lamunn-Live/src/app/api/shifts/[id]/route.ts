@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@lamunn/db-live";
 import { requireStaff, RECORDER_ROLES, EDITOR_ROLES } from "@/lib/requireStaff";
 import { parseShiftBody, checkShiftConflicts } from "@/lib/shiftValidation";
+import { attachShiftToSession, syncSessionTimes } from "@/lib/shiftSession";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const staff = await requireStaff();
@@ -36,11 +37,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const conflict = await checkShiftConflicts(parsed.data, params.id);
   if (conflict) return NextResponse.json({ error: conflict }, { status: 409 });
 
-  const shift = await prisma.liveShift.update({
-    where: { id: params.id },
-    data: parsed.data,
-    include: { streamer: true, channel: true, slots: true },
-  });
+  await prisma.liveShift.update({ where: { id: params.id }, data: parsed.data });
+  await attachShiftToSession(params.id, staff.staffId); // วัน/ช่องทางเปลี่ยน -> ย้ายไปรอบที่ถูกต้อง พร้อมยอดที่กรอกไว้
+  const shift = await prisma.liveShift.findUniqueOrThrow({ where: { id: params.id }, include: { streamer: true, channel: true, slots: true } });
   return NextResponse.json({ shift });
 }
 
@@ -49,6 +48,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   // ยอดที่กรอกไว้ (slots) ยังอยู่ในรอบไลฟ์ของวันนั้น แค่หลุดจากกะ (shiftId -> null)
+  const existing = await prisma.liveShift.findUnique({ where: { id: params.id }, select: { sessionId: true } });
   await prisma.liveShift.delete({ where: { id: params.id } });
+  await syncSessionTimes(existing?.sessionId);
   return NextResponse.json({ ok: true });
 }

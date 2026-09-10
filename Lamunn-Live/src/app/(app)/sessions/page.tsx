@@ -19,7 +19,7 @@ export default async function SessionsPage({ searchParams }: { searchParams: { m
 
   const sessions = await prisma.liveSession.findMany({
     where: { date: { gte: from, lte: to } },
-    include: { channel: true, slots: { include: { streamer: true } } },
+    include: { channel: true, slots: { include: { streamer: true } }, shifts: { include: { streamer: true }, orderBy: { startTime: "asc" } } },
     orderBy: [{ date: "desc" }, { startTime: "desc" }, { createdAt: "desc" }],
   });
 
@@ -33,7 +33,8 @@ export default async function SessionsPage({ searchParams }: { searchParams: { m
       return a === null ? pk : Math.max(a, pk);
     }, null);
     const streamers = Array.from(new Set(s.slots.map((sl) => sl.streamer.name)));
-    return { s, hours, avgViewers: w > 0 ? vw / w : 0, sales, peak, streamers };
+    const pendingShifts = s.shifts.filter((sh) => !s.slots.some((sl) => sl.shiftId === sh.id));
+    return { s, hours, avgViewers: w > 0 ? vw / w : 0, sales, peak, streamers, pendingShifts };
   });
 
   const monthHours = rows.reduce((a, r) => a + r.hours, 0);
@@ -61,7 +62,7 @@ export default async function SessionsPage({ searchParams }: { searchParams: { m
               <th className="px-3 py-2">วันที่</th>
               <th className="px-3 py-2">ช่องทาง / รอบ</th>
               <th className="px-3 py-2">เวลา</th>
-              <th className="px-3 py-2">คนไลฟ์</th>
+              <th className="px-3 py-2">คนไลฟ์ / กะที่วางไว้</th>
               <th className="px-3 py-2 text-right">ช่วง</th>
               <th className="px-3 py-2 text-right">คนดูเฉลี่ย</th>
               <th className="px-3 py-2 text-right">สูงสุด</th>
@@ -70,7 +71,7 @@ export default async function SessionsPage({ searchParams }: { searchParams: { m
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ s, hours, avgViewers, sales, peak, streamers }) => (
+            {rows.map(({ s, hours, avgViewers, sales, peak, streamers, pendingShifts }) => (
               <tr key={s.id} className="border-t border-gray-100 hover:bg-gray-50/60">
                 <td className="px-3 py-2 font-medium text-gray-800">{formatThaiDateShort(s.date)}</td>
                 <td className="px-3 py-2">
@@ -81,7 +82,15 @@ export default async function SessionsPage({ searchParams }: { searchParams: { m
                   {s.startTime ?? "?"}–{s.endTime ?? "?"}
                   {hours > 0 && <span className="ml-1 text-xs text-gray-400">({formatHours(hours)})</span>}
                 </td>
-                <td className="px-3 py-2 text-gray-600">{streamers.length ? streamers.join(", ") : <span className="text-gray-300">ยังไม่บันทึก</span>}</td>
+                <td className="px-3 py-2 text-gray-600">
+                  {streamers.length > 0 && <span>{streamers.join(", ")}</span>}
+                  {pendingShifts.length > 0 && (
+                    <span className="block text-xs text-amber-700">
+                      รอกรอก: {pendingShifts.map((sh) => `${sh.streamer.name} ${sh.startTime}–${sh.endTime}`).join(", ")}
+                    </span>
+                  )}
+                  {streamers.length === 0 && pendingShifts.length === 0 && <span className="text-gray-300">ยังไม่บันทึก</span>}
+                </td>
                 <td className="px-3 py-2 text-right tabular-nums text-gray-500">{s.slots.length}</td>
                 <td className="px-3 py-2 text-right tabular-nums text-gray-800">{s.slots.length ? formatNum(avgViewers) : "-"}</td>
                 <td className="px-3 py-2 text-right tabular-nums text-gray-500">{peak === null ? "-" : formatNum(peak)}</td>
@@ -96,7 +105,11 @@ export default async function SessionsPage({ searchParams }: { searchParams: { m
             {rows.length === 0 && (
               <tr>
                 <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
-                  เดือนนี้ยังไม่มีรอบไลฟ์ — กด &quot;+ รอบไลฟ์ใหม่&quot; เพื่อเริ่มบันทึก
+                  เดือนนี้ยังไม่มีรอบไลฟ์ — ลงกะที่{" "}
+                  <Link href="/schedule" className="text-brand-600 hover:underline">
+                    ตารางไลฟ์
+                  </Link>{" "}
+                  แล้วรอบของวันนั้นจะมาแสดงที่นี่ หรือกด &quot;+ รอบไลฟ์ใหม่&quot;
                 </td>
               </tr>
             )}

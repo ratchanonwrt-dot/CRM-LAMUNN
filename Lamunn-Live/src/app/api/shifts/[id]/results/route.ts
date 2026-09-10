@@ -3,6 +3,7 @@ import { prisma } from "@lamunn/db-live";
 import { requireStaff, RECORDER_ROLES } from "@/lib/requireStaff";
 import { normalizeTime, toInt, toFloat } from "@/lib/validation";
 import { toRange } from "@/lib/schedule";
+import { attachShiftToSession } from "@/lib/shiftSession";
 
 interface RowIn {
   startTime: unknown;
@@ -41,11 +42,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
   const orders = toInt(body.orders);
 
-  let session = await prisma.liveSession.findFirst({ where: { date: shift.date, channelId: shift.channelId }, orderBy: { createdAt: "asc" } });
-  if (!session) {
-    session = await prisma.liveSession.create({ data: { date: shift.date, channelId: shift.channelId, createdByStaffId: staff.staffId } });
-  }
-  const sessionId = session.id;
+  const sessionId = await attachShiftToSession(shift.id, staff.staffId);
 
   const slots = await prisma.$transaction(async (tx) => {
     await tx.liveSlot.deleteMany({ where: { shiftId: shift.id } });
