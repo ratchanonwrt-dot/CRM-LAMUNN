@@ -19,6 +19,7 @@ interface RequestRow {
   requesterPhone: string;
   requesterLine: string | null;
   note: string | null;
+  isReturning: boolean;
   status: Status;
   streamerName: string | null;
   shiftId: string | null;
@@ -75,7 +76,11 @@ function RequestCard({ r, streamers, onChanged }: { r: RequestRow; streamers: St
             {r.channelName && <span className="ml-2 font-normal text-gray-500">· {r.channelName}</span>}
           </p>
           <p className="mt-1 text-sm text-gray-700">
-            {r.requesterName} <span className="tabular-nums text-gray-500">📞 {r.requesterPhone}</span>
+            {r.requesterName}
+            <span className={clsx("ml-2 rounded-full px-2 py-0.5 text-[11px] font-medium", r.isReturning ? "bg-sky-100 text-sky-700" : "bg-violet-100 text-violet-700")}>
+              {r.isReturning ? "คนเก่า เคยไลฟ์กับเรา" : "คนใหม่"}
+            </span>{" "}
+            <span className="tabular-nums text-gray-500">📞 {r.requesterPhone}</span>
             {r.requesterLine && <span className="text-gray-500"> · LINE: {r.requesterLine}</span>}
           </p>
           {r.note && <p className="mt-1 text-xs text-gray-500">📝 {r.note}</p>}

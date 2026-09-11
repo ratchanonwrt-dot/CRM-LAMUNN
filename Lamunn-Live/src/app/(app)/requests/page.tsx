@@ -40,6 +40,7 @@ export default async function RequestsPage({ searchParams }: { searchParams: { s
           requesterPhone: r.requesterPhone,
           requesterLine: r.requesterLine,
           note: r.note,
+          isReturning: r.isReturning,
           status: r.status,
           streamerName: r.streamer?.name ?? null,
           shiftId: r.shiftId,

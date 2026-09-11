@@ -67,6 +67,7 @@ model Channel {
   id        String   @id @default(cuid())
   name      String
   isActive  Boolean  @default(true)
+  publicBooking Boolean @default(false) // เปิดให้คนภายนอกขอจองผ่านเว็บจองได้ (แอดมินเปิด/ปิด)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -205,6 +206,7 @@ model SlotRequest {
   requesterPhone String
   requesterLine  String?
   note           String?
+  isReturning    Boolean @default(false) // เคยไลฟ์กับละมุนมาก่อน (คนเก่า) หรือคนใหม่
 
   status RequestStatus @default(PENDING)
 

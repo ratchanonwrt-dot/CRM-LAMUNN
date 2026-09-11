@@ -7,7 +7,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { name, sortOrder, isActive } = body;
+  const { name, sortOrder, isActive, publicBooking } = body;
 
   const channel = await prisma.channel.update({
     where: { id: params.id },
@@ -15,6 +15,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(name !== undefined ? { name: String(name).trim() } : {}),
       ...(sortOrder !== undefined ? { sortOrder: Number(sortOrder) || 0 } : {}),
       ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
+      ...(publicBooking !== undefined ? { publicBooking: Boolean(publicBooking) } : {}),
     },
   });
   return NextResponse.json({ channel });

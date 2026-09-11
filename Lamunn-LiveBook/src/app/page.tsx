@@ -75,7 +75,11 @@ export default async function PublicSchedulePage({ searchParams }: { searchParam
         </span>
       </div>
 
-      <PublicGrid days={week.days} channelId={week.channelId} channelName={week.channels.find((c) => c.id === week.channelId)?.name ?? null} />
+      {week.channels.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center text-gray-500">ขณะนี้ยังไม่เปิดรับจองช่วงไลฟ์จากภายนอก กรุณาติดต่อทีมงาน Lamunn โดยตรง</div>
+      ) : (
+        <PublicGrid days={week.days} channelId={week.channelId} channelName={week.channels.find((c) => c.id === week.channelId)?.name ?? null} />
+      )}
 
       <div className="mt-8">
         <StatusLookup />

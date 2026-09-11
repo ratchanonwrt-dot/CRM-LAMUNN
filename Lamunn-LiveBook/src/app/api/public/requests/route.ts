@@ -33,10 +33,11 @@ export async function POST(req: NextRequest) {
   if (!requesterPhone) return NextResponse.json({ error: "กรุณากรอกเบอร์โทรให้ถูกต้อง (9-15 หลัก)" }, { status: 400 });
 
   const channelId = typeof body.channelId === "string" && body.channelId ? body.channelId : null;
-  if (channelId) {
-    const ch = await prisma.channel.findFirst({ where: { id: channelId, isActive: true } });
-    if (!ch) return NextResponse.json({ error: "ไม่พบช่องทางที่เลือก" }, { status: 400 });
-  }
+  if (!channelId) return NextResponse.json({ error: "กรุณาเลือกช่องทาง" }, { status: 400 });
+  const ch = await prisma.channel.findFirst({ where: { id: channelId, isActive: true } });
+  if (!ch) return NextResponse.json({ error: "ไม่พบช่องทางที่เลือก" }, { status: 400 });
+  if (!ch.publicBooking) return NextResponse.json({ error: `${ch.name} ยังไม่เปิดรับจองจากภายนอก` }, { status: 403 });
+  if (typeof body.isReturning !== "boolean") return NextResponse.json({ error: "กรุณาระบุว่าเคยไลฟ์กับละมุนมาก่อนหรือไม่" }, { status: 400 });
 
   // ชนกับกะที่ยืนยันแล้ว -> ไม่รับ
   const booked = await prisma.liveShift.findMany({ where: { date, channelId }, select: { startTime: true, endTime: true } });
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
       requesterPhone,
       requesterLine: optionalText(body.requesterLine),
       note: optionalText(body.note),
+      isReturning: body.isReturning,
     },
     select: { id: true, date: true, startTime: true, endTime: true, status: true },
   });

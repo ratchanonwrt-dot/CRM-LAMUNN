@@ -8,6 +8,7 @@ interface ChannelRow {
   name: string;
   sortOrder: number;
   isActive: boolean;
+  publicBooking: boolean;
   sessionCount: number;
 }
 
@@ -80,6 +81,16 @@ function Row({ c, onChanged }: { c: ChannelRow; onChanged: () => void }) {
         </button>
       </td>
       <td className="px-3 py-2">
+        <button
+          disabled={busy || !c.isActive}
+          onClick={() => patch({ publicBooking: !c.publicBooking })}
+          title={c.isActive ? "เปิด/ปิดให้คนภายนอกขอจองช่องนี้ผ่านเว็บจอง" : "ต้องเปิดใช้งานช่องก่อน"}
+          className={`rounded-full px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${c.publicBooking ? "bg-brand-100 text-brand-700" : "bg-gray-100 text-gray-500"}`}
+        >
+          {c.publicBooking ? "เปิดรับจอง" : "ปิดรับจอง"}
+        </button>
+      </td>
+      <td className="px-3 py-2">
         <div className="flex gap-3 text-xs">
           {!editing && (
             <button onClick={() => setEditing(true)} className="font-medium text-brand-600 hover:underline">
@@ -138,6 +149,7 @@ export default function ChannelManager({ channels }: { channels: ChannelRow[] })
               <th className="px-3 py-2">ช่องทาง</th>
               <th className="px-3 py-2 text-right">รอบไลฟ์</th>
               <th className="px-3 py-2">สถานะ</th>
+              <th className="px-3 py-2">เว็บจอง</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
@@ -147,7 +159,7 @@ export default function ChannelManager({ channels }: { channels: ChannelRow[] })
             ))}
             {channels.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">
                   ยังไม่มีช่องทาง
                 </td>
               </tr>

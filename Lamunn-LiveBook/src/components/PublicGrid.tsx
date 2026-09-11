@@ -30,6 +30,7 @@ interface FormState {
   requesterPhone: string;
   requesterLine: string;
   note: string;
+  isReturning: "" | "yes" | "no"; // เคยไลฟ์กับละมุนมาก่อนไหม
   website: string; // honeypot
 }
 
@@ -46,7 +47,7 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
     const s = Math.max(gap.s, Math.floor(startMin / 30) * 30);
     const maxHours = gap.e < GRID_END_MIN ? (gap.e - s) / 60 : 24;
     setError(null);
-    setForm({ date: day.date, startTime: minutesToLabel(s), hours: String(Math.max(1, Math.min(3, maxHours))), requesterName: "", requesterPhone: "", requesterLine: "", note: "", website: "" });
+    setForm({ date: day.date, startTime: minutesToLabel(s), hours: String(Math.max(1, Math.min(3, maxHours))), requesterName: "", requesterPhone: "", requesterLine: "", note: "", isReturning: "", website: "" });
   }
 
   function onColumnClick(ev: React.MouseEvent<HTMLDivElement>, day: PublicDay) {
@@ -65,12 +66,16 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
       setError("กรุณาเลือกเวลาเริ่มและจำนวนชั่วโมง");
       return;
     }
+    if (!form.isReturning) {
+      setError("กรุณาเลือกว่าเคยไลฟ์กับละมุนมาก่อนหรือไม่");
+      return;
+    }
     setSaving(true);
     setError(null);
     const res = await fetch("/api/public/requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, endTime, channelId }),
+      body: JSON.stringify({ ...form, isReturning: form.isReturning === "yes", endTime, channelId }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -221,6 +226,27 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
                     "เลือกเวลาเริ่มและจำนวนชั่วโมง"
                   )}
                 </p>
+              </div>
+              <div className="col-span-2">
+                <label className="mb-1 block text-xs font-medium text-gray-500">เคยไลฟ์กับละมุนมาก่อนไหม</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { v: "yes", label: "เคยไลฟ์แล้ว (คนเก่า)" },
+                    { v: "no", label: "ยังไม่เคย (คนใหม่)" },
+                  ].map((o) => (
+                    <button
+                      key={o.v}
+                      type="button"
+                      onClick={() => setForm({ ...form, isReturning: o.v as "yes" | "no" })}
+                      className={clsx(
+                        "rounded-lg border px-3 py-2 text-sm",
+                        form.isReturning === o.v ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                      )}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="col-span-2">
                 <label className="mb-1 block text-xs font-medium text-gray-500">ชื่อ</label>

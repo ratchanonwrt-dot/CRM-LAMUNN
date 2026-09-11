@@ -38,7 +38,7 @@ export async function loadPublicWeek(weekParam: string | undefined, channelParam
   const weekStart = weekStartOf(Number.isNaN(requested.getTime()) ? today : requested);
   const weekEnd = addDays(weekStart, 6);
 
-  const channels = await prisma.channel.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }], select: { id: true, name: true } });
+  const channels = await prisma.channel.findMany({ where: { isActive: true, publicBooking: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }], select: { id: true, name: true } });
   const channelId = channelParam && channels.some((c) => c.id === channelParam) ? channelParam : (channels[0]?.id ?? null);
 
   const [shifts, requests] = await Promise.all([
