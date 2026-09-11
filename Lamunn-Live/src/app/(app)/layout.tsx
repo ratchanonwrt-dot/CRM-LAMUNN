@@ -1,14 +1,16 @@
 import { requirePageRole } from "@/lib/requirePageRole";
 import { RoleProvider } from "@/lib/RoleContext";
 import Nav from "@/components/Nav";
+import { prisma } from "@lamunn/db-live";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const staff = await requirePageRole();
+  const pendingRequests = await prisma.slotRequest.count({ where: { status: "PENDING" } });
 
   return (
     <RoleProvider role={staff.role}>
       <div className="flex min-h-screen flex-col md:flex-row">
-        <Nav role={staff.role} name={staff.staffName} />
+        <Nav role={staff.role} name={staff.staffName} pendingRequests={pendingRequests} />
         <div className="flex-1 overflow-x-hidden bg-gray-50 p-4 md:p-6">{children}</div>
       </div>
     </RoleProvider>

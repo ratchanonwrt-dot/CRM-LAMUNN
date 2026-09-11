@@ -16,7 +16,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: { w
   const weekStart = weekStartOf(requested ?? today);
   const weekEnd = addDays(weekStart, 6);
 
-  const [shifts, streamers, channels] = await Promise.all([
+  const [shifts, streamers, channels, requests] = await Promise.all([
     prisma.liveShift.findMany({
       where: { date: { gte: weekStart, lte: weekEnd } },
       include: { streamer: true, channel: true, slots: true },
@@ -24,6 +24,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: { w
     }),
     prisma.streamer.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
     prisma.channel.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+    prisma.slotRequest.findMany({ where: { date: { gte: weekStart, lte: weekEnd }, status: "PENDING" }, include: { channel: true } }),
   ]);
 
   // สีประจำคนจาก Streamer.color (ตั้งได้ในหน้าคนไลฟ์) — คนที่ยังไม่มีสีจะได้สีที่ยังไม่ซ้ำชั่วคราว
@@ -61,8 +62,15 @@ export default async function SchedulePage({ searchParams }: { searchParams: { w
           hasResults: s.slots.length > 0,
         };
       });
+    const dayRequests = requests
+      .filter((q) => isoDate(q.date) === iso)
+      .map((q) => {
+        const r = toRange(q.startTime, q.endTime) ?? { s: 0, e: 0 };
+        return { id: q.id, requesterName: q.requesterName, channelName: q.channel?.name ?? null, startTime: q.startTime, endTime: q.endTime, s: r.s, e: r.e };
+      });
     return {
       date: iso,
+      requests: dayRequests,
       dayLabel: `${thaiDaysShort[date.getUTCDay()]} ${date.getUTCDate()} ${thaiMonthsShort[date.getUTCMonth()]}`,
       isToday: iso === isoDate(today),
       isPast: date < today,

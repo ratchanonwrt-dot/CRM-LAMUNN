@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import clsx from "clsx";
-import { LayoutDashboard, CalendarDays, Radio, BarChart3, Wallet, Users, Tv, UserCog, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Inbox, Radio, BarChart3, Wallet, Users, Tv, UserCog, LogOut, Menu, X } from "lucide-react";
 
 const roleLabel: Record<string, string> = {
   SUPER_ADMIN: "ผู้ดูแลระบบสูงสุด",
@@ -19,6 +19,7 @@ const EDITOR_ROLES = ["SUPER_ADMIN", "MANAGER"];
 const mainLinks = [
   { href: "/dashboard", label: "ภาพรวม", icon: LayoutDashboard, color: "bg-sky-100 text-sky-500", roles: ALL_ROLES },
   { href: "/schedule", label: "ตารางไลฟ์", icon: CalendarDays, color: "bg-amber-100 text-amber-600", roles: ALL_ROLES },
+  { href: "/requests", label: "คำขอจองกะ", icon: Inbox, color: "bg-orange-100 text-orange-600", roles: ALL_ROLES },
   { href: "/sessions", label: "บันทึกรอบไลฟ์", icon: Radio, color: "bg-rose-100 text-rose-500", roles: ALL_ROLES },
   { href: "/analysis", label: "วิเคราะห์", icon: BarChart3, color: "bg-blue-100 text-blue-500", roles: ALL_ROLES },
   { href: "/commission", label: "ค่าคอมมิชชั่น", icon: Wallet, color: "bg-emerald-100 text-emerald-600", roles: ALL_ROLES },
@@ -30,7 +31,7 @@ const otherLinks = [
   { href: "/staff", label: "จัดการผู้ใช้งาน", icon: UserCog, color: "bg-fuchsia-100 text-fuchsia-500", roles: ["SUPER_ADMIN"] },
 ];
 
-export default function Nav({ role, name }: { role: string; name: string }) {
+export default function Nav({ role, name, pendingRequests = 0 }: { role: string; name: string; pendingRequests?: number }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const main = mainLinks.filter((l) => l.roles.includes(role));
@@ -57,6 +58,9 @@ export default function Nav({ role, name }: { role: string; name: string }) {
           <Icon size={small ? 13 : 15} strokeWidth={2.4} />
         </span>
         {link.label}
+        {link.href === "/requests" && pendingRequests > 0 && (
+          <span className="ml-auto rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">{pendingRequests}</span>
+        )}
       </Link>
     );
   }

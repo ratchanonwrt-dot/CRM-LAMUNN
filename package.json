@@ -7,7 +7,8 @@
     "Lamunn-CRMAdmin",
     "Lamunn-CRM",
     "Lamunn-Finance",
-    "Lamunn-Live"
+    "Lamunn-Live",
+    "Lamunn-LiveBook"
   ],
   "scripts": {
     "postinstall": "npm run generate -w @lamunn/db-finance && npm run generate -w @lamunn/db && npm run generate -w @lamunn/db-live",
@@ -23,7 +24,8 @@
     "live:generate": "npm run generate -w @lamunn/db-live",
     "live:migrate": "npm run migrate -w @lamunn/db-live",
     "live:seed": "npm run seed -w @lamunn/db-live",
-    "dev:live": "npm run dev -w lamunn-live"
+    "dev:live": "npm run dev -w lamunn-live",
+    "dev:livebook": "npm run dev -w lamunn-livebook"
   },
   "allowScripts": {
     "@prisma/client@5.22.0": true,

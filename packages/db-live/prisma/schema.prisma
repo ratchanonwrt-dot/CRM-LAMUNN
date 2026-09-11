@@ -34,6 +34,7 @@ model StaffUser {
 
   sessionsCreated LiveSession[]
   shiftsCreated   LiveShift[]
+  requestsReviewed SlotRequest[]
 
   @@map("staff_users")
 }
@@ -54,8 +55,9 @@ model Streamer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  slots  LiveSlot[]
-  shifts LiveShift[]
+  slots    LiveSlot[]
+  shifts   LiveShift[]
+  requests SlotRequest[]
 
   @@map("streamers")
 }
@@ -71,6 +73,7 @@ model Channel {
 
   sessions LiveSession[]
   shifts   LiveShift[]
+  requests SlotRequest[]
 
   @@map("channels")
 }
@@ -161,7 +164,8 @@ model LiveShift {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  slots LiveSlot[]
+  slots   LiveSlot[]
+  request SlotRequest? // ถ้ากะนี้เกิดจากการอนุมัติคำขอจากเว็บจอง
 
   @@index([date])
   @@index([streamerId])
@@ -178,4 +182,49 @@ model PaySetting {
   updatedAt     DateTime @updatedAt
 
   @@map("pay_settings")
+}
+
+enum RequestStatus {
+  PENDING  // รอทีมงานอนุมัติ
+  APPROVED // อนุมัติแล้ว -> กลายเป็น LiveShift
+  REJECTED // ปฏิเสธ
+}
+
+// คำขอจองช่วงไลฟ์จากเว็บจอง (สาธารณะ) — คนขอเห็นแค่ ว่าง/มีคนขอ/มีคนไลฟ์ ไม่เห็นชื่อใคร
+model SlotRequest {
+  id String @id @default(cuid())
+
+  date      DateTime @db.Date
+  startTime String // "HH:mm"
+  endTime   String // "HH:mm"
+
+  channelId String?
+  channel   Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+
+  requesterName  String
+  requesterPhone String
+  requesterLine  String?
+  note           String?
+
+  status RequestStatus @default(PENDING)
+
+  // ผูกกับคนไลฟ์ในระบบตอนอนุมัติ (จับคู่จากเบอร์โทรอัตโนมัติ หรือเลือกเอง)
+  streamerId String?
+  streamer   Streamer? @relation(fields: [streamerId], references: [id], onDelete: SetNull)
+
+  shiftId String?    @unique
+  shift   LiveShift? @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+
+  reviewedByStaffId String?
+  reviewedByStaff   StaffUser? @relation(fields: [reviewedByStaffId], references: [id], onDelete: SetNull)
+  reviewedAt        DateTime?
+  reviewNote        String? // เหตุผลที่ปฏิเสธ / หมายเหตุตอนอนุมัติ
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([status])
+  @@index([requesterPhone])
+  @@map("slot_requests")
 }

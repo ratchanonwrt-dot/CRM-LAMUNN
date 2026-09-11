@@ -22,8 +22,19 @@ export interface GridShift {
   hasResults: boolean;
 }
 
+export interface GridRequest {
+  id: string;
+  requesterName: string;
+  channelName: string | null;
+  startTime: string;
+  endTime: string;
+  s: number;
+  e: number;
+}
+
 export interface GridDay {
   date: string; // YYYY-MM-DD
+  requests: GridRequest[]; // คำขอจากเว็บจองที่รออนุมัติ
   dayLabel: string; // "จ 8 ก.ย."
   isToday: boolean;
   isPast: boolean;
@@ -179,6 +190,25 @@ export default function ScheduleGrid({
                 {HOURS.slice(1).map((h) => (
                   <div key={h} className="absolute inset-x-0 border-t border-dashed border-gray-100" style={{ top: ((h - DAY_START_MIN) / 60) * HOUR_PX }} />
                 ))}
+                {d.requests.map((q) => {
+                  const top = ((Math.max(q.s, DAY_START_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
+                  const bottom = ((Math.min(q.e, GRID_END_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
+                  return (
+                    <a
+                      key={q.id}
+                      data-shift
+                      href="/requests"
+                      className="absolute inset-x-1 overflow-hidden rounded-lg border-2 border-dashed border-orange-400 bg-orange-50 px-1.5 py-1 text-[11px] leading-tight text-orange-800"
+                      style={{ top: top + 1, height: Math.max(bottom - top - 2, 18) }}
+                      title={`คำขอจากเว็บจอง: ${q.requesterName} ${q.startTime}–${q.endTime} — รออนุมัติ`}
+                    >
+                      <p className="truncate font-semibold">คำขอ: {q.requesterName}</p>
+                      <p className="truncate opacity-80">
+                        {q.startTime}–{q.endTime} · รออนุมัติ
+                      </p>
+                    </a>
+                  );
+                })}
                 {d.shifts.map((s) => {
                   const top = (Math.max(s.s, DAY_START_MIN) - DAY_START_MIN) / 60 * HOUR_PX;
                   const bottom = (Math.min(s.e, GRID_END_MIN) - DAY_START_MIN) / 60 * HOUR_PX;
