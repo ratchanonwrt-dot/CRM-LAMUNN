@@ -161,12 +161,12 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
                       data-block
                       className={clsx(
                         "absolute inset-x-1 overflow-hidden rounded-lg border px-1.5 py-1 text-[11px] leading-tight",
-                        b.status === "booked" ? "border-gray-300 bg-gray-200 text-gray-600" : "border-amber-300 bg-amber-100 text-amber-800"
+                        b.status === "booked" ? "border-gray-300 bg-gray-200 text-gray-600" : b.status === "blocked" ? "border-gray-900 bg-gray-900 text-white" : "border-amber-300 bg-amber-100 text-amber-800"
                       )}
                       style={{ top: top + 1, height: Math.max(bottom - top - 2, 18) }}
-                      title={`${b.startTime}–${b.endTime} ${b.status === "booked" ? "มีคนไลฟ์แล้ว" : "มีคนขอแล้ว รออนุมัติ"}`}
+                      title={`${b.startTime}–${b.endTime} ${b.status === "booked" ? "มีคนไลฟ์แล้ว" : b.status === "blocked" ? "unavailable" : "มีคนขอแล้ว รออนุมัติ"}`}
                     >
-                      <p className="truncate font-semibold">{b.status === "booked" ? "มีคนไลฟ์แล้ว" : "มีคนขอแล้ว"}</p>
+                      <p className={clsx("truncate font-semibold", b.status === "blocked" && "uppercase tracking-wide")}>{b.status === "booked" ? "มีคนไลฟ์แล้ว" : b.status === "blocked" ? "unavailable" : "มีคนขอแล้ว"}</p>
                       <p className="truncate opacity-80">
                         {b.startTime}–{b.endTime}
                       </p>

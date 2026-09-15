@@ -13,7 +13,7 @@ export interface SlotRow {
   streamerName: string;
   channelId: string | null;
   channelName: string;
-  viewers: number;
+  viewers: number | null; // ไม่บังคับกรอก — ช่วงที่ไม่มีตัวเลขจะไม่ถูกนับในค่าเฉลี่ยคนดู แต่ยังนับชั่วโมง/ยอดขาย
   peakViewers: number | null;
   sales: number;
   orders: number | null;
@@ -23,7 +23,7 @@ interface SlotInput {
   id: string;
   startTime: string;
   endTime: string;
-  viewers: number;
+  viewers: number | null;
   peakViewers: number | null;
   sales: number;
   orders: number | null;
@@ -61,7 +61,8 @@ export interface GroupStat {
   label: string;
   slots: number;
   hours: number;
-  avgViewers: number; // ถ่วงน้ำหนักด้วยชั่วโมง
+  avgViewers: number; // ถ่วงน้ำหนักด้วยชั่วโมง (เฉพาะช่วงที่มีตัวเลขคนดู)
+  viewerHours: number; // ชั่วโมงที่มีตัวเลขคนดู
   peakViewers: number | null;
   totalSales: number;
   salesPerHour: number;
@@ -69,7 +70,11 @@ export interface GroupStat {
 }
 
 function emptyStat(key: string, label: string): GroupStat {
-  return { key, label, slots: 0, hours: 0, avgViewers: 0, peakViewers: null, totalSales: 0, salesPerHour: 0, orders: 0 };
+  return { key, label, slots: 0, hours: 0, avgViewers: 0, viewerHours: 0, peakViewers: null, totalSales: 0, salesPerHour: 0, orders: 0 };
+}
+
+function peakOf(r: SlotRow): number | null {
+  return r.peakViewers ?? r.viewers;
 }
 
 function groupBy(rows: SlotRow[], keyOf: (r: SlotRow) => string, labelOf: (r: SlotRow) => string): GroupStat[] {
@@ -83,15 +88,18 @@ function groupBy(rows: SlotRow[], keyOf: (r: SlotRow) => string, labelOf: (r: Sl
     }
     g.slots += 1;
     g.hours += r.hours;
-    g._vw += r.viewers * r.hours;
+    if (r.viewers !== null) {
+      g.viewerHours += r.hours;
+      g._vw += r.viewers * r.hours;
+    }
     g.totalSales += r.sales;
     g.orders += r.orders ?? 0;
-    const pk = r.peakViewers ?? r.viewers;
-    g.peakViewers = g.peakViewers === null ? pk : Math.max(g.peakViewers, pk);
+    const pk = peakOf(r);
+    if (pk !== null) g.peakViewers = g.peakViewers === null ? pk : Math.max(g.peakViewers, pk);
   }
   return Array.from(acc.values()).map(({ _vw, ...g }) => ({
     ...g,
-    avgViewers: g.hours > 0 ? _vw / g.hours : 0,
+    avgViewers: g.viewerHours > 0 ? _vw / g.viewerHours : 0,
     salesPerHour: g.hours > 0 ? g.totalSales / g.hours : 0,
   }));
 }
@@ -139,9 +147,11 @@ function fillSeries(stats: GroupStat[], keys: string[], labelOf: (k: string) => 
   return keys.map((k) => map.get(k) ?? emptyStat(k, labelOf(k)));
 }
 
+/** heatmap นับเฉพาะช่วงที่มีตัวเลขคนดู */
 function heat(rows: SlotRow[], keyOf: (r: SlotRow) => string): Map<string, HeatCell> {
   const acc = new Map<string, HeatCell & { _vw: number }>();
   for (const r of rows) {
+    if (r.viewers === null) continue;
     const k = keyOf(r);
     let c = acc.get(k);
     if (!c) {
@@ -158,8 +168,10 @@ function heat(rows: SlotRow[], keyOf: (r: SlotRow) => string): Map<string, HeatC
   return out;
 }
 
+type ViewerRow = SlotRow & { viewers: number };
+
 /** สัดส่วนความแปรปรวน (ถ่วงน้ำหนักชั่วโมง) ของยอดคนดูที่ปัจจัยหนึ่งอธิบายได้ — eta squared */
-function etaSquared(rows: SlotRow[], keyOf: (r: SlotRow) => string): number {
+function etaSquared(rows: ViewerRow[], keyOf: (r: SlotRow) => string): number {
   const W = rows.reduce((a, r) => a + r.hours, 0);
   if (W === 0) return 0;
   const mean = rows.reduce((a, r) => a + r.viewers * r.hours, 0) / W;
@@ -181,11 +193,14 @@ function etaSquared(rows: SlotRow[], keyOf: (r: SlotRow) => string): number {
 }
 
 export function analyze(rows: SlotRow[]): Analysis {
+  const viewerRows = rows.filter((r): r is ViewerRow => r.viewers !== null);
   const hours = rows.reduce((a, r) => a + r.hours, 0);
-  const vw = rows.reduce((a, r) => a + r.viewers * r.hours, 0);
+  const viewerHours = viewerRows.reduce((a, r) => a + r.hours, 0);
+  const vw = viewerRows.reduce((a, r) => a + r.viewers * r.hours, 0);
   const totalSales = rows.reduce((a, r) => a + r.sales, 0);
   const peak = rows.reduce<number | null>((a, r) => {
-    const pk = r.peakViewers ?? r.viewers;
+    const pk = peakOf(r);
+    if (pk === null) return a;
     return a === null ? pk : Math.max(a, pk);
   }, null);
   const dayKeys = new Set(rows.map((r) => r.date.toISOString().slice(0, 10)));
@@ -200,10 +215,10 @@ export function analyze(rows: SlotRow[]): Analysis {
   );
   const byChannel = groupBy(rows, (r) => r.channelId ?? "none", (r) => r.channelName).sort((a, b) => b.hours - a.hours);
 
-  // baseline ต่อชั่วโมง "ไม่รวมคนไลฟ์คนนั้น" — ตอบคำถามว่าคนดูมาเพราะเวลา หรือเพราะคนไลฟ์
+  // baseline ต่อชั่วโมง "ไม่รวมคนไลฟ์คนนั้น" — ตอบคำถามว่าคนดูมาเพราะเวลา หรือเพราะคนไลฟ์ (ใช้เฉพาะช่วงที่มีตัวเลขคนดู)
   const hourTotals = new Map<string, { w: number; vw: number }>();
   const hourByStreamer = new Map<string, { w: number; vw: number }>();
-  for (const r of rows) {
+  for (const r of viewerRows) {
     const h = String(r.hour);
     const t = hourTotals.get(h) ?? { w: 0, vw: 0 };
     t.w += r.hours;
@@ -229,11 +244,11 @@ export function analyze(rows: SlotRow[]): Analysis {
   const byStreamer: StreamerStat[] = streamerBase.map((g) => {
     const own = rows.filter((r) => r.streamerId === g.key);
     // เทียบเฉพาะช่วงที่มี "คนอื่น" ไลฟ์ในชั่วโมงเดียวกัน (หรือชั่วโมงติดกัน) — ช่วงที่ไม่มีใครให้เทียบจะไม่ถูกนับ
-    // เพื่อไม่ให้ค่าเฉลี่ยรวม (ที่ไม่สนเวลา) มาปนจนตอบคำถาม "เพราะคนหรือเพราะเวลา" ไม่ได้
     let ownW = 0;
     let ownV = 0;
     let expV = 0;
     for (const r of own) {
+      if (r.viewers === null) continue;
       let baseline = othersAtHour(g.key, r.hour);
       if (baseline === null) {
         const prev = othersAtHour(g.key, r.hour - 1);
@@ -265,7 +280,7 @@ export function analyze(rows: SlotRow[]): Analysis {
       sessions: sessionKeys.size,
       days: dayKeys.size,
       hours,
-      avgViewers: hours > 0 ? vw / hours : 0,
+      avgViewers: viewerHours > 0 ? vw / viewerHours : 0,
       peakViewers: peak,
       totalSales,
       salesPerHour: hours > 0 ? totalSales / hours : 0,
@@ -278,10 +293,10 @@ export function analyze(rows: SlotRow[]): Analysis {
     streamerHour: heat(rows, (r) => `${r.streamerId}|${r.hour}`),
     dowHour: heat(rows, (r) => `${r.dow}|${r.hour}`),
     decomposition: {
-      hour: etaSquared(rows, (r) => String(r.hour)),
-      streamer: etaSquared(rows, (r) => r.streamerId),
-      dow: etaSquared(rows, (r) => String(r.dow)),
-      n: rows.length,
+      hour: etaSquared(viewerRows, (r) => String(r.hour)),
+      streamer: etaSquared(viewerRows, (r) => r.streamerId),
+      dow: etaSquared(viewerRows, (r) => String(r.dow)),
+      n: viewerRows.length,
     },
   };
 }

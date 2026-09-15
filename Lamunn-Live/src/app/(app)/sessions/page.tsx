@@ -25,11 +25,13 @@ export default async function SessionsPage({ searchParams }: { searchParams: { m
 
   const rows = sessions.map((s) => {
     const hours = s.slots.reduce((a, sl) => a + slotHours(sl.startTime, sl.endTime), 0);
-    const vw = s.slots.reduce((a, sl) => a + sl.viewers * (slotHours(sl.startTime, sl.endTime) || 0.25), 0);
-    const w = s.slots.reduce((a, sl) => a + (slotHours(sl.startTime, sl.endTime) || 0.25), 0);
+    const withViewers = s.slots.filter((sl) => sl.viewers !== null);
+    const vw = withViewers.reduce((a, sl) => a + (sl.viewers ?? 0) * (slotHours(sl.startTime, sl.endTime) || 0.25), 0);
+    const w = withViewers.reduce((a, sl) => a + (slotHours(sl.startTime, sl.endTime) || 0.25), 0);
     const sales = s.slots.reduce((a, sl) => a + sl.sales, 0);
     const peak = s.slots.reduce<number | null>((a, sl) => {
       const pk = sl.peakViewers ?? sl.viewers;
+      if (pk === null) return a;
       return a === null ? pk : Math.max(a, pk);
     }, null);
     const streamers = Array.from(new Set(s.slots.map((sl) => sl.streamer.name)));
@@ -92,7 +94,7 @@ export default async function SessionsPage({ searchParams }: { searchParams: { m
                   {streamers.length === 0 && pendingShifts.length === 0 && <span className="text-gray-300">ยังไม่บันทึก</span>}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums text-gray-500">{s.slots.length}</td>
-                <td className="px-3 py-2 text-right tabular-nums text-gray-800">{s.slots.length ? formatNum(avgViewers) : "-"}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-gray-800">{avgViewers ? formatNum(avgViewers) : "-"}</td>
                 <td className="px-3 py-2 text-right tabular-nums text-gray-500">{peak === null ? "-" : formatNum(peak)}</td>
                 <td className="px-3 py-2 text-right tabular-nums text-gray-800">{s.slots.length ? formatBaht(sales) : "-"}</td>
                 <td className="px-3 py-2 text-right">

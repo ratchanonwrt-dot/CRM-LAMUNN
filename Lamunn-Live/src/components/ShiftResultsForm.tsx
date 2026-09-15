@@ -10,7 +10,7 @@ import { formatBaht, formatNum } from "@/lib/format";
 interface ExistingSlot {
   startTime: string;
   endTime: string;
-  viewers: number;
+  viewers: number | null;
   sales: number;
   peakViewers: number | null;
   orders: number | null;
@@ -62,7 +62,7 @@ export default function ShiftResultsForm({
     const perHour = salesSet.size > 1;
     return base.map((row) => {
       const m = existing.find((s) => s.startTime === row.startTime);
-      return m ? { ...row, viewers: String(m.viewers), sales: perHour && m.sales ? String(m.sales) : "" } : row;
+      return m ? { ...row, viewers: m.viewers === null ? "" : String(m.viewers), sales: perHour && m.sales ? String(m.sales) : "" } : row;
     });
   });
   const [totalSales, setTotalSales] = useState<string>(() => {
@@ -114,11 +114,11 @@ export default function ShiftResultsForm({
         sales = Math.round(((total * r.hours) / totalHours) * 100) / 100;
         allocated += sales;
       }
-      const maxRow = rows.reduce((best, x) => (Number(x.viewers) > Number(best.viewers) ? x : best), rows[0]);
+      const maxRow = rows.reduce((best, x) => ((Number(x.viewers) || 0) > (Number(best.viewers) || 0) ? x : best), rows[0]);
       return {
         startTime: r.startTime,
         endTime: r.endTime,
-        viewers: r.viewers,
+        viewers: r.viewers.trim() === "" ? null : r.viewers,
         sales,
         peakViewers: peak && r === maxRow ? peak : null,
       };
@@ -147,7 +147,9 @@ export default function ShiftResultsForm({
             <thead className="text-left text-xs text-gray-400">
               <tr>
                 <th className="pb-1.5 font-medium">ชั่วโมง</th>
-                <th className="pb-1.5 font-medium">คนดูเฉลี่ยในชั่วโมงนี้</th>
+                <th className="pb-1.5 font-medium">
+                  คนดูเฉลี่ยในชั่วโมงนี้ <span className="font-normal">(ไม่บังคับ)</span>
+                </th>
                 <th className="pb-1.5 font-medium">
                   ยอดขาย <span className="font-normal">(ถ้าแยกรายชั่วโมงได้)</span>
                 </th>
@@ -161,7 +163,7 @@ export default function ShiftResultsForm({
                     {r.hours < 1 && <span className="ml-1 text-[10px] text-gray-400">({Math.round(r.hours * 60)} น.)</span>}
                   </td>
                   <td className="py-1 pr-3">
-                    <input type="number" inputMode="numeric" min={0} required value={r.viewers} onChange={(e) => setRow(i, "viewers", e.target.value)} className={inputCls} placeholder="เช่น 120" />
+                    <input type="number" inputMode="numeric" min={0} value={r.viewers} onChange={(e) => setRow(i, "viewers", e.target.value)} className={inputCls} placeholder="ว่างได้" />
                   </td>
                   <td className="py-1">
                     <input type="number" inputMode="decimal" min={0} step="any" value={r.sales} onChange={(e) => setRow(i, "sales", e.target.value)} className={inputCls} placeholder="-" />
@@ -206,7 +208,7 @@ export default function ShiftResultsForm({
               <dt className="text-gray-500">คนดูเฉลี่ยทั้งกะ</dt>
               <dd className="tabular-nums text-gray-800">
                 {preview.avgViewers === null ? "-" : formatNum(preview.avgViewers)}
-                {preview.filled > 0 && preview.filled < rows.length && <span className="ml-1 text-[10px] text-gray-400">({preview.filled}/{rows.length} ชม.)</span>}
+                {preview.filled > 0 && preview.filled < rows.length && <span className="ml-1 text-[10px] text-gray-400">(จาก {preview.filled}/{rows.length} ชม. ที่กรอก)</span>}
               </dd>
             </div>
             <div className="flex justify-between">

@@ -4,14 +4,14 @@ import { thaiDaysShort } from "@/lib/format";
 
 const thaiMonthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
-export type PublicBlockStatus = "booked" | "requested";
+export type PublicBlockStatus = "booked" | "requested" | "blocked";
 
 export interface PublicBlock {
   startTime: string;
   endTime: string;
   s: number;
   e: number;
-  status: PublicBlockStatus; // booked = มีคนไลฟ์แล้ว (ไม่บอกชื่อ), requested = มีคนขอแล้ว รออนุมัติ
+  status: PublicBlockStatus; // booked = มีคนไลฟ์แล้ว (ไม่บอกชื่อ), requested = มีคนขอแล้ว รออนุมัติ, blocked = unavailable
 }
 
 export interface PublicDay {
@@ -41,9 +41,10 @@ export async function loadPublicWeek(weekParam: string | undefined, channelParam
   const channels = await prisma.channel.findMany({ where: { isActive: true, publicBooking: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }], select: { id: true, name: true } });
   const channelId = channelParam && channels.some((c) => c.id === channelParam) ? channelParam : (channels[0]?.id ?? null);
 
-  const [shifts, requests] = await Promise.all([
+  const [shifts, requests, blocks_] = await Promise.all([
     prisma.liveShift.findMany({ where: { date: { gte: weekStart, lte: weekEnd }, channelId }, select: { date: true, startTime: true, endTime: true } }),
     prisma.slotRequest.findMany({ where: { date: { gte: weekStart, lte: weekEnd }, channelId, status: "PENDING" }, select: { date: true, startTime: true, endTime: true } }),
+    prisma.scheduleBlock.findMany({ where: { date: { gte: weekStart, lte: weekEnd }, OR: [{ channelId }, { channelId: null }] }, select: { date: true, startTime: true, endTime: true, label: true } }),
   ]);
 
   const days: PublicDay[] = Array.from({ length: 7 }, (_, i) => {
@@ -59,6 +60,11 @@ export async function loadPublicWeek(weekParam: string | undefined, channelParam
       if (isoDate(q.date) !== iso) continue;
       const r = toRange(q.startTime, q.endTime);
       if (r) blocks.push({ startTime: q.startTime, endTime: q.endTime, s: r.s, e: r.e, status: "requested" });
+    }
+    for (const b of blocks_) {
+      if (isoDate(b.date) !== iso) continue;
+      const r = toRange(b.startTime, b.endTime);
+      if (r) blocks.push({ startTime: b.startTime, endTime: b.endTime, s: r.s, e: r.e, status: "blocked" });
     }
     blocks.sort((a, b) => a.s - b.s);
     return {

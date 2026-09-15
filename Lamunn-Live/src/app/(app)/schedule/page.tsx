@@ -16,7 +16,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: { w
   const weekStart = weekStartOf(requested ?? today);
   const weekEnd = addDays(weekStart, 6);
 
-  const [shifts, streamers, channels, requests] = await Promise.all([
+  const [shifts, streamers, channels, requests, blocks] = await Promise.all([
     prisma.liveShift.findMany({
       where: { date: { gte: weekStart, lte: weekEnd } },
       include: { streamer: true, channel: true, slots: true },
@@ -25,6 +25,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: { w
     prisma.streamer.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
     prisma.channel.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
     prisma.slotRequest.findMany({ where: { date: { gte: weekStart, lte: weekEnd }, status: "PENDING" }, include: { channel: true } }),
+    prisma.scheduleBlock.findMany({ where: { date: { gte: weekStart, lte: weekEnd } }, include: { channel: true } }),
   ]);
 
   // สีประจำคนจาก Streamer.color (ตั้งได้ในหน้าคนไลฟ์) — คนที่ยังไม่มีสีจะได้สีที่ยังไม่ซ้ำชั่วคราว
@@ -68,14 +69,21 @@ export default async function SchedulePage({ searchParams }: { searchParams: { w
         const r = toRange(q.startTime, q.endTime) ?? { s: 0, e: 0 };
         return { id: q.id, requesterName: q.requesterName, channelName: q.channel?.name ?? null, startTime: q.startTime, endTime: q.endTime, s: r.s, e: r.e };
       });
+    const dayBlocks = blocks
+      .filter((b) => isoDate(b.date) === iso)
+      .map((b) => {
+        const r = toRange(b.startTime, b.endTime) ?? { s: 0, e: 0 };
+        return { id: b.id, label: b.label, note: b.note, channelName: b.channel?.name ?? null, startTime: b.startTime, endTime: b.endTime, s: r.s, e: r.e };
+      });
     return {
       date: iso,
       requests: dayRequests,
+      blocks: dayBlocks,
       dayLabel: `${thaiDaysShort[date.getUTCDay()]} ${date.getUTCDate()} ${thaiMonthsShort[date.getUTCMonth()]}`,
       isToday: iso === isoDate(today),
       isPast: date < today,
       shifts: dayShifts,
-      free: freeRanges(dayShifts.map((s) => ({ s: s.s, e: s.e }))),
+      free: freeRanges([...dayShifts.map((s) => ({ s: s.s, e: s.e })), ...dayBlocks.map((b) => ({ s: b.s, e: b.e }))]),
     };
   });
 

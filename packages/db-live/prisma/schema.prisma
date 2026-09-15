@@ -35,6 +35,7 @@ model StaffUser {
   sessionsCreated LiveSession[]
   shiftsCreated   LiveShift[]
   requestsReviewed SlotRequest[]
+  blocksCreated    ScheduleBlock[]
 
   @@map("staff_users")
 }
@@ -75,6 +76,7 @@ model Channel {
   sessions LiveSession[]
   shifts   LiveShift[]
   requests SlotRequest[]
+  blocks   ScheduleBlock[]
 
   @@map("channels")
 }
@@ -123,7 +125,7 @@ model LiveSlot {
   startTime String // "HH:mm"
   endTime   String // "HH:mm" (ถ้าน้อยกว่า startTime ถือว่าข้ามเที่ยงคืน)
 
-  viewers     Int   // ยอดคนดูเฉลี่ย/ตัวแทนของช่วงนี้
+  viewers     Int?  // ยอดคนดูเฉลี่ยของช่วงนี้ (ไม่บังคับ — ว่างได้ถ้าไม่ได้จด)
   peakViewers Int?  // ยอดคนดูสูงสุดในช่วงนี้ (ถ้ามี)
   sales       Float @default(0) // ยอดขาย (บาท) ในช่วงนี้
   orders      Int?  // จำนวนออเดอร์ในช่วงนี้ (ถ้ามี)
@@ -229,4 +231,26 @@ model SlotRequest {
   @@index([status])
   @@index([requesterPhone])
   @@map("slot_requests")
+}
+
+// บล็อกเวลา "unavailable" ที่แอดมินวางบนตาราง — คนนอกเห็นเป็นสีดำ ขอจองไม่ได้ (channelId ว่าง = ทุกช่องทาง)
+model ScheduleBlock {
+  id String @id @default(cuid())
+
+  date      DateTime @db.Date
+  startTime String // "HH:mm"
+  endTime   String // "HH:mm"
+
+  channelId String?
+  channel   Channel? @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  label String  @default("unavailable")
+  note  String?
+
+  createdByStaffId String?
+  createdByStaff   StaffUser? @relation(fields: [createdByStaffId], references: [id], onDelete: SetNull)
+  createdAt        DateTime   @default(now())
+
+  @@index([date])
+  @@map("schedule_blocks")
 }

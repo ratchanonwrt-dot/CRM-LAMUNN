@@ -73,6 +73,9 @@ export default async function PublicSchedulePage({ searchParams }: { searchParam
         <span className="inline-flex items-center gap-1.5">
           <span className="h-3 w-5 rounded border border-gray-300 bg-gray-200" /> มีคนไลฟ์แล้ว
         </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-3 w-5 rounded border border-gray-900 bg-gray-900" /> unavailable
+        </span>
       </div>
 
       {week.channels.length === 0 ? (

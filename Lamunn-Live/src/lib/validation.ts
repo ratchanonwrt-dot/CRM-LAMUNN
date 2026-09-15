@@ -51,7 +51,7 @@ export function parseSlotBody(body: Record<string, unknown>, partial: boolean) {
     streamerId?: string;
     startTime?: string;
     endTime?: string;
-    viewers?: number;
+    viewers?: number | null;
     peakViewers?: number | null;
     sales?: number;
     orders?: number | null;
@@ -72,11 +72,13 @@ export function parseSlotBody(body: Record<string, unknown>, partial: boolean) {
     if (t) data.endTime = t;
     else errors.push("เวลาสิ้นสุดไม่ถูกต้อง (รูปแบบ HH:mm)");
   }
-  if (!partial || body.viewers !== undefined) {
+  if (body.viewers !== undefined) {
+    // ไม่บังคับกรอก: ว่าง = ไม่ทราบ
     const n = toInt(body.viewers);
-    if (n !== null && n >= 0) data.viewers = n;
+    if (body.viewers === null || body.viewers === "") data.viewers = null;
+    else if (n !== null && n >= 0) data.viewers = n;
     else errors.push("ยอดคนดูต้องเป็นตัวเลข 0 ขึ้นไป");
-  }
+  } else if (!partial) data.viewers = null;
   if (body.peakViewers !== undefined) {
     const n = toInt(body.peakViewers);
     if (body.peakViewers === null || body.peakViewers === "") data.peakViewers = null;

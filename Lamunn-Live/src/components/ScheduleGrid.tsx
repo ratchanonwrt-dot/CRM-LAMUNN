@@ -32,9 +32,21 @@ export interface GridRequest {
   e: number;
 }
 
+export interface GridBlock {
+  id: string;
+  label: string;
+  note: string | null;
+  channelName: string | null; // null = ทุกช่องทาง
+  startTime: string;
+  endTime: string;
+  s: number;
+  e: number;
+}
+
 export interface GridDay {
   date: string; // YYYY-MM-DD
   requests: GridRequest[]; // คำขอจากเว็บจองที่รออนุมัติ
+  blocks: GridBlock[]; // บล็อกเวลา unavailable
   dayLabel: string; // "จ 8 ก.ย."
   isToday: boolean;
   isPast: boolean;
@@ -64,6 +76,7 @@ function endFromStart(startTime: string, hours: number): { endTime: string; hour
 
 interface FormState {
   id: string | null;
+  kind: "shift" | "block"; // ลงกะ หรือ บล็อกเวลา unavailable
   date: string;
   streamerId: string;
   channelId: string;
@@ -103,6 +116,7 @@ export default function ScheduleGrid({
     setError(null);
     setForm({
       id: null,
+      kind: "shift",
       date,
       streamerId: streamers[0]?.id ?? "",
       channelId: channels[0]?.id ?? "",
@@ -110,6 +124,16 @@ export default function ScheduleGrid({
       hours: String(hours),
       note: "",
     });
+  }
+
+  async function removeBlock(b: GridBlock) {
+    if (!confirm(`ลบบล็อก "${b.label}" ${b.startTime}–${b.endTime}?`)) return;
+    const res = await fetch(`/api/blocks/${b.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert("ลบไม่สำเร็จ (ต้องเป็นผู้จัดการขึ้นไป)");
+      return;
+    }
+    router.refresh();
   }
 
   async function submit(e: React.FormEvent) {
@@ -122,6 +146,22 @@ export default function ScheduleGrid({
     }
     setSaving(true);
     setError(null);
+    if (form.kind === "block") {
+      const res = await fetch("/api/blocks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: form.date, channelId: form.channelId || null, startTime: form.startTime, endTime, label: "unavailable", note: form.note }),
+      });
+      setSaving(false);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "บันทึกไม่สำเร็จ");
+        return;
+      }
+      setForm(null);
+      router.refresh();
+      return;
+    }
     const res = await fetch("/api/shifts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -190,6 +230,27 @@ export default function ScheduleGrid({
                 {HOURS.slice(1).map((h) => (
                   <div key={h} className="absolute inset-x-0 border-t border-dashed border-gray-100" style={{ top: ((h - DAY_START_MIN) / 60) * HOUR_PX }} />
                 ))}
+                {d.blocks.map((b) => {
+                  const top = ((Math.max(b.s, DAY_START_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
+                  const bottom = ((Math.min(b.e, GRID_END_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
+                  return (
+                    <button
+                      key={b.id}
+                      data-shift
+                      type="button"
+                      onClick={() => removeBlock(b)}
+                      className="absolute inset-x-1 overflow-hidden rounded-lg border-2 border-gray-900 bg-gray-900 px-1.5 py-1 text-left text-[11px] leading-tight text-white shadow-sm hover:bg-black"
+                      style={{ top: top + 1, height: Math.max(bottom - top - 2, 18) }}
+                      title={`บล็อกเวลา ${b.startTime}–${b.endTime}${b.channelName ? ` · ${b.channelName}` : " · ทุกช่องทาง"}${b.note ? ` · ${b.note}` : ""} — คลิกเพื่อลบ`}
+                    >
+                      <p className="truncate text-[12px] font-bold uppercase tracking-wide">{b.label}</p>
+                      <p className="truncate opacity-80">
+                        {b.startTime}–{b.endTime}
+                        {b.channelName ? ` · ${b.channelName}` : ""}
+                      </p>
+                    </button>
+                  );
+                })}
                 {d.requests.map((q) => {
                   const top = ((Math.max(q.s, DAY_START_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
                   const bottom = ((Math.min(q.e, GRID_END_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
@@ -291,10 +352,18 @@ export default function ScheduleGrid({
       {form && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={() => setForm(null)}>
           <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-700">ลงกะไลฟ์</h2>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-700">{form.kind === "block" ? "บล็อกเวลา (unavailable)" : "ลงกะไลฟ์"}</h2>
               <button type="button" onClick={() => setForm(null)} className="text-gray-400 hover:text-gray-600">
                 <X size={18} />
+              </button>
+            </div>
+            <div className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1 text-xs">
+              <button type="button" onClick={() => setForm({ ...form, kind: "shift" })} className={clsx("rounded-md px-2 py-1.5 font-medium", form.kind === "shift" ? "bg-white text-gray-800 shadow-sm" : "text-gray-500")}>
+                ลงกะให้คนไลฟ์
+              </button>
+              <button type="button" onClick={() => setForm({ ...form, kind: "block" })} className={clsx("rounded-md px-2 py-1.5 font-medium", form.kind === "block" ? "bg-gray-900 text-white shadow-sm" : "text-gray-500")}>
+                ⛔ บล็อก unavailable
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -308,9 +377,9 @@ export default function ScheduleGrid({
                   ))}
                 </select>
               </div>
-              <div className="col-span-2">
+              <div className={clsx("col-span-2", form.kind === "block" && "hidden")}>
                 <label className="mb-1 block text-xs font-medium text-gray-500">คนไลฟ์</label>
-                <select required value={form.streamerId} onChange={(e) => setForm({ ...form, streamerId: e.target.value })} className={inputCls}>
+                <select required={form.kind === "shift"} value={form.streamerId} onChange={(e) => setForm({ ...form, streamerId: e.target.value })} className={inputCls}>
                   {streamers.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
@@ -366,7 +435,7 @@ export default function ScheduleGrid({
               <div className="col-span-2">
                 <label className="mb-1 block text-xs font-medium text-gray-500">ช่องทาง</label>
                 <select value={form.channelId} onChange={(e) => setForm({ ...form, channelId: e.target.value })} className={inputCls}>
-                  <option value="">ไม่ระบุ</option>
+                  <option value="">{form.kind === "block" ? "ทุกช่องทาง" : "ไม่ระบุ"}</option>
                   {channels.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -381,8 +450,12 @@ export default function ScheduleGrid({
             </div>
             {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
             <div className="mt-4 flex gap-2">
-              <button type="submit" disabled={saving} className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
-                {saving ? "กำลังบันทึก..." : "ลงกะ"}
+              <button
+                type="submit"
+                disabled={saving}
+                className={clsx("rounded-xl px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50", form.kind === "block" ? "bg-gray-900 hover:bg-black" : "bg-brand-600 hover:bg-brand-700")}
+              >
+                {saving ? "กำลังบันทึก..." : form.kind === "block" ? "บล็อกช่วงนี้" : "ลงกะ"}
               </button>
               <button type="button" onClick={() => setForm(null)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-50">
                 ยกเลิก

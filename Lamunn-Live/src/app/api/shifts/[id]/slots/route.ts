@@ -29,7 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       streamerId: data.streamerId!,
       startTime: data.startTime!,
       endTime: data.endTime!,
-      viewers: data.viewers!,
+      viewers: data.viewers ?? null,
       peakViewers: data.peakViewers ?? null,
       sales: data.sales ?? 0,
       orders: data.orders ?? null,

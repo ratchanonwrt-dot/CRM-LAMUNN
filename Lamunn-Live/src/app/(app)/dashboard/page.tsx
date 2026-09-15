@@ -111,8 +111,9 @@ export default async function DashboardPage() {
             <table className="w-full min-w-[520px] text-sm">
               <tbody>
                 {recent.map((s) => {
-                  const w = s.slots.reduce((x, sl) => x + (slotHours(sl.startTime, sl.endTime) || 0.25), 0);
-                  const vw = s.slots.reduce((x, sl) => x + sl.viewers * (slotHours(sl.startTime, sl.endTime) || 0.25), 0);
+                  const withViewers = s.slots.filter((sl) => sl.viewers !== null);
+                  const w = withViewers.reduce((x, sl) => x + (slotHours(sl.startTime, sl.endTime) || 0.25), 0);
+                  const vw = withViewers.reduce((x, sl) => x + (sl.viewers ?? 0) * (slotHours(sl.startTime, sl.endTime) || 0.25), 0);
                   const sales = s.slots.reduce((x, sl) => x + sl.sales, 0);
                   const names = Array.from(new Set(s.slots.length ? s.slots.map((sl) => sl.streamer.name) : s.shifts.map((sh) => sh.streamer.name)));
                   return (
@@ -123,7 +124,7 @@ export default async function DashboardPage() {
                         {names.length ? names.join(", ") : <span className="text-gray-300">ยังไม่บันทึก</span>}
                         {!s.slots.length && s.shifts.length > 0 && <span className="ml-1 text-xs text-amber-700">(รอกรอก)</span>}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums text-gray-800">{s.slots.length ? `${formatNum(vw / w)} คน` : ""}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-gray-800">{w > 0 ? `${formatNum(vw / w)} คน` : ""}</td>
                       <td className="px-3 py-2 text-right tabular-nums text-gray-800">{s.slots.length ? `${formatBaht(sales)} ฿` : ""}</td>
                       <td className="px-3 py-2 text-right">
                         <Link href={`/sessions/${s.id}`} className="text-xs font-medium text-brand-600 hover:underline">

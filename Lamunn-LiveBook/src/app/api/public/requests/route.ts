@@ -45,6 +45,12 @@ export async function POST(req: NextRequest) {
     const r = toRange(b.startTime, b.endTime);
     if (r && rangesOverlap(r, range)) return NextResponse.json({ error: `ช่วง ${b.startTime}–${b.endTime} มีคนไลฟ์แล้ว กรุณาเลือกช่วงอื่น` }, { status: 409 });
   }
+  // ชนกับบล็อก unavailable -> ไม่รับ
+  const blocked = await prisma.scheduleBlock.findMany({ where: { date, OR: [{ channelId }, { channelId: null }] }, select: { startTime: true, endTime: true } });
+  for (const b of blocked) {
+    const r = toRange(b.startTime, b.endTime);
+    if (r && rangesOverlap(r, range)) return NextResponse.json({ error: `ช่วง ${b.startTime}–${b.endTime} ไม่เปิดให้จอง (unavailable)` }, { status: 409 });
+  }
   // เบอร์เดิมขอช่วงเดิมซ้ำ -> ไม่รับ
   const dup = await prisma.slotRequest.findFirst({ where: { date, channelId, requesterPhone, status: "PENDING" } });
   if (dup) {

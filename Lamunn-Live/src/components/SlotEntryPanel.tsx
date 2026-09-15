@@ -12,7 +12,7 @@ export interface SlotData {
   streamerName: string;
   startTime: string;
   endTime: string;
-  viewers: number;
+  viewers: number | null;
   peakViewers: number | null;
   sales: number;
   orders: number | null;
@@ -93,15 +93,17 @@ export default function SlotEntryPanel({
 
   const summary = useMemo(() => {
     const hours = slots.reduce((a, s) => a + slotHours(s.startTime, s.endTime), 0);
-    const w = slots.reduce((a, s) => a + (slotHours(s.startTime, s.endTime) || 0.25), 0);
-    const vw = slots.reduce((a, s) => a + s.viewers * (slotHours(s.startTime, s.endTime) || 0.25), 0);
+    const withViewers = slots.filter((s) => s.viewers !== null);
+    const w = withViewers.reduce((a, s) => a + (slotHours(s.startTime, s.endTime) || 0.25), 0);
+    const vw = withViewers.reduce((a, s) => a + (s.viewers ?? 0) * (slotHours(s.startTime, s.endTime) || 0.25), 0);
     const sales = slots.reduce((a, s) => a + s.sales, 0);
     const orders = slots.reduce((a, s) => a + (s.orders ?? 0), 0);
     const peak = slots.reduce<number | null>((a, s) => {
       const pk = s.peakViewers ?? s.viewers;
+      if (pk === null) return a;
       return a === null ? pk : Math.max(a, pk);
     }, null);
-    const maxViewers = Math.max(0, ...slots.map((s) => s.viewers));
+    const maxViewers = Math.max(0, ...slots.map((s) => s.viewers ?? 0));
     return { hours, avgViewers: w > 0 ? vw / w : 0, sales, orders, peak, maxViewers };
   }, [slots]);
 
@@ -116,7 +118,7 @@ export default function SlotEntryPanel({
       streamerId: s.streamerId,
       startTime: s.startTime,
       endTime: s.endTime,
-      viewers: String(s.viewers),
+      viewers: s.viewers === null ? "" : String(s.viewers),
       peakViewers: s.peakViewers === null ? "" : String(s.peakViewers),
       sales: s.sales ? String(s.sales) : "",
       orders: s.orders === null ? "" : String(s.orders),
@@ -196,7 +198,7 @@ export default function SlotEntryPanel({
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
         {[
           { label: "รวมเวลาไลฟ์", value: formatHours(summary.hours) },
-          { label: "คนดูเฉลี่ย", value: slots.length ? formatNum(summary.avgViewers) : "-" },
+          { label: "คนดูเฉลี่ย", value: summary.avgViewers ? formatNum(summary.avgViewers) : "-" },
           { label: "คนดูสูงสุด", value: summary.peak === null ? "-" : formatNum(summary.peak) },
           { label: "ยอดขายรวม", value: slots.length ? `${formatBaht(summary.sales)} ฿` : "-" },
           { label: "ออเดอร์", value: summary.orders ? formatNum(summary.orders) : "-" },
@@ -242,8 +244,8 @@ export default function SlotEntryPanel({
             <TimeSelect value={form.endTime} onChange={(v) => set("endTime", v)} required />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">คนดู (เฉลี่ย)</label>
-            <input type="number" inputMode="numeric" min={0} required value={form.viewers} onChange={(e) => set("viewers", e.target.value)} className={inputCls} />
+            <label className="mb-1 block text-xs font-medium text-gray-500">คนดู (เฉลี่ย, ไม่บังคับ)</label>
+            <input type="number" inputMode="numeric" min={0} value={form.viewers} onChange={(e) => set("viewers", e.target.value)} className={inputCls} />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-500">คนดูสูงสุด</label>
@@ -292,7 +294,7 @@ export default function SlotEntryPanel({
           <tbody>
             {slots.map((s) => {
               const h = slotHours(s.startTime, s.endTime);
-              const pct = summary.maxViewers > 0 ? (s.viewers / summary.maxViewers) * 100 : 0;
+              const pct = summary.maxViewers > 0 && s.viewers !== null ? (s.viewers / summary.maxViewers) * 100 : 0;
               return (
                 <tr key={s.id} className={clsx("border-t border-gray-100", editingId === s.id && "bg-brand-50/50")}>
                   <td className="px-3 py-2 tabular-nums text-gray-800">
@@ -302,7 +304,7 @@ export default function SlotEntryPanel({
                   <td className="px-3 py-2 font-medium text-gray-800">{s.streamerName}</td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <span className="w-12 text-right tabular-nums text-gray-800">{formatNum(s.viewers)}</span>
+                      <span className="w-12 text-right tabular-nums text-gray-800">{s.viewers === null ? "-" : formatNum(s.viewers)}</span>
                       <span className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
                         <span className="block h-full rounded-full bg-brand-400" style={{ width: `${pct}%` }} />
                       </span>
