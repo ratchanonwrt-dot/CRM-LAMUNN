@@ -8,6 +8,8 @@ import TimeSelect from "@/components/TimeSelect";
 import { DAY_START_MIN, GRID_END_MIN, DAY_END_MIN, minutesToLabel } from "@/lib/schedule";
 import { timeToMinutes } from "@/lib/format";
 import type { PublicDay } from "@/lib/publicWeek";
+import { PUBLIC_GAP_MINUTES, findGapViolation } from "@/lib/bookingRules";
+import { toRange } from "@/lib/schedule";
 
 const HOUR_PX = 30;
 const HOURS = Array.from({ length: (GRID_END_MIN - DAY_START_MIN) / 60 + 1 }, (_, i) => DAY_START_MIN + i * 60);
@@ -69,6 +71,16 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
     if (!form.isReturning) {
       setError("กรุณาเลือกว่าเคยไลฟ์กับละมุนมาก่อนหรือไม่");
       return;
+    }
+    // เตือนทันทีถ้าชิดช่วงที่มีคนแล้วน้อยกว่า 30 นาที (ระบบฝั่งเซิร์ฟเวอร์เช็กซ้ำอีกชั้น)
+    const day = days.find((d) => d.date === form.date);
+    const range = toRange(form.startTime, endTime);
+    if (day?.gapRule && range) {
+      const v = findGapViolation(range, day.blocks.filter((b) => b.status !== "blocked").map((b) => ({ s: b.s, e: b.e })));
+      if (v) {
+        setError(v.message);
+        return;
+      }
     }
     setSaving(true);
     setError(null);
@@ -266,7 +278,10 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
               </div>
               <input tabIndex={-1} autoComplete="off" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} className="hidden" aria-hidden="true" />
             </div>
-            {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+            {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+            {days.find((d) => d.date === form.date)?.gapRule && (
+              <p className="mt-3 text-[11px] text-amber-700">กติกา: ต้องเว้นอย่างน้อย {PUBLIC_GAP_MINUTES} นาทีจากช่วงที่มีคนไลฟ์/มีคนขอแล้ว ระบบกันระยะให้ในช่อง &quot;ว่าง&quot; แล้ว</p>
+            )}
             <p className="mt-3 text-[11px] text-stone-400">คำขอจะยังไม่ยืนยันจนกว่าทีมงานจะอนุมัติ ช่วงนี้จะขึ้นเป็น &quot;มีคนขอแล้ว&quot; ให้คนอื่นเห็นทันที</p>
             <div className="mt-4 flex gap-2">
               <button type="submit" disabled={saving} className="rounded-xl bg-ink px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@lamunn/db-live";
 import { parseDateOnly, normalizeTime, optionalText } from "@/lib/validation";
 import { toRange, rangesOverlap, todayTH } from "@/lib/schedule";
+import { gapRuleApplies, findGapViolation } from "@/lib/bookingRules";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,13 @@ export async function POST(req: NextRequest) {
   for (const b of booked) {
     const r = toRange(b.startTime, b.endTime);
     if (r && rangesOverlap(r, range)) return NextResponse.json({ error: `ช่วง ${b.startTime}–${b.endTime} มีคนไลฟ์แล้ว กรุณาเลือกช่วงอื่น` }, { status: 409 });
+  }
+  // กติกาเว้นระยะ 30 นาที (คนนอก) — เทียบกับกะที่มีแล้วและคำขอที่รออยู่ของช่องเดียวกัน
+  if (gapRuleApplies(date.toISOString().slice(0, 10))) {
+    const pendingOthers = await prisma.slotRequest.findMany({ where: { date, channelId, status: "PENDING" }, select: { startTime: true, endTime: true } });
+    const existing = [...booked, ...pendingOthers].map((x) => toRange(x.startTime, x.endTime)).filter((r): r is NonNullable<typeof r> => !!r);
+    const violation = findGapViolation(range, existing);
+    if (violation) return NextResponse.json({ error: violation.message, code: "GAP" }, { status: 409 });
   }
   // ชนกับบล็อก unavailable -> ไม่รับ
   const blocked = await prisma.scheduleBlock.findMany({ where: { date, OR: [{ channelId }, { channelId: null }] }, select: { startTime: true, endTime: true } });

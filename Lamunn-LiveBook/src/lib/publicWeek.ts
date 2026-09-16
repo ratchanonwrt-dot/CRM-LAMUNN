@@ -1,6 +1,7 @@
 import { prisma } from "@lamunn/db-live";
 import { addDays, freeRanges, isoDate, toRange, weekStartOf } from "@/lib/schedule";
 import { thaiDaysShort } from "@/lib/format";
+import { gapRuleApplies, padRanges } from "@/lib/bookingRules";
 
 const thaiMonthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
@@ -19,6 +20,7 @@ export interface PublicDay {
   dayLabel: string;
   isToday: boolean;
   isPast: boolean;
+  gapRule: boolean; // ต้องเว้น 30 นาทีจากช่วงที่มีคนแล้ว (คนนอก)
   blocks: PublicBlock[];
   free: { s: number; e: number }[];
 }
@@ -67,14 +69,20 @@ export async function loadPublicWeek(weekParam: string | undefined, channelParam
       if (r) blocks.push({ startTime: b.startTime, endTime: b.endTime, s: r.s, e: r.e, status: "blocked" });
     }
     blocks.sort((a, b) => a.s - b.s);
+    const gapRule = gapRuleApplies(iso);
+    // "ว่าง" สำหรับคนนอก = ไม่ทับกะ/คำขอ (+ระยะเว้น 30 นาทีถ้ากติกามีผล) และไม่ทับบล็อก unavailable
+    const taken = [
+      ...(gapRule ? padRanges(blocks.filter((b) => b.status !== "blocked").map((b) => ({ s: b.s, e: b.e }))) : blocks.filter((b) => b.status !== "blocked").map((b) => ({ s: b.s, e: b.e }))),
+      ...blocks.filter((b) => b.status === "blocked").map((b) => ({ s: b.s, e: b.e })),
+    ];
     return {
       date: iso,
+      gapRule,
       dayLabel: `${thaiDaysShort[date.getUTCDay()]} ${date.getUTCDate()} ${thaiMonthsShort[date.getUTCMonth()]}`,
       isToday: iso === isoDate(today),
       isPast: date < today,
       blocks,
-      // "ว่าง" = ไม่มีทั้งกะจริงและคำขอที่รออยู่
-      free: freeRanges(blocks.map((b) => ({ s: b.s, e: b.e }))),
+      free: freeRanges(taken),
     };
   });
 
