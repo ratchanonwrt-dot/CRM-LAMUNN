@@ -7,6 +7,20 @@ export interface PaySettings {
 
 export const DEFAULT_PAY: PaySettings = { shippingPct: 20, commissionPct: 4, minHourly: 250 };
 
+/** แอดมินกำหนดยอดจ่ายรวมเอง -> แทนที่ pay ที่คำนวณได้ (ตัวเลขอื่นคงไว้ให้เทียบ) */
+export function applyOverride(result: PayResult, override: number | null): PayResult & { overridden: boolean; computedPay: number } {
+  if (override === null) return { ...result, overridden: false, computedPay: result.pay };
+  return {
+    ...result,
+    pay: override,
+    topUp: override - result.commission,
+    hitMinimum: false,
+    effectivePct: result.net > 0 ? (override / result.net) * 100 : null,
+    overridden: true,
+    computedPay: result.pay,
+  };
+}
+
 export interface PayResult {
   sales: number; // ยอดขายที่กรอก
   net: number; // ยอดหลังหักค่าส่ง

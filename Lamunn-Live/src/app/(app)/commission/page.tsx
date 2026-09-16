@@ -4,7 +4,7 @@ import { prisma } from "@lamunn/db-live";
 import { requirePageRole } from "@/lib/requirePageRole";
 import { parseDateOnly } from "@/lib/validation";
 import { getPaySettings } from "@/lib/paySettings";
-import { computePay, sumPay, type PayResult } from "@/lib/pay";
+import { computePay, applyOverride, sumPay, type PayResult } from "@/lib/pay";
 import { addDays, isoDate, todayTH, toRange, weekStartOf } from "@/lib/schedule";
 import { formatBaht, formatNum, formatThaiDateShort, slotHours } from "@/lib/format";
 import WeekPicker from "@/components/WeekPicker";
@@ -38,6 +38,9 @@ export default async function CommissionPage({ searchParams }: { searchParams: {
     plannedHours: number;
     hasResults: boolean;
     pay: PayResult;
+    overridden: boolean;
+    computedPay: number;
+    payNote: string | null;
   }
   const byStreamer = new Map<string, { name: string; hrEmployeeId: string | null; rows: ShiftRow[] }>();
   for (const s of shifts) {
@@ -46,14 +49,18 @@ export default async function CommissionPage({ searchParams }: { searchParams: {
     const actualHours = s.slots.reduce((a, sl) => a + slotHours(sl.startTime, sl.endTime), 0);
     const sales = s.slots.reduce((a, sl) => a + sl.sales, 0);
     const hasResults = s.slots.length > 0;
+    const payCalc = applyOverride(computePay(sales, hasResults ? actualHours : plannedHours, settings), s.payOverride);
     const row: ShiftRow = {
+      overridden: payCalc.overridden,
+      computedPay: payCalc.computedPay,
+      payNote: s.payNote,
       id: s.id,
       date: s.date,
       time: `${s.startTime}–${s.endTime}`,
       channel: s.channel?.name ?? "-",
       plannedHours,
       hasResults,
-      pay: computePay(sales, hasResults ? actualHours : plannedHours, settings),
+      pay: payCalc,
     };
     const g = byStreamer.get(s.streamerId) ?? { name: s.streamer.name, hrEmployeeId: s.streamer.hrEmployeeId, rows: [] };
     g.rows.push(row);
@@ -151,7 +158,15 @@ export default async function CommissionPage({ searchParams }: { searchParams: {
                   <tbody>
                     {g.rows.map((r) => (
                       <tr key={r.id} className={clsx("border-t border-line/60", !r.hasResults && "text-stone-400")}>
-                        <td className="px-4 py-2 font-medium text-ink">{formatThaiDateShort(r.date)}</td>
+                        <td className="px-4 py-2 font-medium text-ink">
+                          {formatThaiDateShort(r.date)}
+                          {r.overridden && (
+                            <span className="ml-1.5 rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold text-brand-800" title={`ระบบคำนวณได้ ${formatBaht(r.computedPay)} ฿`}>
+                              กำหนดเอง
+                            </span>
+                          )}
+                          {r.payNote && <span className="block text-[11px] font-normal text-muted">📝 {r.payNote}</span>}
+                        </td>
                         <td className="px-3 py-2 tabular-nums">{r.time}</td>
                         <td className="px-3 py-2">{r.channel}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{formatNum(r.pay.hours, 1)}</td>
@@ -159,9 +174,9 @@ export default async function CommissionPage({ searchParams }: { searchParams: {
                         <td className="px-3 py-2 text-right tabular-nums">{r.hasResults ? formatBaht(r.pay.net) : "-"}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{r.hasResults ? formatBaht(r.pay.commission) : "-"}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{formatBaht(r.pay.minPay)}</td>
-                        <td className={clsx("px-3 py-2 text-right tabular-nums font-semibold", r.hasResults && r.pay.hitMinimum ? "text-amber-700" : "text-ink")}>
+                        <td className={clsx("px-3 py-2 text-right tabular-nums font-semibold", r.overridden ? "text-brand-800" : r.hasResults && r.pay.hitMinimum ? "text-amber-700" : "text-ink")}>
                           {formatBaht(r.pay.pay)}
-                          {r.hasResults && r.pay.hitMinimum && <span className="ml-1 text-[10px] font-normal">ขั้นต่ำ</span>}
+                          {!r.overridden && r.hasResults && r.pay.hitMinimum && <span className="ml-1 text-[10px] font-normal">ขั้นต่ำ</span>}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">{r.hasResults ? pct(r.pay.effectivePct) : "-"}</td>
                         <td className="px-3 py-2 text-right">

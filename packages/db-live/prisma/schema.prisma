@@ -161,6 +161,10 @@ model LiveShift {
   endTime   String // "HH:mm" — "00:00" หมายถึงเที่ยงคืน (จบวัน)
   note      String?
 
+  // แอดมินกำหนดยอดจ่ายรวมของกะนี้เอง (ว่าง = ใช้ที่ระบบคำนวณจากอัตราปกติ)
+  payOverride Float?
+  payNote     String? // หมายเหตุเรื่องค่าตอบแทน (ไม่บังคับ)
+
   createdByStaffId String?
   createdByStaff   StaffUser? @relation(fields: [createdByStaffId], references: [id], onDelete: SetNull)
 

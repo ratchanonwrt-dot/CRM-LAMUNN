@@ -4,12 +4,13 @@ import clsx from "clsx";
 import { prisma } from "@lamunn/db-live";
 import { requirePageRole } from "@/lib/requirePageRole";
 import { getPaySettings } from "@/lib/paySettings";
-import { computePay } from "@/lib/pay";
+import { computePay, applyOverride } from "@/lib/pay";
 import { toRange, isoDate, weekStartOf } from "@/lib/schedule";
 import { formatBaht, formatHours, formatNum, formatThaiDate, slotHours, thaiDays } from "@/lib/format";
 import ShiftResultsForm from "@/components/ShiftResultsForm";
 import ShiftEditForm from "@/components/ShiftEditForm";
 import DeleteShiftButton from "@/components/DeleteShiftButton";
+import ShiftPayOverride from "@/components/ShiftPayOverride";
 
 export default async function ShiftDetailPage({ params }: { params: { id: string } }) {
   await requirePageRole();
@@ -35,7 +36,7 @@ export default async function ShiftDetailPage({ params }: { params: { id: string
   const actualHours = shift.slots.reduce((a, s) => a + slotHours(s.startTime, s.endTime), 0);
   const sales = shift.slots.reduce((a, s) => a + s.sales, 0);
   const hasResults = shift.slots.length > 0;
-  const pay = computePay(sales, hasResults ? actualHours : plannedHours, settings);
+  const pay = applyOverride(computePay(sales, hasResults ? actualHours : plannedHours, settings), shift.payOverride);
   const weekParam = isoDate(weekStartOf(shift.date));
 
   const rows: { label: string; value: string; sub?: string; strong?: boolean; tone?: string }[] = [
@@ -97,7 +98,10 @@ export default async function ShiftDetailPage({ params }: { params: { id: string
       <section className={clsx("mb-6 rounded-xl border bg-white p-5", pay.hitMinimum && hasResults ? "border-amber-300" : "border-line")}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-[260px] flex-1">
-            <h2 className="font-display text-[15px] font-semibold text-ink">ค่าตอบแทนกะนี้</h2>
+            <h2 className="font-display text-[15px] font-semibold text-ink">
+              ค่าตอบแทนกะนี้
+              {pay.overridden && <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-[11px] font-semibold text-brand-800">แอดมินกำหนดเอง</span>}
+            </h2>
             <dl className="mt-3 space-y-1.5 text-sm">
               {rows.map((r) => (
                 <div key={r.label} className="flex items-baseline justify-between gap-3">
@@ -113,7 +117,9 @@ export default async function ShiftDetailPage({ params }: { params: { id: string
           <div className="w-full rounded-xl bg-paper p-4 sm:w-64">
             <p className="text-[11px] text-stone-400">ต้องจ่ายคนไลฟ์</p>
             <p className="text-2xl font-bold tabular-nums text-ink">{formatBaht(pay.pay)} ฿</p>
-            {!hasResults ? (
+            {pay.overridden ? (
+              <p className="mt-1 text-xs text-brand-800">แอดมินกำหนดยอดนี้เอง (ระบบคำนวณได้ {formatBaht(pay.computedPay)} ฿)</p>
+            ) : !hasResults ? (
               <p className="mt-1 text-xs text-stone-400">ประมาณการจากขั้นต่ำ — กรอกยอดขายด้านล่างเพื่อคิดจริง</p>
             ) : pay.hitMinimum ? (
               <div className="mt-2 space-y-1 text-xs">
@@ -128,6 +134,7 @@ export default async function ShiftDetailPage({ params }: { params: { id: string
             )}
           </div>
         </div>
+        <ShiftPayOverride shiftId={shift.id} computed={pay.computedPay} override={shift.payOverride} note={shift.payNote} />
       </section>
 
       <h2 className="mb-2 font-display text-[15px] font-semibold text-ink">กรอกยอดหลังไลฟ์เสร็จ</h2>
