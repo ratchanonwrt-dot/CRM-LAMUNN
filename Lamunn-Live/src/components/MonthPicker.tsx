@@ -14,12 +14,12 @@ export default function MonthPicker({ year, month }: { year: number; month: numb
   }
 
   return (
-    <div className="flex items-center rounded-xl border border-gray-200 bg-white">
-      <button onClick={() => go(-1)} aria-label="เดือนก่อน" className="px-2 py-2 text-gray-500 hover:bg-gray-50">
+    <div className="flex items-center rounded-2xl border border-line bg-white shadow-card">
+      <button onClick={() => go(-1)} aria-label="เดือนก่อน" className="px-2 py-2 text-muted hover:bg-paper">
         <ChevronLeft size={16} />
       </button>
-      <span className="min-w-[130px] text-center text-sm font-medium text-gray-700">{thaiMonthLabel(year, month)}</span>
-      <button onClick={() => go(1)} aria-label="เดือนถัดไป" className="px-2 py-2 text-gray-500 hover:bg-gray-50">
+      <span className="min-w-[130px] text-center text-sm font-medium text-ink/80">{thaiMonthLabel(year, month)}</span>
+      <button onClick={() => go(1)} aria-label="เดือนถัดไป" className="px-2 py-2 text-muted hover:bg-paper">
         <ChevronRight size={16} />
       </button>
     </div>

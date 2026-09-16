@@ -24,7 +24,7 @@ export default function DeleteSessionButton({ sessionId }: { sessionId: string }
   }
 
   return (
-    <button onClick={remove} disabled={busy} className="rounded-xl border border-gray-200 px-3 py-1.5 text-xs text-gray-400 hover:border-red-200 hover:text-red-600 disabled:opacity-50">
+    <button onClick={remove} disabled={busy} className="rounded-xl border border-line px-3 py-1.5 text-xs text-stone-400 hover:border-red-200 hover:text-red-600 disabled:opacity-50">
       ลบรอบนี้
     </button>
   );

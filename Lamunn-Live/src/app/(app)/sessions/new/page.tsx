@@ -13,11 +13,11 @@ export default async function NewSessionPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href="/sessions" className="text-sm text-gray-400 hover:text-gray-600">
+      <Link href="/sessions" className="text-sm text-stone-400 hover:text-muted">
         ← กลับไปรายการรอบไลฟ์
       </Link>
-      <h1 className="mb-1 mt-2 text-xl font-bold text-gray-800">เปิดรอบไลฟ์ใหม่</h1>
-      <p className="mb-6 text-sm text-gray-500">สร้างรอบก่อน แล้วค่อยบันทึกยอดคนดู/ยอดขายของแต่ละช่วงเวลาในหน้าถัดไป</p>
+      <h1 className="mb-1 mt-2 font-display text-2xl font-semibold tracking-tight text-ink">เปิดรอบไลฟ์ใหม่</h1>
+      <p className="mb-6 text-sm text-muted">สร้างรอบก่อน แล้วค่อยบันทึกยอดคนดู/ยอดขายของแต่ละช่วงเวลาในหน้าถัดไป</p>
       <NewSessionForm channels={channels.map((c) => ({ id: c.id, name: c.name }))} defaultDate={today} />
     </div>
   );

@@ -36,7 +36,7 @@ function RoleSelect({
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value as StaffRole)}
-      className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-xs outline-none disabled:opacity-50"
+      className="rounded-lg border border-line bg-white px-2 py-1 text-xs outline-none disabled:opacity-50"
     >
       <option value="STAFF">{detailed ? "พนักงาน (บันทึกยอดได้ ตั้งค่าไม่ได้)" : ROLE_LABEL.STAFF}</option>
       <option value="MANAGER">{detailed ? "ผู้จัดการ (แก้ไขได้ทุกอย่าง ยกเว้นจัดการผู้ใช้งาน)" : ROLE_LABEL.MANAGER}</option>
@@ -75,40 +75,40 @@ function AddStaffForm({ onAdded }: { onAdded: () => void }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 rounded-xl border border-gray-200 bg-white p-5">
-      <h2 className="mb-4 text-sm font-semibold text-gray-700">เพิ่มผู้ใช้งานใหม่</h2>
+    <form onSubmit={handleSubmit} className="mb-6 rounded-2xl border border-line bg-white shadow-card p-5">
+      <h2 className="mb-4 font-display text-[15px] font-semibold text-ink">เพิ่มผู้ใช้งานใหม่</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">ชื่อ</label>
+          <label className="mb-1 block text-xs font-medium text-muted">ชื่อ</label>
           <input
             required
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white"
+            className="w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">อีเมล</label>
+          <label className="mb-1 block text-xs font-medium text-muted">อีเมล</label>
           <input
             required
             type="email"
             value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white"
+            className="w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">รหัสผ่านเริ่มต้น</label>
+          <label className="mb-1 block text-xs font-medium text-muted">รหัสผ่านเริ่มต้น</label>
           <input
             required
             type="text"
             value={form.password}
             onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white"
+            className="w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">สิทธิ์การใช้งาน</label>
+          <label className="mb-1 block text-xs font-medium text-muted">สิทธิ์การใช้งาน</label>
           <div className="w-full">
             <RoleSelect value={form.role} onChange={(role) => setForm((f) => ({ ...f, role }))} detailed />
           </div>
@@ -118,7 +118,7 @@ function AddStaffForm({ onAdded }: { onAdded: () => void }) {
       <button
         type="submit"
         disabled={saving}
-        className="mt-4 rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-medium text-white shadow-md shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-50"
+        className="mt-4 rounded-xl bg-ink px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50"
       >
         {saving ? "กำลังเพิ่ม..." : "+ เพิ่มผู้ใช้งาน"}
       </button>
@@ -158,12 +158,12 @@ function StaffRow({ user, currentStaffId, onChanged }: { user: StaffUserRow; cur
   }
 
   return (
-    <tr className="border-t border-gray-100">
-      <td className="px-3 py-2 font-medium text-gray-800">
+    <tr className="border-t border-line/60">
+      <td className="px-3 py-2 font-medium text-ink">
         {user.name}
-        {isSelf && <span className="ml-1.5 text-xs font-normal text-gray-400">(คุณ)</span>}
+        {isSelf && <span className="ml-1.5 text-xs font-normal text-stone-400">(คุณ)</span>}
       </td>
-      <td className="px-3 py-2 text-gray-500">{user.email}</td>
+      <td className="px-3 py-2 text-muted">{user.email}</td>
       <td className="px-3 py-2">
         <RoleSelect value={user.role} disabled={busy || isSelf} onChange={(role) => patch({ role })} />
       </td>
@@ -172,7 +172,7 @@ function StaffRow({ user, currentStaffId, onChanged }: { user: StaffUserRow; cur
           disabled={busy || isSelf}
           onClick={() => patch({ isActive: !user.isActive })}
           className={`rounded-full px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${
-            user.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-500"
+            user.isActive ? "bg-emerald-100 text-emerald-700" : "bg-stone-200 text-muted"
           }`}
         >
           {user.isActive ? "ใช้งานอยู่" : "ปิดการใช้งานแล้ว"}
@@ -187,17 +187,17 @@ function StaffRow({ user, currentStaffId, onChanged }: { user: StaffUserRow; cur
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="รหัสผ่านใหม่"
-              className="w-28 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-xs outline-none focus:border-brand-400 focus:bg-white"
+              className="w-28 rounded-lg border border-line bg-white px-2 py-1 text-xs outline-none focus:border-ink"
             />
             <button onClick={handleResetPassword} disabled={busy || newPassword.length < 6} className="text-xs font-medium text-brand-600 disabled:opacity-40">
               บันทึก
             </button>
-            <button onClick={() => { setResetting(false); setNewPassword(""); }} className="text-xs text-gray-400">
+            <button onClick={() => { setResetting(false); setNewPassword(""); }} className="text-xs text-stone-400">
               ยกเลิก
             </button>
           </div>
         ) : (
-          <button onClick={() => setResetting(true)} className="text-xs font-medium text-gray-500 hover:text-brand-600">
+          <button onClick={() => setResetting(true)} className="text-xs font-medium text-muted hover:text-brand-600">
             ตั้งรหัสผ่านใหม่
           </button>
         )}
@@ -222,9 +222,9 @@ export default function StaffManager({ initialUsers, currentStaffId }: { initial
   return (
     <div>
       <AddStaffForm onAdded={refresh} />
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-card">
         <table className="w-full min-w-[700px] text-sm">
-          <thead className="bg-gray-50 text-left text-gray-500">
+          <thead className="bg-paper/70 text-left text-[11px] font-semibold uppercase tracking-wider text-muted">
             <tr>
               <th className="px-3 py-2">ชื่อ</th>
               <th className="px-3 py-2">อีเมล</th>

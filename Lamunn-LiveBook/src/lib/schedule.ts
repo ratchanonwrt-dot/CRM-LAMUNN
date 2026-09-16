@@ -89,7 +89,7 @@ export const STREAMER_PALETTE: { key: string; label: string; block: string; dot:
   { key: "yellow", label: "เหลืองสด", block: "bg-yellow-200 border-yellow-400 text-yellow-950", dot: "bg-yellow-400" },
   { key: "stone", label: "น้ำตาลเทา", block: "bg-stone-300 border-stone-500 text-stone-950", dot: "bg-stone-500" },
 ];
-export const STREAMER_COLOR_FALLBACK = "bg-gray-100 border-gray-300 text-gray-800";
+export const STREAMER_COLOR_FALLBACK = "bg-stone-100 border-line text-ink";
 export const PALETTE_KEYS = STREAMER_PALETTE.map((p) => p.key);
 
 export function streamerColor(key: string | null | undefined): string {

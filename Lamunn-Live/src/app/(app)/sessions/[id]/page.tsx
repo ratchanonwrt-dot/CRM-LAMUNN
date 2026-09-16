@@ -31,15 +31,15 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
 
   return (
     <div className="mx-auto max-w-5xl">
-      <Link href="/sessions" className="text-sm text-gray-400 hover:text-gray-600">
+      <Link href="/sessions" className="text-sm text-stone-400 hover:text-muted">
         ← รายการรอบไลฟ์
       </Link>
       <div className="mb-5 mt-2 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">
-            {formatThaiDate(session.date)} <span className="text-base font-medium text-gray-400">({thaiDays[session.date.getUTCDay()]})</span>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">
+            {formatThaiDate(session.date)} <span className="text-base font-medium text-stone-400">({thaiDays[session.date.getUTCDay()]})</span>
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted">
             {session.channel?.name ?? "ไม่ระบุช่องทาง"}
             {session.title && <> · {session.title}</>}
             {(session.startTime || session.endTime) && (
@@ -48,17 +48,17 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
                 · {session.startTime ?? "?"}–{session.endTime ?? "?"}
               </>
             )}
-            {session.createdByStaff && <span className="text-gray-400"> · สร้างโดย {session.createdByStaff.name}</span>}
+            {session.createdByStaff && <span className="text-stone-400"> · สร้างโดย {session.createdByStaff.name}</span>}
           </p>
-          {session.note && <p className="mt-1 text-sm text-gray-500">📝 {session.note}</p>}
+          {session.note && <p className="mt-1 text-sm text-muted">📝 {session.note}</p>}
         </div>
         <DeleteSessionButton sessionId={session.id} />
       </div>
 
       {session.shifts.length > 0 && (
-        <section className="mb-5 rounded-xl border border-gray-200 bg-white p-4">
+        <section className="mb-5 rounded-2xl border border-line bg-white shadow-card p-4">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-700">กะที่วางไว้ในรอบนี้ ({session.shifts.length})</h2>
+            <h2 className="font-display text-[15px] font-semibold text-ink">กะที่วางไว้ในรอบนี้ ({session.shifts.length})</h2>
             <Link href={`/schedule?week=${session.date.toISOString().slice(0, 10)}`} className="text-xs font-medium text-brand-600 hover:underline">
               ไปตารางไลฟ์ →
             </Link>
@@ -70,8 +70,8 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
               return (
                 <li key={sh.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                   <span>
-                    <span className="font-medium text-gray-800">{sh.streamer.name}</span>
-                    <span className="ml-2 tabular-nums text-gray-500">{sh.startTime}–{sh.endTime}</span>
+                    <span className="font-medium text-ink">{sh.streamer.name}</span>
+                    <span className="ml-2 tabular-nums text-muted">{sh.startTime}–{sh.endTime}</span>
                     {done ? (
                       <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">กรอกแล้ว · ขาย {formatBaht(sales)} ฿</span>
                     ) : (
@@ -85,7 +85,7 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
               );
             })}
           </ul>
-          <p className="mt-2 text-[11px] text-gray-400">ยอดที่กรอกจากหน้ากะจะมาอยู่ในตารางช่วงเวลาด้านล่างอัตโนมัติ (แก้ได้ทั้งสองที่)</p>
+          <p className="mt-2 text-[11px] text-stone-400">ยอดที่กรอกจากหน้ากะจะมาอยู่ในตารางช่วงเวลาด้านล่างอัตโนมัติ (แก้ได้ทั้งสองที่)</p>
         </section>
       )}
 

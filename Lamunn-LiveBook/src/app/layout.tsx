@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { IBM_Plex_Sans_Thai, Anuphan } from "next/font/google";
 import "./globals.css";
+
+const sans = IBM_Plex_Sans_Thai({ subsets: ["thai", "latin"], weight: ["400", "500", "600"], variable: "--font-sans", display: "swap" });
+const display = Anuphan({ subsets: ["thai", "latin"], weight: ["500", "600", "700"], variable: "--font-display", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Lamunn Live — จองช่วงไลฟ์",
@@ -8,13 +12,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0d9488",
+  themeColor: "#1b1a17",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="th">
-      <body className="bg-gray-50 text-gray-900">{children}</body>
+    <html lang="th" className={`${sans.variable} ${display.variable}`}>
+      <body className="bg-paper text-ink">{children}</body>
     </html>
   );
 }

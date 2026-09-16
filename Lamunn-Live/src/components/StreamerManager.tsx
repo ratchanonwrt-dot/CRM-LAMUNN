@@ -19,7 +19,7 @@ interface StreamerRow {
   slotCount: number;
 }
 
-const inputCls = "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white";
+const inputCls = "w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10";
 
 function ColorPicker({ value, onChange, size = "h-6 w-6" }: { value: string | null; onChange: (k: string) => void; size?: string }) {
   return (
@@ -77,7 +77,7 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
 
   if (editing) {
     return (
-      <tr className="border-t border-gray-100 bg-brand-50/40">
+      <tr className="border-t border-line/60 bg-brand-50/40">
         <td className="px-3 py-2" colSpan={3}>
           <div className="flex flex-wrap gap-2">
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls + " max-w-[180px]"} placeholder="ชื่อ" />
@@ -88,12 +88,12 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
             <input value={hrEmployeeId} onChange={(e) => setHrEmployeeId(e.target.value)} className={inputCls + " max-w-[150px]"} placeholder="รหัสพนักงาน HR" />
           </div>
           <div className="mt-2 flex items-center gap-2">
-            <span className="text-xs text-gray-500">สีในตาราง</span>
+            <span className="text-xs text-muted">สีในตาราง</span>
             <ColorPicker value={color} onChange={setColor} />
           </div>
           {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
         </td>
-        <td className="px-3 py-2 text-right text-gray-500">{s.slotCount}</td>
+        <td className="px-3 py-2 text-right text-muted">{s.slotCount}</td>
         <td className="px-3 py-2" colSpan={2}>
           <div className="flex gap-2">
             <button
@@ -101,11 +101,11 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
               onClick={async () => {
                 if (await patch({ name, nickname, note, hrEmployeeId, phone, lineId, color })) setEditing(false);
               }}
-              className="rounded-lg bg-brand-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+              className="rounded-lg bg-ink px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
             >
               บันทึก
             </button>
-            <button onClick={() => setEditing(false)} className="rounded-lg border border-gray-200 px-3 py-1 text-xs text-gray-500">
+            <button onClick={() => setEditing(false)} className="rounded-lg border border-line px-3 py-1 text-xs text-muted">
               ยกเลิก
             </button>
           </div>
@@ -115,31 +115,31 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
   }
 
   return (
-    <tr className="border-t border-gray-100">
-      <td className="px-3 py-2 font-medium text-gray-800">
+    <tr className="border-t border-line/60">
+      <td className="px-3 py-2 font-medium text-ink">
         <span className={clsx("mr-1.5 inline-block h-3 w-3 rounded-full align-middle", streamerDot(s.color))} />
         <span className={clsx("rounded-md border px-1.5 py-0.5", streamerColor(s.color))}>{s.name}</span>
-        {s.nickname && <span className="ml-1.5 text-xs font-normal text-gray-400">({s.nickname})</span>}
-        {s.hrEmployeeId && <span className="ml-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-normal text-gray-500">HR: {s.hrEmployeeId}</span>}
+        {s.nickname && <span className="ml-1.5 text-xs font-normal text-stone-400">({s.nickname})</span>}
+        {s.hrEmployeeId && <span className="ml-1.5 rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-normal text-muted">HR: {s.hrEmployeeId}</span>}
         {error && <p className="text-xs font-normal text-red-600">{error}</p>}
       </td>
-      <td className="px-3 py-2 text-gray-600">
+      <td className="px-3 py-2 text-muted">
         {s.phone || s.lineId ? (
           <div className="text-xs leading-5">
             {s.phone && <p className="tabular-nums">📞 {s.phone}</p>}
             {s.lineId && <p>LINE: {s.lineId}</p>}
           </div>
         ) : (
-          <span className="text-xs text-gray-300">ยังไม่กรอก</span>
+          <span className="text-xs text-stone-300">ยังไม่กรอก</span>
         )}
       </td>
-      <td className="px-3 py-2 text-gray-500">{s.note ?? ""}</td>
-      <td className="px-3 py-2 text-right text-gray-500">{s.slotCount}</td>
+      <td className="px-3 py-2 text-muted">{s.note ?? ""}</td>
+      <td className="px-3 py-2 text-right text-muted">{s.slotCount}</td>
       <td className="px-3 py-2">
         <button
           disabled={busy}
           onClick={() => patch({ isActive: !s.isActive })}
-          className={`rounded-full px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${s.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-500"}`}
+          className={`rounded-full px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${s.isActive ? "bg-emerald-100 text-emerald-700" : "bg-stone-200 text-muted"}`}
         >
           {s.isActive ? "ใช้งานอยู่" : "ปิดใช้งาน"}
         </button>
@@ -150,7 +150,7 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
             แก้ไข
           </button>
           {s.slotCount === 0 && (
-            <button onClick={remove} disabled={busy} className="text-gray-400 hover:text-red-600">
+            <button onClick={remove} disabled={busy} className="text-stone-400 hover:text-red-600">
               ลบ
             </button>
           )}
@@ -191,36 +191,36 @@ export default function StreamerManager({ streamers }: { streamers: StreamerRow[
 
   return (
     <div>
-      <form onSubmit={add} className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4">
+      <form onSubmit={add} className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-white shadow-card p-4">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">ชื่อคนไลฟ์</label>
+          <label className="mb-1 block text-xs font-medium text-muted">ชื่อคนไลฟ์</label>
           <input required value={name} onChange={(e) => setName(e.target.value)} className={inputCls + " w-56"} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">ชื่อเล่น (ถ้ามี)</label>
+          <label className="mb-1 block text-xs font-medium text-muted">ชื่อเล่น (ถ้ามี)</label>
           <input value={nickname} onChange={(e) => setNickname(e.target.value)} className={inputCls + " w-40"} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">เบอร์โทร</label>
+          <label className="mb-1 block text-xs font-medium text-muted">เบอร์โทร</label>
           <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls + " w-40"} inputMode="tel" />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">LINE ID</label>
+          <label className="mb-1 block text-xs font-medium text-muted">LINE ID</label>
           <input value={lineId} onChange={(e) => setLineId(e.target.value)} className={inputCls + " w-40"} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">สีในตาราง (ไม่เลือก = ระบบเลือกสีที่ยังว่างให้)</label>
+          <label className="mb-1 block text-xs font-medium text-muted">สีในตาราง (ไม่เลือก = ระบบเลือกสีที่ยังว่างให้)</label>
           <ColorPicker value={color} onChange={setColor} />
         </div>
-        <button type="submit" disabled={saving} className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
+        <button type="submit" disabled={saving} className="rounded-xl bg-ink px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">
           {saving ? "กำลังเพิ่ม..." : "+ เพิ่มคนไลฟ์"}
         </button>
         {error && <p className="w-full text-sm text-red-600">{error}</p>}
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-card">
         <table className="w-full min-w-[760px] text-sm">
-          <thead className="bg-gray-50 text-left text-gray-500">
+          <thead className="bg-paper/70 text-left text-[11px] font-semibold uppercase tracking-wider text-muted">
             <tr>
               <th className="px-3 py-2">ชื่อ</th>
               <th className="px-3 py-2">ติดต่อ</th>
@@ -236,7 +236,7 @@ export default function StreamerManager({ streamers }: { streamers: StreamerRow[
             ))}
             {streamers.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-stone-400">
                   ยังไม่มีคนไลฟ์ — เพิ่มชื่อด้านบนก่อน แล้วค่อยไปบันทึกรอบไลฟ์
                 </td>
               </tr>

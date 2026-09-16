@@ -41,7 +41,7 @@ export default function BarChart({
                 className={clsx(
                   "pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] tabular-nums transition",
                   // แท่งสูงสุดโชว์ตัวเลขค้างไว้ (สีตัวอักษรปกติ) ส่วนแท่งอื่นโชว์เป็น tooltip ตอน hover
-                  isMax ? "font-semibold text-gray-700" : "rounded bg-gray-800 px-1.5 py-0.5 text-white opacity-0 group-hover:opacity-100"
+                  isMax ? "font-semibold text-ink/80" : "rounded bg-gray-800 px-1.5 py-0.5 text-white opacity-0 group-hover:opacity-100"
                 )}
                 style={{ bottom: `calc(${pct}% + 3px)` }}
               >
@@ -51,9 +51,9 @@ export default function BarChart({
                 className={clsx(
                   "w-full rounded-t-[4px] transition-colors",
                   d.empty || d.value === 0
-                    ? "bg-gray-100"
+                    ? "bg-stone-100"
                     : isMax
-                      ? "bg-brand-600 group-hover:bg-brand-700"
+                      ? "bg-brand-600 group-hover:bg-brand-600"
                       : "bg-brand-300 group-hover:bg-brand-500"
                 )}
                 style={{ height: d.empty || d.value === 0 ? 2 : `${Math.max(pct, 1.5)}%` }}
@@ -62,9 +62,9 @@ export default function BarChart({
           );
         })}
       </div>
-      <div className="mt-1 flex min-w-[520px] gap-[3px] border-t border-gray-100 pt-1">
+      <div className="mt-1 flex min-w-[520px] gap-[3px] border-t border-line/60 pt-1">
         {data.map((d, i) => (
-          <div key={d.key} className="flex-1 text-center text-[10px] leading-tight text-gray-400">
+          <div key={d.key} className="flex-1 text-center text-[10px] leading-tight text-stone-400">
             {i % labelEvery === 0 ? d.label : ""}
           </div>
         ))}

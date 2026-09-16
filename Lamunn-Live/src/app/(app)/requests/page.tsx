@@ -22,8 +22,8 @@ export default async function RequestsPage({ searchParams }: { searchParams: { s
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold text-gray-800">คำขอจองกะจากเว็บจอง</h1>
-      <p className="mb-5 text-sm text-gray-500">
+      <h1 className="mb-1 font-display text-2xl font-semibold tracking-tight text-ink">คำขอจองกะจากเว็บจอง</h1>
+      <p className="mb-5 text-sm text-muted">
         คนที่ขอมาจากเว็บจองจะมารอที่นี่ — อนุมัติแล้วระบบจะสร้างกะในตารางไลฟ์ให้ทันที (จับคู่คนไลฟ์จากเบอร์โทรอัตโนมัติ ถ้าไม่เจอให้เลือกเองหรือสร้างคนใหม่)
       </p>
       <RequestsManager

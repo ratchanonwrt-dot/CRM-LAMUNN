@@ -20,17 +20,17 @@ export default function WeekPicker({ weekStart, label, isCurrent }: { weekStart:
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex items-center rounded-xl border border-gray-200 bg-white">
-        <button onClick={() => go(-7)} aria-label="สัปดาห์ก่อน" className="px-2 py-2 text-gray-500 hover:bg-gray-50">
+      <div className="flex items-center rounded-2xl border border-line bg-white shadow-card">
+        <button onClick={() => go(-7)} aria-label="สัปดาห์ก่อน" className="px-2 py-2 text-muted hover:bg-paper">
           <ChevronLeft size={16} />
         </button>
-        <span className="min-w-[190px] text-center text-sm font-medium text-gray-700">{label}</span>
-        <button onClick={() => go(7)} aria-label="สัปดาห์ถัดไป" className="px-2 py-2 text-gray-500 hover:bg-gray-50">
+        <span className="min-w-[190px] text-center text-sm font-medium text-ink/80">{label}</span>
+        <button onClick={() => go(7)} aria-label="สัปดาห์ถัดไป" className="px-2 py-2 text-muted hover:bg-paper">
           <ChevronRight size={16} />
         </button>
       </div>
       {!isCurrent && (
-        <button onClick={() => go(null)} className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 hover:bg-gray-50">
+        <button onClick={() => go(null)} className="rounded-2xl border border-line bg-white shadow-card px-3 py-2 text-xs text-muted hover:bg-paper">
           สัปดาห์นี้
         </button>
       )}

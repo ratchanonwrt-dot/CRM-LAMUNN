@@ -70,8 +70,8 @@ export default async function CommissionPage({ searchParams }: { searchParams: {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">ค่าคอมมิชชั่นคนไลฟ์ (รายสัปดาห์)</h1>
-          <p className="text-sm text-gray-500">รวมจากกะในตารางไลฟ์ · ใช้เป็นยอดทำจ่ายรายสัปดาห์ (เตรียมส่งต่อระบบ HR)</p>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">ค่าคอมมิชชั่นคนไลฟ์ (รายสัปดาห์)</h1>
+          <p className="text-sm text-muted">รวมจากกะในตารางไลฟ์ · ใช้เป็นยอดทำจ่ายรายสัปดาห์ (เตรียมส่งต่อระบบ HR)</p>
         </div>
         <WeekPicker weekStart={isoDate(weekStart)} label={label} isCurrent={isoDate(weekStart) === isoDate(weekStartOf(today))} />
       </div>
@@ -89,10 +89,10 @@ export default async function CommissionPage({ searchParams }: { searchParams: {
           { label: "ต้องจ่ายรวม", value: `${formatBaht(grand.pay)} ฿`, strong: true },
           { label: "คิดเป็นคอมจริง", value: pct(grand.effectivePct), sub: "ของยอดหลังหัก" },
         ].map((c) => (
-          <div key={c.label} className="rounded-xl border border-gray-200 bg-white p-3">
-            <p className="text-[11px] text-gray-400">{c.label}</p>
-            <p className={clsx("mt-0.5 truncate text-lg font-semibold tabular-nums", c.tone ?? "text-gray-800", c.strong && "text-brand-700")}>{c.value}</p>
-            {c.sub && <p className="text-[11px] text-gray-400">{c.sub}</p>}
+          <div key={c.label} className="rounded-2xl border border-line bg-white shadow-card p-3">
+            <p className="text-[11px] text-stone-400">{c.label}</p>
+            <p className={clsx("mt-0.5 truncate text-lg font-semibold tabular-nums", c.tone ?? "text-ink", c.strong && "text-brand-700")}>{c.value}</p>
+            {c.sub && <p className="text-[11px] text-stone-400">{c.sub}</p>}
           </div>
         ))}
       </div>
@@ -104,7 +104,7 @@ export default async function CommissionPage({ searchParams }: { searchParams: {
       )}
 
       {groups.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center text-gray-400">
+        <div className="rounded-2xl border border-dashed border-line bg-white p-10 text-center text-stone-400">
           สัปดาห์นี้ยังไม่มีกะในตาราง —{" "}
           <Link href={`/schedule?week=${isoDate(weekStart)}`} className="text-brand-600 hover:underline">
             ไปลงตารางไลฟ์
@@ -113,27 +113,27 @@ export default async function CommissionPage({ searchParams }: { searchParams: {
       ) : (
         <div className="space-y-4">
           {groups.map((g) => (
-            <section key={g.id} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-              <div className="flex flex-wrap items-center justify-between gap-2 bg-gray-50 px-4 py-3">
+            <section key={g.id} className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-2 bg-paper px-4 py-3">
                 <div>
-                  <p className="font-semibold text-gray-800">
+                  <p className="font-semibold text-ink">
                     {g.name}
-                    {g.hrEmployeeId && <span className="ml-2 rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-normal text-gray-600">HR: {g.hrEmployeeId}</span>}
+                    {g.hrEmployeeId && <span className="ml-2 rounded bg-stone-200 px-1.5 py-0.5 text-[10px] font-normal text-muted">HR: {g.hrEmployeeId}</span>}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted">
                     {g.rows.length} กะ · {formatNum(g.total.hours, 1)} ชม. · ขาย {formatBaht(g.total.sales)} ฿ · คอม {formatBaht(g.total.commission)} ฿
                     {g.total.topUp > 0 && <span className="text-amber-700"> · เพิ่มขั้นต่ำ {formatBaht(g.total.topUp)} ฿</span>}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[11px] text-gray-400">ต้องจ่าย</p>
-                  <p className="text-xl font-bold tabular-nums text-gray-800">{formatBaht(g.total.pay)} ฿</p>
-                  <p className="text-[11px] text-gray-500">คอมจริง {pct(g.total.effectivePct)}</p>
+                  <p className="text-[11px] text-stone-400">ต้องจ่าย</p>
+                  <p className="text-xl font-bold tabular-nums text-ink">{formatBaht(g.total.pay)} ฿</p>
+                  <p className="text-[11px] text-muted">คอมจริง {pct(g.total.effectivePct)}</p>
                 </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[820px] text-sm">
-                  <thead className="text-left text-xs text-gray-400">
+                  <thead className="text-left text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                     <tr>
                       <th className="px-4 py-1.5 font-medium">วัน</th>
                       <th className="px-3 py-1.5 font-medium">เวลา</th>
@@ -150,8 +150,8 @@ export default async function CommissionPage({ searchParams }: { searchParams: {
                   </thead>
                   <tbody>
                     {g.rows.map((r) => (
-                      <tr key={r.id} className={clsx("border-t border-gray-100", !r.hasResults && "text-gray-400")}>
-                        <td className="px-4 py-2 font-medium text-gray-800">{formatThaiDateShort(r.date)}</td>
+                      <tr key={r.id} className={clsx("border-t border-line/60", !r.hasResults && "text-stone-400")}>
+                        <td className="px-4 py-2 font-medium text-ink">{formatThaiDateShort(r.date)}</td>
                         <td className="px-3 py-2 tabular-nums">{r.time}</td>
                         <td className="px-3 py-2">{r.channel}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{formatNum(r.pay.hours, 1)}</td>
@@ -159,7 +159,7 @@ export default async function CommissionPage({ searchParams }: { searchParams: {
                         <td className="px-3 py-2 text-right tabular-nums">{r.hasResults ? formatBaht(r.pay.net) : "-"}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{r.hasResults ? formatBaht(r.pay.commission) : "-"}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{formatBaht(r.pay.minPay)}</td>
-                        <td className={clsx("px-3 py-2 text-right tabular-nums font-semibold", r.hasResults && r.pay.hitMinimum ? "text-amber-700" : "text-gray-800")}>
+                        <td className={clsx("px-3 py-2 text-right tabular-nums font-semibold", r.hasResults && r.pay.hitMinimum ? "text-amber-700" : "text-ink")}>
                           {formatBaht(r.pay.pay)}
                           {r.hasResults && r.pay.hitMinimum && <span className="ml-1 text-[10px] font-normal">ขั้นต่ำ</span>}
                         </td>

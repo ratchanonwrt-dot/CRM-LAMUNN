@@ -24,7 +24,7 @@ interface Row {
   sales: string;
 }
 
-const inputCls = "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm tabular-nums outline-none focus:border-brand-400 focus:bg-white";
+const inputCls = "w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm tabular-nums outline-none focus:border-brand-400 focus:bg-white";
 
 /** แบ่งช่วงของกะเป็นรายชั่วโมง (ช่วงสุดท้ายอาจสั้นกว่า 1 ชม.) */
 function hourlyRows(start: string, end: string): Row[] {
@@ -139,12 +139,12 @@ export default function ShiftResultsForm({
   }
 
   return (
-    <form onSubmit={save} className="rounded-xl border border-gray-200 bg-white p-5">
+    <form onSubmit={save} className="rounded-2xl border border-line bg-white shadow-card p-5">
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
         {/* รายชั่วโมง */}
         <div className="lg:col-span-3">
           <table className="w-full text-sm">
-            <thead className="text-left text-xs text-gray-400">
+            <thead className="text-left text-[11px] font-semibold uppercase tracking-wider text-stone-400">
               <tr>
                 <th className="pb-1.5 font-medium">ชั่วโมง</th>
                 <th className="pb-1.5 font-medium">
@@ -158,9 +158,9 @@ export default function ShiftResultsForm({
             <tbody>
               {rows.map((r, i) => (
                 <tr key={r.startTime}>
-                  <td className="py-1 pr-3 tabular-nums text-gray-700">
+                  <td className="py-1 pr-3 tabular-nums text-ink/80">
                     {r.startTime}–{r.endTime}
-                    {r.hours < 1 && <span className="ml-1 text-[10px] text-gray-400">({Math.round(r.hours * 60)} น.)</span>}
+                    {r.hours < 1 && <span className="ml-1 text-[10px] text-stone-400">({Math.round(r.hours * 60)} น.)</span>}
                   </td>
                   <td className="py-1 pr-3">
                     <input type="number" inputMode="numeric" min={0} value={r.viewers} onChange={(e) => setRow(i, "viewers", e.target.value)} className={inputCls} placeholder="ว่างได้" />
@@ -174,7 +174,7 @@ export default function ShiftResultsForm({
           </table>
           <div className="mt-3 grid grid-cols-3 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">ยอดขายรวมทั้งกะ (บาท)</label>
+              <label className="mb-1 block text-xs font-medium text-muted">ยอดขายรวมทั้งกะ (บาท)</label>
               <input
                 type="number"
                 inputMode="decimal"
@@ -183,59 +183,59 @@ export default function ShiftResultsForm({
                 value={perHourMode ? String(Math.round(preview.sales * 100) / 100) : totalSales}
                 readOnly={perHourMode}
                 onChange={(e) => setTotalSales(e.target.value)}
-                className={clsx(inputCls, perHourMode && "bg-gray-100 text-gray-500")}
+                className={clsx(inputCls, perHourMode && "bg-stone-100 text-muted")}
                 placeholder="0"
               />
-              {perHourMode && <p className="mt-1 text-[10px] text-gray-400">รวมจากรายชั่วโมงอัตโนมัติ</p>}
+              {perHourMode && <p className="mt-1 text-[10px] text-stone-400">รวมจากรายชั่วโมงอัตโนมัติ</p>}
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">คนดูสูงสุดทั้งกะ</label>
+              <label className="mb-1 block text-xs font-medium text-muted">คนดูสูงสุดทั้งกะ</label>
               <input type="number" inputMode="numeric" min={0} value={peak} onChange={(e) => setPeak(e.target.value)} className={inputCls} placeholder="-" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">ออเดอร์รวม</label>
+              <label className="mb-1 block text-xs font-medium text-muted">ออเดอร์รวม</label>
               <input type="number" inputMode="numeric" min={0} value={orders} onChange={(e) => setOrders(e.target.value)} className={inputCls} placeholder="-" />
             </div>
           </div>
-          {!perHourMode && <p className="mt-2 text-[11px] text-gray-400">ถ้าไม่แยกยอดขายรายชั่วโมง ระบบจะเฉลี่ยยอดรวมลงทุกชั่วโมงเท่า ๆ กันเพื่อใช้ในหน้าวิเคราะห์ ส่วนค่าตอบแทนคิดจากยอดรวมเท่านั้น</p>}
+          {!perHourMode && <p className="mt-2 text-[11px] text-stone-400">ถ้าไม่แยกยอดขายรายชั่วโมง ระบบจะเฉลี่ยยอดรวมลงทุกชั่วโมงเท่า ๆ กันเพื่อใช้ในหน้าวิเคราะห์ ส่วนค่าตอบแทนคิดจากยอดรวมเท่านั้น</p>}
         </div>
 
         {/* พรีวิว */}
-        <div className="rounded-xl bg-gray-50 p-4 lg:col-span-2">
-          <p className="text-xs font-semibold text-gray-600">สรุปกะนี้ (คำนวณสดตามที่กรอก)</p>
+        <div className="rounded-xl bg-paper p-4 lg:col-span-2">
+          <p className="text-xs font-semibold text-muted">สรุปกะนี้ (คำนวณสดตามที่กรอก)</p>
           <dl className="mt-2 space-y-1.5 text-sm">
             <div className="flex justify-between">
-              <dt className="text-gray-500">คนดูเฉลี่ยทั้งกะ</dt>
-              <dd className="tabular-nums text-gray-800">
+              <dt className="text-muted">คนดูเฉลี่ยทั้งกะ</dt>
+              <dd className="tabular-nums text-ink">
                 {preview.avgViewers === null ? "-" : formatNum(preview.avgViewers)}
-                {preview.filled > 0 && preview.filled < rows.length && <span className="ml-1 text-[10px] text-gray-400">(จาก {preview.filled}/{rows.length} ชม. ที่กรอก)</span>}
+                {preview.filled > 0 && preview.filled < rows.length && <span className="ml-1 text-[10px] text-stone-400">(จาก {preview.filled}/{rows.length} ชม. ที่กรอก)</span>}
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">ชั่วโมงไลฟ์</dt>
-              <dd className="tabular-nums text-gray-800">{formatNum(totalHours, 2)}</dd>
+              <dt className="text-muted">ชั่วโมงไลฟ์</dt>
+              <dd className="tabular-nums text-ink">{formatNum(totalHours, 2)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">ยอดขาย</dt>
-              <dd className="tabular-nums text-gray-800">{formatBaht(preview.sales)} ฿</dd>
+              <dt className="text-muted">ยอดขาย</dt>
+              <dd className="tabular-nums text-ink">{formatBaht(preview.sales)} ฿</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">หลังหักค่าส่ง {formatNum(settings.shippingPct, 2)}%</dt>
-              <dd className="tabular-nums text-gray-800">{formatBaht(preview.pay.net)} ฿</dd>
+              <dt className="text-muted">หลังหักค่าส่ง {formatNum(settings.shippingPct, 2)}%</dt>
+              <dd className="tabular-nums text-ink">{formatBaht(preview.pay.net)} ฿</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">คอม {formatNum(settings.commissionPct, 2)}%</dt>
-              <dd className="tabular-nums text-gray-800">{formatBaht(preview.pay.commission)} ฿</dd>
+              <dt className="text-muted">คอม {formatNum(settings.commissionPct, 2)}%</dt>
+              <dd className="tabular-nums text-ink">{formatBaht(preview.pay.commission)} ฿</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">ขั้นต่ำ {formatBaht(settings.minHourly)} × {formatNum(totalHours, 2)} ชม.</dt>
-              <dd className="tabular-nums text-gray-800">{formatBaht(preview.pay.minPay)} ฿</dd>
+              <dt className="text-muted">ขั้นต่ำ {formatBaht(settings.minHourly)} × {formatNum(totalHours, 2)} ชม.</dt>
+              <dd className="tabular-nums text-ink">{formatBaht(preview.pay.minPay)} ฿</dd>
             </div>
           </dl>
-          <div className="mt-3 border-t border-gray-200 pt-3">
-            <p className="text-[11px] text-gray-400">จ่ายคนไลฟ์</p>
-            <p className={clsx("text-xl font-bold tabular-nums", preview.pay.hitMinimum ? "text-amber-700" : "text-gray-800")}>{formatBaht(preview.pay.pay)} ฿</p>
-            <p className="text-xs text-gray-500">
+          <div className="mt-3 border-t border-line pt-3">
+            <p className="text-[11px] text-stone-400">จ่ายคนไลฟ์</p>
+            <p className={clsx("text-xl font-bold tabular-nums", preview.pay.hitMinimum ? "text-amber-700" : "text-ink")}>{formatBaht(preview.pay.pay)} ฿</p>
+            <p className="text-xs text-muted">
               {preview.pay.hitMinimum
                 ? `ไม่ถึงขั้นต่ำ จ่ายตามขั้นต่ำ = คอมจริง ${preview.pay.effectivePct === null ? "-" : formatNum(preview.pay.effectivePct, 1) + "%"}`
                 : `ตามคอมมิชชั่น ${formatNum(settings.commissionPct, 2)}%`}
@@ -246,7 +246,7 @@ export default function ShiftResultsForm({
 
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       {saved && <p className="mt-3 text-sm text-emerald-600">บันทึกแล้ว</p>}
-      <button type="submit" disabled={saving} className="mt-4 rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-medium text-white shadow-md shadow-brand-600/20 hover:bg-brand-700 disabled:opacity-50">
+      <button type="submit" disabled={saving} className="mt-4 rounded-xl bg-ink px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50">
         {saving ? "กำลังบันทึก..." : hasExisting ? "บันทึกการแก้ไข" : "บันทึกผลกะนี้"}
       </button>
     </form>

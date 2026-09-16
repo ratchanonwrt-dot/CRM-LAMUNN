@@ -46,20 +46,20 @@ export default async function SessionsPage({ searchParams }: { searchParams: { m
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">บันทึกรอบไลฟ์</h1>
-          <p className="text-sm text-gray-500">{thaiMonthLabel(year, month)} · {rows.length} รอบ · {formatHours(monthHours)} · ยอดขาย {formatBaht(monthSales)} บาท</p>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">บันทึกรอบไลฟ์</h1>
+          <p className="text-sm text-muted">{thaiMonthLabel(year, month)} · {rows.length} รอบ · {formatHours(monthHours)} · ยอดขาย {formatBaht(monthSales)} บาท</p>
         </div>
         <div className="flex items-center gap-2">
           <MonthPicker year={year} month={month} />
-          <Link href="/sessions/new" className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-md shadow-brand-600/20 hover:bg-brand-700">
+          <Link href="/sessions/new" className="rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600">
             + รอบไลฟ์ใหม่
           </Link>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-card">
         <table className="w-full min-w-[820px] text-sm">
-          <thead className="bg-gray-50 text-left text-gray-500">
+          <thead className="bg-paper/70 text-left text-[11px] font-semibold uppercase tracking-wider text-muted">
             <tr>
               <th className="px-3 py-2">วันที่</th>
               <th className="px-3 py-2">ช่องทาง / รอบ</th>
@@ -74,29 +74,29 @@ export default async function SessionsPage({ searchParams }: { searchParams: { m
           </thead>
           <tbody>
             {rows.map(({ s, hours, avgViewers, sales, peak, streamers, pendingShifts }) => (
-              <tr key={s.id} className="border-t border-gray-100 hover:bg-gray-50/60">
-                <td className="px-3 py-2 font-medium text-gray-800">{formatThaiDateShort(s.date)}</td>
+              <tr key={s.id} className="border-t border-line/60 hover:bg-paper/60">
+                <td className="px-3 py-2 font-medium text-ink">{formatThaiDateShort(s.date)}</td>
                 <td className="px-3 py-2">
-                  <span className="text-gray-800">{s.channel?.name ?? "-"}</span>
-                  {s.title && <span className="ml-1.5 text-xs text-gray-400">{s.title}</span>}
+                  <span className="text-ink">{s.channel?.name ?? "-"}</span>
+                  {s.title && <span className="ml-1.5 text-xs text-stone-400">{s.title}</span>}
                 </td>
-                <td className="px-3 py-2 text-gray-500">
+                <td className="px-3 py-2 text-muted">
                   {s.startTime ?? "?"}–{s.endTime ?? "?"}
-                  {hours > 0 && <span className="ml-1 text-xs text-gray-400">({formatHours(hours)})</span>}
+                  {hours > 0 && <span className="ml-1 text-xs text-stone-400">({formatHours(hours)})</span>}
                 </td>
-                <td className="px-3 py-2 text-gray-600">
+                <td className="px-3 py-2 text-muted">
                   {streamers.length > 0 && <span>{streamers.join(", ")}</span>}
                   {pendingShifts.length > 0 && (
                     <span className="block text-xs text-amber-700">
                       รอกรอก: {pendingShifts.map((sh) => `${sh.streamer.name} ${sh.startTime}–${sh.endTime}`).join(", ")}
                     </span>
                   )}
-                  {streamers.length === 0 && pendingShifts.length === 0 && <span className="text-gray-300">ยังไม่บันทึก</span>}
+                  {streamers.length === 0 && pendingShifts.length === 0 && <span className="text-stone-300">ยังไม่บันทึก</span>}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-gray-500">{s.slots.length}</td>
-                <td className="px-3 py-2 text-right tabular-nums text-gray-800">{avgViewers ? formatNum(avgViewers) : "-"}</td>
-                <td className="px-3 py-2 text-right tabular-nums text-gray-500">{peak === null ? "-" : formatNum(peak)}</td>
-                <td className="px-3 py-2 text-right tabular-nums text-gray-800">{s.slots.length ? formatBaht(sales) : "-"}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-muted">{s.slots.length}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-ink">{avgViewers ? formatNum(avgViewers) : "-"}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-muted">{peak === null ? "-" : formatNum(peak)}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-ink">{s.slots.length ? formatBaht(sales) : "-"}</td>
                 <td className="px-3 py-2 text-right">
                   <Link href={`/sessions/${s.id}`} className="font-medium text-brand-600 hover:underline">
                     {s.slots.length ? "เปิด" : "บันทึกยอด"}
@@ -106,7 +106,7 @@ export default async function SessionsPage({ searchParams }: { searchParams: { m
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={9} className="px-4 py-8 text-center text-stone-400">
                   เดือนนี้ยังไม่มีรอบไลฟ์ — ลงกะที่{" "}
                   <Link href="/schedule" className="text-brand-600 hover:underline">
                     ตารางไลฟ์

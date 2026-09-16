@@ -15,9 +15,9 @@ function todayTH(): Date {
 }
 
 function IndexBadge({ s }: { s: StreamerStat }) {
-  if (s.index === null) return <span className="text-xs text-gray-300">เทียบไม่ได้</span>;
+  if (s.index === null) return <span className="text-xs text-stone-300">เทียบไม่ได้</span>;
   const pct = Math.round((s.index - 1) * 100);
-  const tone = s.index >= 1.15 ? "bg-emerald-100 text-emerald-700" : s.index <= 0.85 ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600";
+  const tone = s.index >= 1.15 ? "bg-emerald-100 text-emerald-700" : s.index <= 0.85 ? "bg-red-100 text-red-700" : "bg-stone-100 text-muted";
   return (
     <span className={clsx("inline-block rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums", tone)} title={`คนดูจริง ${formatNum(s.avgViewers)} เทียบกับที่ช่วงเวลาเดียวกันมักได้ ${formatNum(s.expectedViewers)}`}>
       {pct > 0 ? "+" : ""}
@@ -31,10 +31,10 @@ function Meter({ label, value, hint }: { label: string; value: number; hint: str
   return (
     <div title={hint}>
       <div className="mb-1 flex items-baseline justify-between text-sm">
-        <span className="font-medium text-gray-700">{label}</span>
-        <span className="tabular-nums text-gray-800">{pct}%</span>
+        <span className="font-medium text-ink/80">{label}</span>
+        <span className="tabular-nums text-ink">{pct}%</span>
       </div>
-      <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
+      <div className="h-2.5 overflow-hidden rounded-full bg-stone-100">
         <div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -91,10 +91,10 @@ export default async function AnalysisPage({ searchParams }: { searchParams: { f
     <div>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">วิเคราะห์ยอดไลฟ์</h1>
-          <p className="text-sm text-gray-500">ช่วงเวลาไหนคนดูเยอะ · คนดูมาเพราะเวลาหรือเพราะคน · ใครไลฟ์เก่ง</p>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">วิเคราะห์ยอดไลฟ์</h1>
+          <p className="text-sm text-muted">ช่วงเวลาไหนคนดูเยอะ · คนดูมาเพราะเวลาหรือเพราะคน · ใครไลฟ์เก่ง</p>
         </div>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-stone-400">
           {a.totals.slots} ช่วง · {a.totals.sessions} รอบ · {a.totals.days} วัน · {formatHours(a.totals.hours)}
         </p>
       </div>
@@ -102,7 +102,7 @@ export default async function AnalysisPage({ searchParams }: { searchParams: { f
       <AnalysisFilters from={fromStr} to={toStr} channelId={channelId} channels={channels.map((c) => ({ id: c.id, name: c.name }))} />
 
       {rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center text-gray-400">
+        <div className="rounded-2xl border border-dashed border-line bg-white p-10 text-center text-stone-400">
           ยังไม่มีข้อมูลในช่วงที่เลือก —{" "}
           <Link href="/sessions/new" className="text-brand-600 hover:underline">
             บันทึกรอบไลฟ์
@@ -121,18 +121,18 @@ export default async function AnalysisPage({ searchParams }: { searchParams: { f
               { label: "ช่วงเวลาที่คนดูเยอะสุด", value: bestHour ? `${bestHour.label}` : "-", sub: bestHour ? `เฉลี่ย ${formatNum(bestHour.avgViewers)} คน` : undefined },
               { label: "คนไลฟ์เด่นสุด", value: topStreamer?.label ?? "-", sub: topStreamer?.index !== null && topStreamer ? `${topStreamer.index >= 1 ? "+" : ""}${Math.round((topStreamer.index - 1) * 100)}% เทียบช่วงเดียวกัน` : undefined },
             ].map((c) => (
-              <div key={c.label} className="rounded-xl border border-gray-200 bg-white p-3">
-                <p className="text-[11px] text-gray-400">{c.label}</p>
-                <p className="mt-0.5 truncate text-lg font-semibold tabular-nums text-gray-800">{c.value}</p>
-                {c.sub && <p className="text-[11px] text-gray-400">{c.sub}</p>}
+              <div key={c.label} className="rounded-2xl border border-line bg-white shadow-card p-3">
+                <p className="text-[11px] text-stone-400">{c.label}</p>
+                <p className="mt-0.5 truncate text-lg font-semibold tabular-nums text-ink">{c.value}</p>
+                {c.sub && <p className="text-[11px] text-stone-400">{c.sub}</p>}
               </div>
             ))}
           </div>
 
           {/* คนหรือเวลา */}
-          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-gray-700">คนดูมาเพราะ &quot;เวลา&quot; หรือเพราะ &quot;คนไลฟ์&quot;?</h2>
-            <p className="mb-4 text-xs text-gray-400">
+          <section className="mb-6 rounded-2xl border border-line bg-white shadow-card p-5">
+            <h2 className="font-display text-[15px] font-semibold text-ink">คนดูมาเพราะ &quot;เวลา&quot; หรือเพราะ &quot;คนไลฟ์&quot;?</h2>
+            <p className="mb-4 text-xs text-stone-400">
               สัดส่วนความแตกต่างของยอดคนดูระหว่างช่วงต่าง ๆ ที่แต่ละปัจจัยอธิบายได้ (ยิ่งสูงยิ่งมีผล) — คำนวณจาก {d.n} ช่วงเวลาที่บันทึกไว้
             </p>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -145,9 +145,9 @@ export default async function AnalysisPage({ searchParams }: { searchParams: { f
 
           {/* ช่วงเวลา */}
           <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <section className="rounded-xl border border-gray-200 bg-white p-5">
-              <h2 className="text-sm font-semibold text-gray-700">คนดูเฉลี่ยตามช่วงเวลา</h2>
-              <p className="mb-3 text-xs text-gray-400">{bestHour ? `พีคที่ ${bestHour.label} (เฉลี่ย ${formatNum(bestHour.avgViewers)} คน จาก ${bestHour.slots} ช่วง)` : ""}</p>
+            <section className="rounded-2xl border border-line bg-white shadow-card p-5">
+              <h2 className="font-display text-[15px] font-semibold text-ink">คนดูเฉลี่ยตามช่วงเวลา</h2>
+              <p className="mb-3 text-xs text-stone-400">{bestHour ? `พีคที่ ${bestHour.label} (เฉลี่ย ${formatNum(bestHour.avgViewers)} คน จาก ${bestHour.slots} ช่วง)` : ""}</p>
               <BarChart
                 data={hourRange.map((h) => ({
                   key: h.key,
@@ -158,9 +158,9 @@ export default async function AnalysisPage({ searchParams }: { searchParams: { f
                 }))}
               />
             </section>
-            <section className="rounded-xl border border-gray-200 bg-white p-5">
-              <h2 className="text-sm font-semibold text-gray-700">ยอดขายต่อชั่วโมง ตามช่วงเวลา</h2>
-              <p className="mb-3 text-xs text-gray-400">{bestSalesHour ? `ขายดีสุดที่ ${bestSalesHour.label} (${formatBaht(bestSalesHour.salesPerHour)} ฿/ชม.)` : ""}</p>
+            <section className="rounded-2xl border border-line bg-white shadow-card p-5">
+              <h2 className="font-display text-[15px] font-semibold text-ink">ยอดขายต่อชั่วโมง ตามช่วงเวลา</h2>
+              <p className="mb-3 text-xs text-stone-400">{bestSalesHour ? `ขายดีสุดที่ ${bestSalesHour.label} (${formatBaht(bestSalesHour.salesPerHour)} ฿/ชม.)` : ""}</p>
               <BarChart
                 data={hourRange.map((h) => ({
                   key: h.key,
@@ -175,14 +175,14 @@ export default async function AnalysisPage({ searchParams }: { searchParams: { f
           </div>
 
           {/* คนไลฟ์ */}
-          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-gray-700">ใครไลฟ์เก่ง — เทียบกับ &quot;ช่วงเวลาเดียวกัน&quot;</h2>
-            <p className="mb-3 text-xs text-gray-400">
+          <section className="mb-6 rounded-2xl border border-line bg-white shadow-card p-5">
+            <h2 className="font-display text-[15px] font-semibold text-ink">ใครไลฟ์เก่ง — เทียบกับ &quot;ช่วงเวลาเดียวกัน&quot;</h2>
+            <p className="mb-3 text-xs text-stone-400">
               คอลัมน์ &quot;เทียบช่วงเดียวกัน&quot; = คนดูจริงของคนนี้ เทียบกับคนดูที่คนอื่นได้ในชั่วโมงเดียวกัน (ตัดผลของเวลาออก) — บวก = ดึงคนดูได้เกินค่าปกติของช่วงนั้น
             </p>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] text-sm">
-                <thead className="bg-gray-50 text-left text-gray-500">
+                <thead className="bg-paper/70 text-left text-[11px] font-semibold uppercase tracking-wider text-muted">
                   <tr>
                     <th className="px-3 py-2">คนไลฟ์</th>
                     <th className="px-3 py-2 text-right">วัน</th>
@@ -198,22 +198,22 @@ export default async function AnalysisPage({ searchParams }: { searchParams: { f
                 </thead>
                 <tbody>
                   {streamerRows.map((s, i) => (
-                    <tr key={s.key} className="border-t border-gray-100">
-                      <td className="px-3 py-2 font-medium text-gray-800">
-                        <span className="mr-2 inline-block w-5 text-center text-xs text-gray-300">{i + 1}</span>
+                    <tr key={s.key} className="border-t border-line/60">
+                      <td className="px-3 py-2 font-medium text-ink">
+                        <span className="mr-2 inline-block w-5 text-center text-xs text-stone-300">{i + 1}</span>
                         {s.label}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums text-gray-500">{s.days}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-gray-500">{formatNum(s.hours, 1)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums font-medium text-gray-800">{formatNum(s.avgViewers)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-gray-500">{s.comparable ? formatNum(s.expectedViewers) : "-"}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-muted">{s.days}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-muted">{formatNum(s.hours, 1)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums font-medium text-ink">{formatNum(s.avgViewers)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-muted">{s.comparable ? formatNum(s.expectedViewers) : "-"}</td>
                       <td className="px-3 py-2 text-center">
                         <IndexBadge s={s} />
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums text-gray-500">{s.peakViewers === null ? "-" : formatNum(s.peakViewers)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-gray-800">{formatBaht(s.totalSales)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-gray-800">{formatBaht(s.salesPerHour)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-gray-500">{s.orders ? formatNum(s.orders) : "-"}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-muted">{s.peakViewers === null ? "-" : formatNum(s.peakViewers)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-ink">{formatBaht(s.totalSales)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-ink">{formatBaht(s.salesPerHour)}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-muted">{s.orders ? formatNum(s.orders) : "-"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -222,9 +222,9 @@ export default async function AnalysisPage({ searchParams }: { searchParams: { f
           </section>
 
           {/* Heatmap คนไลฟ์ x ชั่วโมง */}
-          <section className="mb-6 rounded-xl border border-gray-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-gray-700">คนไลฟ์ × ช่วงเวลา (คนดูเฉลี่ย)</h2>
-            <p className="mb-3 text-xs text-gray-400">ใช้จับคู่ว่าใครควรไลฟ์ช่วงไหน — สีเข้ม = คนดูเยอะ, จุด = ยังไม่เคยไลฟ์ช่วงนั้น</p>
+          <section className="mb-6 rounded-2xl border border-line bg-white shadow-card p-5">
+            <h2 className="font-display text-[15px] font-semibold text-ink">คนไลฟ์ × ช่วงเวลา (คนดูเฉลี่ย)</h2>
+            <p className="mb-3 text-xs text-stone-400">ใช้จับคู่ว่าใครควรไลฟ์ช่วงไหน — สีเข้ม = คนดูเยอะ, จุด = ยังไม่เคยไลฟ์ช่วงนั้น</p>
             <Heatmap
               rowLabels={streamerRows.map((s) => s.label)}
               colLabels={hoursAll.map((h) => String(h).padStart(2, "0"))}
@@ -241,9 +241,9 @@ export default async function AnalysisPage({ searchParams }: { searchParams: { f
 
           {/* วัน x ชั่วโมง + วันในสัปดาห์ */}
           <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <section className="rounded-xl border border-gray-200 bg-white p-5 xl:col-span-2">
-              <h2 className="text-sm font-semibold text-gray-700">วันในสัปดาห์ × ช่วงเวลา (คนดูเฉลี่ย)</h2>
-              <p className="mb-3 text-xs text-gray-400">ดูว่าวันไหน-เวลาไหนคนดูเยอะ</p>
+            <section className="rounded-2xl border border-line bg-white shadow-card p-5 xl:col-span-2">
+              <h2 className="font-display text-[15px] font-semibold text-ink">วันในสัปดาห์ × ช่วงเวลา (คนดูเฉลี่ย)</h2>
+              <p className="mb-3 text-xs text-stone-400">ดูว่าวันไหน-เวลาไหนคนดูเยอะ</p>
               <Heatmap
                 rowLabels={DOW_LABEL}
                 colLabels={hoursAll.map((h) => String(h).padStart(2, "0"))}
@@ -256,9 +256,9 @@ export default async function AnalysisPage({ searchParams }: { searchParams: { f
                 compact
               />
             </section>
-            <section className="rounded-xl border border-gray-200 bg-white p-5">
-              <h2 className="text-sm font-semibold text-gray-700">คนดูเฉลี่ยตามวันในสัปดาห์</h2>
-              <p className="mb-3 text-xs text-gray-400">{bestDow ? `ดีสุดวัน${bestDow.label} (เฉลี่ย ${formatNum(bestDow.avgViewers)} คน)` : ""}</p>
+            <section className="rounded-2xl border border-line bg-white shadow-card p-5">
+              <h2 className="font-display text-[15px] font-semibold text-ink">คนดูเฉลี่ยตามวันในสัปดาห์</h2>
+              <p className="mb-3 text-xs text-stone-400">{bestDow ? `ดีสุดวัน${bestDow.label} (เฉลี่ย ${formatNum(bestDow.avgViewers)} คน)` : ""}</p>
               <BarChart
                 height={140}
                 data={a.byDow.map((dd, i) => ({
@@ -274,11 +274,11 @@ export default async function AnalysisPage({ searchParams }: { searchParams: { f
 
           {/* ช่องทาง */}
           {a.byChannel.length > 1 && (
-            <section className="mb-6 rounded-xl border border-gray-200 bg-white p-5">
-              <h2 className="mb-3 text-sm font-semibold text-gray-700">เทียบช่องทาง</h2>
+            <section className="mb-6 rounded-2xl border border-line bg-white shadow-card p-5">
+              <h2 className="mb-3 font-display text-[15px] font-semibold text-ink">เทียบช่องทาง</h2>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[560px] text-sm">
-                  <thead className="bg-gray-50 text-left text-gray-500">
+                  <thead className="bg-paper/70 text-left text-[11px] font-semibold uppercase tracking-wider text-muted">
                     <tr>
                       <th className="px-3 py-2">ช่องทาง</th>
                       <th className="px-3 py-2 text-right">ชั่วโมง</th>
@@ -290,13 +290,13 @@ export default async function AnalysisPage({ searchParams }: { searchParams: { f
                   </thead>
                   <tbody>
                     {a.byChannel.map((c) => (
-                      <tr key={c.key} className="border-t border-gray-100">
-                        <td className="px-3 py-2 font-medium text-gray-800">{c.label}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-gray-500">{formatNum(c.hours, 1)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-gray-800">{formatNum(c.avgViewers)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-gray-500">{c.peakViewers === null ? "-" : formatNum(c.peakViewers)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-gray-800">{formatBaht(c.totalSales)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-gray-800">{formatBaht(c.salesPerHour)}</td>
+                      <tr key={c.key} className="border-t border-line/60">
+                        <td className="px-3 py-2 font-medium text-ink">{c.label}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-muted">{formatNum(c.hours, 1)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-ink">{formatNum(c.avgViewers)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-muted">{c.peakViewers === null ? "-" : formatNum(c.peakViewers)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-ink">{formatBaht(c.totalSales)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-ink">{formatBaht(c.salesPerHour)}</td>
                       </tr>
                     ))}
                   </tbody>

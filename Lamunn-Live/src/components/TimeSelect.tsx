@@ -25,7 +25,7 @@ export default function TimeSelect({
   const minutes = Array.from({ length: 60 / minuteStep }, (_, i) => String(i * minuteStep).padStart(2, "0"));
   // ค่านาทีที่ไม่ตรง step (เช่นข้อมูลเก่า 17:20) ยังต้องแสดงได้
   const minuteOptions = m && !minutes.includes(m) ? [...minutes, m].sort() : minutes;
-  const selectCls = clsx("rounded-lg border border-gray-200 bg-gray-50 px-2 py-2 text-sm tabular-nums outline-none focus:border-brand-400 focus:bg-white", className);
+  const selectCls = clsx("rounded-xl border border-line bg-white px-2 py-2.5 text-sm tabular-nums text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10", className);
 
   function update(nh: string, nm: string) {
     if (!nh) return onChange("");
@@ -42,7 +42,7 @@ export default function TimeSelect({
           </option>
         ))}
       </select>
-      <span className="text-gray-400">:</span>
+      <span className="text-stone-400">:</span>
       <select value={m} disabled={!h} onChange={(e) => update(h, e.target.value)} className={clsx(selectCls, "flex-1 disabled:opacity-50")} aria-label="นาที">
         {minuteOptions.map((x) => (
           <option key={x} value={x}>

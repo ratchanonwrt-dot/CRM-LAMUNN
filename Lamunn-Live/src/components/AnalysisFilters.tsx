@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 
-const inputCls = "rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-brand-400";
+const inputCls = "rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10";
 
 function iso(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -58,21 +58,21 @@ export default function AnalysisFilters({
   ];
 
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white p-3">
+    <div className="mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-white shadow-card p-3">
       <div className="flex items-center gap-1">
         {presets.map((p) => (
           <button
             key={p.label}
             onClick={() => preset(p.v)}
-            className={clsx("rounded-lg px-2.5 py-1.5 text-xs font-medium", "text-gray-600 hover:bg-gray-100")}
+            className={clsx("rounded-lg px-2.5 py-1.5 text-xs font-medium", "text-muted hover:bg-stone-100")}
           >
             {p.label}
           </button>
         ))}
       </div>
-      <span className="hidden h-5 w-px bg-gray-200 sm:block" />
+      <span className="hidden h-5 w-px bg-stone-200 sm:block" />
       <input type="date" value={f} onChange={(e) => setF(e.target.value)} className={inputCls} />
-      <span className="text-xs text-gray-400">ถึง</span>
+      <span className="text-xs text-stone-400">ถึง</span>
       <input type="date" value={t} onChange={(e) => setT(e.target.value)} className={inputCls} />
       <select value={ch} onChange={(e) => setCh(e.target.value)} className={inputCls}>
         <option value="">ทุกช่องทาง</option>
@@ -82,7 +82,7 @@ export default function AnalysisFilters({
           </option>
         ))}
       </select>
-      <button onClick={() => apply()} className="rounded-lg bg-brand-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
+      <button onClick={() => apply()} className="rounded-lg bg-ink px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-600">
         ดูผล
       </button>
     </div>

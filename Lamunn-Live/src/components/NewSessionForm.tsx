@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import TimeSelect from "@/components/TimeSelect";
 
-const inputCls = "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white";
+const inputCls = "w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10";
 
 export default function NewSessionForm({ channels, defaultDate }: { channels: { id: string; name: string }[]; defaultDate: string }) {
   const router = useRouter();
@@ -38,14 +38,14 @@ export default function NewSessionForm({ channels, defaultDate }: { channels: { 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-gray-200 bg-white p-5">
+    <form onSubmit={handleSubmit} className="rounded-2xl border border-line bg-white shadow-card p-5">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">วันที่ไลฟ์</label>
+          <label className="mb-1 block text-xs font-medium text-muted">วันที่ไลฟ์</label>
           <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">ช่องทาง</label>
+          <label className="mb-1 block text-xs font-medium text-muted">ช่องทาง</label>
           <select value={channelId} onChange={(e) => setChannelId(e.target.value)} className={inputCls}>
             <option value="">ไม่ระบุ</option>
             {channels.map((c) => (
@@ -56,24 +56,24 @@ export default function NewSessionForm({ channels, defaultDate }: { channels: { 
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">เวลาเริ่มไลฟ์ (ประมาณ)</label>
+          <label className="mb-1 block text-xs font-medium text-muted">เวลาเริ่มไลฟ์ (ประมาณ)</label>
           <TimeSelect value={startTime} onChange={(v) => setStartTime(v)} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">เวลาจบไลฟ์ (เติมทีหลังได้)</label>
+          <label className="mb-1 block text-xs font-medium text-muted">เวลาจบไลฟ์ (เติมทีหลังได้)</label>
           <TimeSelect value={endTime} onChange={(v) => setEndTime(v)} />
         </div>
         <div className="sm:col-span-2">
-          <label className="mb-1 block text-xs font-medium text-gray-500">ชื่อรอบ / แคมเปญ (ถ้ามี)</label>
+          <label className="mb-1 block text-xs font-medium text-muted">ชื่อรอบ / แคมเปญ (ถ้ามี)</label>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="เช่น 9.9 Mega Sale, ไลฟ์ประจำวัน" className={inputCls} />
         </div>
         <div className="sm:col-span-2">
-          <label className="mb-1 block text-xs font-medium text-gray-500">หมายเหตุ</label>
+          <label className="mb-1 block text-xs font-medium text-muted">หมายเหตุ</label>
           <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="เช่น มีโปรพิเศษ, เน็ตหลุดช่วง 20:00" className={inputCls} />
         </div>
       </div>
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-      <button type="submit" disabled={saving} className="mt-4 rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-medium text-white shadow-md shadow-brand-600/20 hover:bg-brand-700 disabled:opacity-50">
+      <button type="submit" disabled={saving} className="mt-4 rounded-xl bg-ink px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50">
         {saving ? "กำลังสร้าง..." : "สร้างรอบ แล้วไปบันทึกยอด →"}
       </button>
     </form>

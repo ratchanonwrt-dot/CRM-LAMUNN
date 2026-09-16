@@ -10,20 +10,33 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
       colors: {
-        // Rose/red — distinct from Catering's orange and Finance's palette so browser tabs are easy to tell apart.
+        // พื้นผิวกระดาษอุ่น ๆ + หมึกเข้ม แทนเทา/ขาวมาตรฐาน
+        paper: "#f5f3ee",
+        ink: "#1b1a17",
+        muted: "#6e6960",
+        line: "#e5e0d6",
+        // Accent ของแอปหลังบ้าน: ส้มอิฐ (ember) — ใช้เน้นจุดสำคัญ ไม่เททั้งหน้า
         brand: {
-          50: "#fff1f2",
-          100: "#ffe4e6",
-          200: "#fecdd3",
-          300: "#fda4af",
-          400: "#fb7185",
-          500: "#f43f5e",
-          600: "#e11d48",
-          700: "#be123c",
-          800: "#9f1239",
-          900: "#881337",
+          50: "#fff4ee",
+          100: "#ffe5d6",
+          200: "#ffc8ad",
+          300: "#ffa27a",
+          400: "#fb7a47",
+          500: "#ef5a26",
+          600: "#d3441a",
+          700: "#ad3515",
+          800: "#8b2c15",
+          900: "#722713",
         },
+      },
+      boxShadow: {
+        card: "0 1px 2px rgba(27, 26, 23, 0.04), 0 10px 30px -18px rgba(27, 26, 23, 0.25)",
+        pop: "0 24px 60px -20px rgba(27, 26, 23, 0.35)",
       },
     },
   },

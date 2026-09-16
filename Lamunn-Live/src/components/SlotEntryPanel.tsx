@@ -37,7 +37,7 @@ interface FormState {
   note: string;
 }
 
-const inputCls = "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white";
+const inputCls = "w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10";
 
 function minutesToTime(m: number): string {
   const mm = ((m % (24 * 60)) + 24 * 60) % (24 * 60);
@@ -203,19 +203,19 @@ export default function SlotEntryPanel({
           { label: "ยอดขายรวม", value: slots.length ? `${formatBaht(summary.sales)} ฿` : "-" },
           { label: "ออเดอร์", value: summary.orders ? formatNum(summary.orders) : "-" },
         ].map((c) => (
-          <div key={c.label} className="rounded-xl border border-gray-200 bg-white p-3">
-            <p className="text-[11px] text-gray-400">{c.label}</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums text-gray-800">{c.value}</p>
+          <div key={c.label} className="rounded-2xl border border-line bg-white shadow-card p-3">
+            <p className="text-[11px] text-stone-400">{c.label}</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums text-ink">{c.value}</p>
           </div>
         ))}
       </div>
 
       {/* ฟอร์มกรอกช่วงเวลา */}
-      <form onSubmit={submit} className={clsx("mb-5 rounded-xl border bg-white p-4", editingId ? "border-brand-300 ring-2 ring-brand-100" : "border-gray-200")}>
+      <form onSubmit={submit} className={clsx("mb-5 rounded-xl border bg-white p-4", editingId ? "border-brand-300 ring-2 ring-brand-100" : "border-line")}>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">{editingId ? "แก้ไขช่วงเวลา" : "บันทึกช่วงเวลาใหม่"}</h2>
+          <h2 className="font-display text-[15px] font-semibold text-ink">{editingId ? "แก้ไขช่วงเวลา" : "บันทึกช่วงเวลาใหม่"}</h2>
           {editingId && (
-            <button type="button" onClick={cancelEdit} className="text-xs text-gray-400 hover:text-gray-600">
+            <button type="button" onClick={cancelEdit} className="text-xs text-stone-400 hover:text-muted">
               ยกเลิกการแก้ไข
             </button>
           )}
@@ -225,7 +225,7 @@ export default function SlotEntryPanel({
         )}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
           <div className="col-span-2">
-            <label className="mb-1 block text-xs font-medium text-gray-500">คนไลฟ์</label>
+            <label className="mb-1 block text-xs font-medium text-muted">คนไลฟ์</label>
             <select required value={form.streamerId} onChange={(e) => set("streamerId", e.target.value)} className={inputCls}>
               <option value="">เลือก...</option>
               {streamers.map((s) => (
@@ -236,38 +236,38 @@ export default function SlotEntryPanel({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">เริ่ม</label>
+            <label className="mb-1 block text-xs font-medium text-muted">เริ่ม</label>
             <TimeSelect value={form.startTime} onChange={(v) => set("startTime", v)} required />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">ถึง</label>
+            <label className="mb-1 block text-xs font-medium text-muted">ถึง</label>
             <TimeSelect value={form.endTime} onChange={(v) => set("endTime", v)} required />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">คนดู (เฉลี่ย, ไม่บังคับ)</label>
+            <label className="mb-1 block text-xs font-medium text-muted">คนดู (เฉลี่ย, ไม่บังคับ)</label>
             <input type="number" inputMode="numeric" min={0} value={form.viewers} onChange={(e) => set("viewers", e.target.value)} className={inputCls} />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">คนดูสูงสุด</label>
+            <label className="mb-1 block text-xs font-medium text-muted">คนดูสูงสุด</label>
             <input type="number" inputMode="numeric" min={0} value={form.peakViewers} onChange={(e) => set("peakViewers", e.target.value)} className={inputCls} />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">ยอดขาย (บาท)</label>
+            <label className="mb-1 block text-xs font-medium text-muted">ยอดขาย (บาท)</label>
             <input type="number" inputMode="decimal" min={0} step="any" value={form.sales} onChange={(e) => set("sales", e.target.value)} className={inputCls} />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">ออเดอร์</label>
+            <label className="mb-1 block text-xs font-medium text-muted">ออเดอร์</label>
             <input type="number" inputMode="numeric" min={0} value={form.orders} onChange={(e) => set("orders", e.target.value)} className={inputCls} />
           </div>
           <div className="col-span-2 sm:col-span-4 lg:col-span-6">
-            <label className="mb-1 block text-xs font-medium text-gray-500">หมายเหตุ (เช่น เล่นเกมแจกของ, เน็ตหลุด, สินค้าหมด)</label>
+            <label className="mb-1 block text-xs font-medium text-muted">หมายเหตุ (เช่น เล่นเกมแจกของ, เน็ตหลุด, สินค้าหมด)</label>
             <input value={form.note} onChange={(e) => set("note", e.target.value)} className={inputCls} />
           </div>
           <div className="col-span-2 flex items-end">
             <button
               type="submit"
               disabled={saving || streamers.length === 0}
-              className="w-full rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-medium text-white shadow-md shadow-brand-600/20 hover:bg-brand-700 disabled:opacity-50"
+              className="w-full rounded-xl bg-ink px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50"
             >
               {saving ? "กำลังบันทึก..." : editingId ? "บันทึกการแก้ไข" : "+ เพิ่มช่วงนี้"}
             </button>
@@ -277,9 +277,9 @@ export default function SlotEntryPanel({
       </form>
 
       {/* ตารางช่วงเวลา */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-card">
         <table className="w-full min-w-[760px] text-sm">
-          <thead className="bg-gray-50 text-left text-gray-500">
+          <thead className="bg-paper/70 text-left text-[11px] font-semibold uppercase tracking-wider text-muted">
             <tr>
               <th className="px-3 py-2">เวลา</th>
               <th className="px-3 py-2">คนไลฟ์</th>
@@ -296,24 +296,24 @@ export default function SlotEntryPanel({
               const h = slotHours(s.startTime, s.endTime);
               const pct = summary.maxViewers > 0 && s.viewers !== null ? (s.viewers / summary.maxViewers) * 100 : 0;
               return (
-                <tr key={s.id} className={clsx("border-t border-gray-100", editingId === s.id && "bg-brand-50/50")}>
-                  <td className="px-3 py-2 tabular-nums text-gray-800">
+                <tr key={s.id} className={clsx("border-t border-line/60", editingId === s.id && "bg-brand-50/50")}>
+                  <td className="px-3 py-2 tabular-nums text-ink">
                     {s.startTime}–{s.endTime}
-                    <span className="ml-1 text-xs text-gray-400">({formatHours(h)})</span>
+                    <span className="ml-1 text-xs text-stone-400">({formatHours(h)})</span>
                   </td>
-                  <td className="px-3 py-2 font-medium text-gray-800">{s.streamerName}</td>
+                  <td className="px-3 py-2 font-medium text-ink">{s.streamerName}</td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <span className="w-12 text-right tabular-nums text-gray-800">{s.viewers === null ? "-" : formatNum(s.viewers)}</span>
-                      <span className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+                      <span className="w-12 text-right tabular-nums text-ink">{s.viewers === null ? "-" : formatNum(s.viewers)}</span>
+                      <span className="h-2 flex-1 overflow-hidden rounded-full bg-stone-100">
                         <span className="block h-full rounded-full bg-brand-400" style={{ width: `${pct}%` }} />
                       </span>
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-gray-500">{s.peakViewers === null ? "-" : formatNum(s.peakViewers)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-gray-800">{s.sales ? formatBaht(s.sales) : "-"}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-gray-500">{s.orders === null ? "-" : formatNum(s.orders)}</td>
-                  <td className="max-w-[200px] truncate px-3 py-2 text-xs text-gray-500" title={s.note ?? ""}>
+                  <td className="px-3 py-2 text-right tabular-nums text-muted">{s.peakViewers === null ? "-" : formatNum(s.peakViewers)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-ink">{s.sales ? formatBaht(s.sales) : "-"}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-muted">{s.orders === null ? "-" : formatNum(s.orders)}</td>
+                  <td className="max-w-[200px] truncate px-3 py-2 text-xs text-muted" title={s.note ?? ""}>
                     {s.note ?? ""}
                   </td>
                   <td className="px-3 py-2 text-right">
@@ -321,7 +321,7 @@ export default function SlotEntryPanel({
                       <button onClick={() => startEdit(s)} className="font-medium text-brand-600 hover:underline">
                         แก้ไข
                       </button>
-                      <button onClick={() => remove(s)} className="text-gray-400 hover:text-red-600">
+                      <button onClick={() => remove(s)} className="text-stone-400 hover:text-red-600">
                         ลบ
                       </button>
                     </div>
@@ -331,7 +331,7 @@ export default function SlotEntryPanel({
             })}
             {slots.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-stone-400">
                   ยังไม่มีข้อมูล — กรอกช่วงเวลาแรกด้านบน (แนะนำแบ่งทุก 30 นาที หรือทุกครั้งที่เปลี่ยนคนไลฟ์)
                 </td>
               </tr>

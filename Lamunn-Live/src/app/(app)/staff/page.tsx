@@ -12,8 +12,8 @@ export default async function StaffPage() {
 
   return (
     <div>
-      <h1 className="mb-2 text-xl font-bold text-gray-800">จัดการผู้ใช้งาน</h1>
-      <p className="mb-6 text-sm text-gray-500">
+      <h1 className="mb-2 font-display text-2xl font-semibold tracking-tight text-ink">จัดการผู้ใช้งาน</h1>
+      <p className="mb-6 text-sm text-muted">
         เพิ่มบัญชีให้พนักงาน/ผู้จัดการเข้ามาใช้งานได้ — กำหนดสิทธิ์เป็น &quot;พนักงาน&quot; (บันทึกยอดไลฟ์ได้ แต่แก้ตั้งค่า/ลบไม่ได้) &quot;ผู้จัดการ&quot;
         (แก้ไขได้ทุกอย่างยกเว้นจัดการผู้ใช้งาน) หรือ &quot;ผู้ดูแลระบบสูงสุด&quot; (ทำได้ทุกอย่าง รวมถึงเพิ่ม/ลบผู้ใช้งาน)
       </p>

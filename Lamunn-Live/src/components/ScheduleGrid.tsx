@@ -62,7 +62,7 @@ interface Option {
 const HOUR_PX = 34;
 const HOURS = Array.from({ length: (GRID_END_MIN - DAY_START_MIN) / 60 + 1 }, (_, i) => DAY_START_MIN + i * 60);
 const COL_HEIGHT = ((GRID_END_MIN - DAY_START_MIN) / 60) * HOUR_PX;
-const inputCls = "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white";
+const inputCls = "w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10";
 /** ตัวเลือกจำนวนชั่วโมง — กดทีเดียวแทนการเลื่อนหาเวลาจบ */
 const HOUR_CHOICES = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
 
@@ -194,15 +194,15 @@ export default function ScheduleGrid({
         <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">ยังไม่มีรายชื่อคนไลฟ์ — เพิ่มที่เมนู &quot;คนไลฟ์&quot; ก่อนจึงจะลงตารางได้</p>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-card">
         <div className="min-w-[900px]">
           {/* หัวตาราง */}
-          <div className="grid border-b border-gray-200" style={{ gridTemplateColumns: `56px repeat(${days.length}, 1fr)` }}>
+          <div className="grid border-b border-line" style={{ gridTemplateColumns: `56px repeat(${days.length}, 1fr)` }}>
             <div />
             {days.map((d) => (
-              <div key={d.date} className={clsx("border-l border-gray-100 px-2 py-2 text-center", d.isToday && "bg-brand-50")}>
-                <p className={clsx("text-sm font-semibold", d.isToday ? "text-brand-700" : "text-gray-700")}>{d.dayLabel}</p>
-                <p className="text-[11px] text-gray-400">
+              <div key={d.date} className={clsx("border-l border-line/60 px-2 py-2 text-center", d.isToday && "bg-brand-50")}>
+                <p className={clsx("text-sm font-semibold", d.isToday ? "text-brand-700" : "text-ink/80")}>{d.dayLabel}</p>
+                <p className="text-[11px] text-stone-400">
                   {d.shifts.length ? `${d.shifts.length} กะ · ${formatHours(d.shifts.reduce((a, s) => a + s.hours, 0))}` : "ยังไม่ลงใคร"}
                 </p>
               </div>
@@ -214,7 +214,7 @@ export default function ScheduleGrid({
             {/* แกนเวลา */}
             <div className="relative" style={{ height: COL_HEIGHT }}>
               {HOURS.map((h) => (
-                <span key={h} className="absolute right-2 -translate-y-1/2 text-[10px] tabular-nums text-gray-400" style={{ top: ((h - DAY_START_MIN) / 60) * HOUR_PX }}>
+                <span key={h} className="absolute right-2 -translate-y-1/2 text-[10px] tabular-nums text-stone-400" style={{ top: ((h - DAY_START_MIN) / 60) * HOUR_PX }}>
                   {minutesToLabel(h)}
                 </span>
               ))}
@@ -223,12 +223,12 @@ export default function ScheduleGrid({
               <div
                 key={d.date}
                 onClick={(ev) => streamers.length > 0 && onColumnClick(ev, d)}
-                className={clsx("relative cursor-pointer border-l border-gray-100", d.isToday && "bg-brand-50/40", d.isPast && "bg-gray-50/60")}
+                className={clsx("relative cursor-pointer border-l border-line/60", d.isToday && "bg-brand-50/40", d.isPast && "bg-paper/60")}
                 style={{ height: COL_HEIGHT }}
                 title="คลิกช่องว่างเพื่อลงกะ"
               >
                 {HOURS.slice(1).map((h) => (
-                  <div key={h} className="absolute inset-x-0 border-t border-dashed border-gray-100" style={{ top: ((h - DAY_START_MIN) / 60) * HOUR_PX }} />
+                  <div key={h} className="absolute inset-x-0 border-t border-dashed border-line/60" style={{ top: ((h - DAY_START_MIN) / 60) * HOUR_PX }} />
                 ))}
                 {d.blocks.map((b) => {
                   const top = ((Math.max(b.s, DAY_START_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
@@ -302,10 +302,10 @@ export default function ScheduleGrid({
           </div>
 
           {/* ช่วงที่ยังว่าง */}
-          <div className="grid border-t border-gray-200 bg-gray-50/60" style={{ gridTemplateColumns: `56px repeat(${days.length}, 1fr)` }}>
-            <div className="px-2 py-2 text-[10px] text-gray-400">ว่าง</div>
+          <div className="grid border-t border-line bg-paper/60" style={{ gridTemplateColumns: `56px repeat(${days.length}, 1fr)` }}>
+            <div className="px-2 py-2 text-[10px] text-stone-400">ว่าง</div>
             {days.map((d) => (
-              <div key={d.date} className="border-l border-gray-100 px-2 py-2">
+              <div key={d.date} className="border-l border-line/60 px-2 py-2">
                 {d.free.length === 0 ? (
                   <p className="text-[11px] text-emerald-600">เต็มแล้ว</p>
                 ) : (
@@ -314,7 +314,7 @@ export default function ScheduleGrid({
                       <button
                         key={f.s}
                         onClick={() => streamers.length > 0 && openNew(d.date, f.s)}
-                        className="rounded-md border border-dashed border-gray-300 bg-white px-1.5 py-0.5 text-[11px] tabular-nums text-gray-600 hover:border-brand-400 hover:text-brand-700"
+                        className="rounded-md border border-dashed border-line bg-white px-1.5 py-0.5 text-[11px] tabular-nums text-muted hover:border-brand-400 hover:text-brand-700"
                       >
                         {minutesToLabel(f.s)}–{minutesToLabel(f.e)}
                       </button>
@@ -343,7 +343,7 @@ export default function ScheduleGrid({
       <button
         onClick={() => streamers.length > 0 && openNew(days.find((d) => d.isToday)?.date ?? days[0].date)}
         disabled={streamers.length === 0}
-        className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-md shadow-brand-600/20 hover:bg-brand-700 disabled:opacity-50"
+        className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50"
       >
         <Plus size={16} /> ลงกะใหม่
       </button>
@@ -353,22 +353,22 @@ export default function ScheduleGrid({
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={() => setForm(null)}>
           <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-700">{form.kind === "block" ? "บล็อกเวลา (unavailable)" : "ลงกะไลฟ์"}</h2>
-              <button type="button" onClick={() => setForm(null)} className="text-gray-400 hover:text-gray-600">
+              <h2 className="font-display text-[15px] font-semibold text-ink">{form.kind === "block" ? "บล็อกเวลา (unavailable)" : "ลงกะไลฟ์"}</h2>
+              <button type="button" onClick={() => setForm(null)} className="text-stone-400 hover:text-muted">
                 <X size={18} />
               </button>
             </div>
-            <div className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1 text-xs">
-              <button type="button" onClick={() => setForm({ ...form, kind: "shift" })} className={clsx("rounded-md px-2 py-1.5 font-medium", form.kind === "shift" ? "bg-white text-gray-800 shadow-sm" : "text-gray-500")}>
+            <div className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-stone-100 p-1 text-xs">
+              <button type="button" onClick={() => setForm({ ...form, kind: "shift" })} className={clsx("rounded-md px-2 py-1.5 font-medium", form.kind === "shift" ? "bg-white text-ink shadow-sm" : "text-muted")}>
                 ลงกะให้คนไลฟ์
               </button>
-              <button type="button" onClick={() => setForm({ ...form, kind: "block" })} className={clsx("rounded-md px-2 py-1.5 font-medium", form.kind === "block" ? "bg-gray-900 text-white shadow-sm" : "text-gray-500")}>
+              <button type="button" onClick={() => setForm({ ...form, kind: "block" })} className={clsx("rounded-md px-2 py-1.5 font-medium", form.kind === "block" ? "bg-gray-900 text-white shadow-sm" : "text-muted")}>
                 ⛔ บล็อก unavailable
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
-                <label className="mb-1 block text-xs font-medium text-gray-500">วันที่</label>
+                <label className="mb-1 block text-xs font-medium text-muted">วันที่</label>
                 <select value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className={inputCls}>
                   {days.map((d) => (
                     <option key={d.date} value={d.date}>
@@ -378,7 +378,7 @@ export default function ScheduleGrid({
                 </select>
               </div>
               <div className={clsx("col-span-2", form.kind === "block" && "hidden")}>
-                <label className="mb-1 block text-xs font-medium text-gray-500">คนไลฟ์</label>
+                <label className="mb-1 block text-xs font-medium text-muted">คนไลฟ์</label>
                 <select required={form.kind === "shift"} value={form.streamerId} onChange={(e) => setForm({ ...form, streamerId: e.target.value })} className={inputCls}>
                   {streamers.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -388,11 +388,11 @@ export default function ScheduleGrid({
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">เวลาเริ่ม</label>
+                <label className="mb-1 block text-xs font-medium text-muted">เวลาเริ่ม</label>
                 <TimeSelect value={form.startTime} onChange={(v) => setForm({ ...form, startTime: v })} required minuteStep={30} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">ไลฟ์กี่ชั่วโมง</label>
+                <label className="mb-1 block text-xs font-medium text-muted">ไลฟ์กี่ชั่วโมง</label>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -414,18 +414,18 @@ export default function ScheduleGrid({
                       onClick={() => setForm({ ...form, hours: String(h) })}
                       className={clsx(
                         "rounded-lg border px-2.5 py-1 text-xs tabular-nums",
-                        Number(form.hours) === h ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                        Number(form.hours) === h ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line text-muted hover:bg-paper"
                       )}
                     >
                       {h} ชม.
                     </button>
                   ))}
                 </div>
-                <p className="mt-1.5 text-xs text-gray-500">
+                <p className="mt-1.5 text-xs text-muted">
                   {derived?.endTime ? (
                     <>
-                      กะนี้ <span className="font-semibold tabular-nums text-gray-800">{form.startTime}–{derived.endTime}</span>
-                      {derived.crossesMidnight && <span className="text-gray-400"> (ข้ามเที่ยงคืน — ยังนับเป็นกะของวันนี้)</span>}
+                      กะนี้ <span className="font-semibold tabular-nums text-ink">{form.startTime}–{derived.endTime}</span>
+                      {derived.crossesMidnight && <span className="text-stone-400"> (ข้ามเที่ยงคืน — ยังนับเป็นกะของวันนี้)</span>}
                     </>
                   ) : (
                     "เลือกเวลาเริ่มและจำนวนชั่วโมง"
@@ -433,7 +433,7 @@ export default function ScheduleGrid({
                 </p>
               </div>
               <div className="col-span-2">
-                <label className="mb-1 block text-xs font-medium text-gray-500">ช่องทาง</label>
+                <label className="mb-1 block text-xs font-medium text-muted">ช่องทาง</label>
                 <select value={form.channelId} onChange={(e) => setForm({ ...form, channelId: e.target.value })} className={inputCls}>
                   <option value="">{form.kind === "block" ? "ทุกช่องทาง" : "ไม่ระบุ"}</option>
                   {channels.map((c) => (
@@ -444,7 +444,7 @@ export default function ScheduleGrid({
                 </select>
               </div>
               <div className="col-span-2">
-                <label className="mb-1 block text-xs font-medium text-gray-500">หมายเหตุ</label>
+                <label className="mb-1 block text-xs font-medium text-muted">หมายเหตุ</label>
                 <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className={inputCls} placeholder="เช่น โปรพิเศษ, ไลฟ์คู่" />
               </div>
             </div>
@@ -453,11 +453,11 @@ export default function ScheduleGrid({
               <button
                 type="submit"
                 disabled={saving}
-                className={clsx("rounded-xl px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50", form.kind === "block" ? "bg-gray-900 hover:bg-black" : "bg-brand-600 hover:bg-brand-700")}
+                className={clsx("rounded-xl px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50", form.kind === "block" ? "bg-gray-900 hover:bg-black" : "bg-brand-600 hover:bg-brand-600")}
               >
                 {saving ? "กำลังบันทึก..." : form.kind === "block" ? "บล็อกช่วงนี้" : "ลงกะ"}
               </button>
-              <button type="button" onClick={() => setForm(null)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-50">
+              <button type="button" onClick={() => setForm(null)} className="rounded-xl border border-line px-5 py-2.5 text-sm text-muted hover:bg-paper">
                 ยกเลิก
               </button>
             </div>

@@ -36,7 +36,7 @@ interface StreamerOpt {
 }
 
 const digits = (s: string | null | undefined) => (s ?? "").replace(/[^\d]/g, "");
-const inputCls = "rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white";
+const inputCls = "rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10";
 
 function RequestCard({ r, streamers, onChanged }: { r: RequestRow; streamers: StreamerOpt[]; onChanged: () => void }) {
   const canEdit = useCanEdit();
@@ -68,23 +68,23 @@ function RequestCard({ r, streamers, onChanged }: { r: RequestRow; streamers: St
   }
 
   return (
-    <li className={clsx("rounded-xl border bg-white p-4", r.status === "PENDING" ? "border-amber-200" : "border-gray-200")}>
+    <li className={clsx("rounded-xl border bg-white p-4", r.status === "PENDING" ? "border-amber-200" : "border-line")}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-gray-800">
+          <p className="text-sm font-semibold text-ink">
             {formatThaiDateShort(d)} ({thaiDays[d.getUTCDay()]}) <span className="tabular-nums">{r.startTime}–{r.endTime}</span>
-            {r.channelName && <span className="ml-2 font-normal text-gray-500">· {r.channelName}</span>}
+            {r.channelName && <span className="ml-2 font-normal text-muted">· {r.channelName}</span>}
           </p>
-          <p className="mt-1 text-sm text-gray-700">
+          <p className="mt-1 text-sm text-ink/80">
             {r.requesterName}
             <span className={clsx("ml-2 rounded-full px-2 py-0.5 text-[11px] font-medium", r.isReturning ? "bg-sky-100 text-sky-700" : "bg-violet-100 text-violet-700")}>
               {r.isReturning ? "คนเก่า เคยไลฟ์กับเรา" : "คนใหม่"}
             </span>{" "}
-            <span className="tabular-nums text-gray-500">📞 {r.requesterPhone}</span>
-            {r.requesterLine && <span className="text-gray-500"> · LINE: {r.requesterLine}</span>}
+            <span className="tabular-nums text-muted">📞 {r.requesterPhone}</span>
+            {r.requesterLine && <span className="text-muted"> · LINE: {r.requesterLine}</span>}
           </p>
-          {r.note && <p className="mt-1 text-xs text-gray-500">📝 {r.note}</p>}
-          <p className="mt-1 text-[11px] text-gray-400">ส่งเมื่อ {new Date(r.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "short", timeStyle: "short" })}</p>
+          {r.note && <p className="mt-1 text-xs text-muted">📝 {r.note}</p>}
+          <p className="mt-1 text-[11px] text-stone-400">ส่งเมื่อ {new Date(r.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "short", timeStyle: "short" })}</p>
         </div>
         <div className="text-right">
           {r.status === "APPROVED" && (
@@ -97,17 +97,17 @@ function RequestCard({ r, streamers, onChanged }: { r: RequestRow; streamers: St
               )}
             </div>
           )}
-          {r.status === "REJECTED" && <span className="rounded-full bg-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600">ปฏิเสธแล้ว</span>}
-          {r.status !== "PENDING" && r.reviewedBy && <p className="mt-1 text-[11px] text-gray-400">โดย {r.reviewedBy}</p>}
-          {r.status !== "PENDING" && r.reviewNote && <p className="mt-1 text-xs text-gray-500">{r.reviewNote}</p>}
+          {r.status === "REJECTED" && <span className="rounded-full bg-stone-200 px-2.5 py-1 text-xs font-medium text-muted">ปฏิเสธแล้ว</span>}
+          {r.status !== "PENDING" && r.reviewedBy && <p className="mt-1 text-[11px] text-stone-400">โดย {r.reviewedBy}</p>}
+          {r.status !== "PENDING" && r.reviewNote && <p className="mt-1 text-xs text-muted">{r.reviewNote}</p>}
         </div>
       </div>
 
       {r.status === "PENDING" && canEdit && (
-        <div className="mt-3 border-t border-gray-100 pt-3">
+        <div className="mt-3 border-t border-line/60 pt-3">
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">
+              <label className="mb-1 block text-xs font-medium text-muted">
                 ผูกกับคนไลฟ์{matched && <span className="ml-1 text-emerald-600">(เจอจากเบอร์/LINE: {matched.name})</span>}
               </label>
               <div className="flex items-center gap-2">
@@ -133,20 +133,20 @@ function RequestCard({ r, streamers, onChanged }: { r: RequestRow; streamers: St
               </div>
             </div>
             <div className="min-w-[200px] flex-1">
-              <label className="mb-1 block text-xs font-medium text-gray-500">หมายเหตุ / เหตุผล (ถ้ามี)</label>
+              <label className="mb-1 block text-xs font-medium text-muted">หมายเหตุ / เหตุผล (ถ้ามี)</label>
               <input value={note} onChange={(e) => setNote(e.target.value)} className={inputCls + " w-full"} placeholder="เช่น ยืนยันทาง LINE แล้ว / ช่วงนี้มีคนแล้ว" />
             </div>
             <button onClick={() => act("approve")} disabled={busy || (mode === "pick" && !streamerId)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
               {busy ? "กำลังทำ..." : "อนุมัติ → ลงตาราง"}
             </button>
-            <button onClick={() => act("reject")} disabled={busy} className="rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:border-red-200 hover:text-red-600 disabled:opacity-50">
+            <button onClick={() => act("reject")} disabled={busy} className="rounded-xl border border-line px-4 py-2 text-sm text-muted hover:border-red-200 hover:text-red-600 disabled:opacity-50">
               ปฏิเสธ
             </button>
           </div>
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
         </div>
       )}
-      {r.status === "PENDING" && !canEdit && <p className="mt-2 text-xs text-gray-400">รอผู้จัดการอนุมัติ</p>}
+      {r.status === "PENDING" && !canEdit && <p className="mt-2 text-xs text-stone-400">รอผู้จัดการอนุมัติ</p>}
     </li>
   );
 }
@@ -171,15 +171,15 @@ export default function RequestsManager({
   ];
   return (
     <div>
-      <div className="mb-4 flex flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-1">
+      <div className="mb-4 flex flex-wrap gap-1 rounded-2xl border border-line bg-white shadow-card p-1">
         {tabs.map((t) => (
-          <Link key={t.key} href={`/requests?status=${t.key}`} className={clsx("rounded-lg px-3 py-1.5 text-sm", status === t.key ? "bg-brand-600 font-medium text-white" : "text-gray-600 hover:bg-gray-50")}>
+          <Link key={t.key} href={`/requests?status=${t.key}`} className={clsx("rounded-lg px-3 py-1.5 text-sm", status === t.key ? "bg-brand-600 font-medium text-white" : "text-muted hover:bg-paper")}>
             {t.label}
           </Link>
         ))}
       </div>
       {requests.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center text-gray-400">ไม่มีคำขอในหมวดนี้</div>
+        <div className="rounded-2xl border border-dashed border-line bg-white p-10 text-center text-stone-400">ไม่มีคำขอในหมวดนี้</div>
       ) : (
         <ul className="space-y-3">
           {requests.map((r) => (

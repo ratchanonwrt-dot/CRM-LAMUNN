@@ -53,25 +53,25 @@ export default async function ShiftDetailPage({ params }: { params: { id: string
   return (
     <div className="mx-auto max-w-5xl">
       <div className="flex flex-wrap gap-4 text-sm">
-        <Link href={`/schedule?week=${weekParam}`} className="text-gray-400 hover:text-gray-600">
+        <Link href={`/schedule?week=${weekParam}`} className="text-stone-400 hover:text-muted">
           ← ตารางไลฟ์
         </Link>
         {shift.sessionId && (
-          <Link href={`/sessions/${shift.sessionId}`} className="text-gray-400 hover:text-gray-600">
+          <Link href={`/sessions/${shift.sessionId}`} className="text-stone-400 hover:text-muted">
             รอบไลฟ์ของวันนี้ →
           </Link>
         )}
       </div>
       <div className="mb-5 mt-2 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">
-            {shift.streamer.name} <span className="text-base font-medium text-gray-400">· {shift.startTime}–{shift.endTime}</span>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">
+            {shift.streamer.name} <span className="text-base font-medium text-stone-400">· {shift.startTime}–{shift.endTime}</span>
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted">
             {formatThaiDate(shift.date)} ({thaiDays[shift.date.getUTCDay()]}) · {shift.channel?.name ?? "ไม่ระบุช่องทาง"} · วางไว้ {formatHours(plannedHours)}
             {hasResults && <> · ไลฟ์จริง {formatHours(actualHours)}</>}
           </p>
-          {shift.note && <p className="mt-1 text-sm text-gray-500">📝 {shift.note}</p>}
+          {shift.note && <p className="mt-1 text-sm text-muted">📝 {shift.note}</p>}
         </div>
         <DeleteShiftButton shiftId={shift.id} weekParam={weekParam} />
       </div>
@@ -94,34 +94,34 @@ export default async function ShiftDetailPage({ params }: { params: { id: string
       </div>
 
       {/* ค่าตอบแทน */}
-      <section className={clsx("mb-6 rounded-xl border bg-white p-5", pay.hitMinimum && hasResults ? "border-amber-300" : "border-gray-200")}>
+      <section className={clsx("mb-6 rounded-xl border bg-white p-5", pay.hitMinimum && hasResults ? "border-amber-300" : "border-line")}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-[260px] flex-1">
-            <h2 className="text-sm font-semibold text-gray-700">ค่าตอบแทนกะนี้</h2>
+            <h2 className="font-display text-[15px] font-semibold text-ink">ค่าตอบแทนกะนี้</h2>
             <dl className="mt-3 space-y-1.5 text-sm">
               {rows.map((r) => (
                 <div key={r.label} className="flex items-baseline justify-between gap-3">
-                  <dt className="text-gray-500">
+                  <dt className="text-muted">
                     {r.label}
-                    {r.sub && <span className="block text-[11px] text-gray-400">{r.sub}</span>}
+                    {r.sub && <span className="block text-[11px] text-stone-400">{r.sub}</span>}
                   </dt>
-                  <dd className="tabular-nums text-gray-800">{r.value}</dd>
+                  <dd className="tabular-nums text-ink">{r.value}</dd>
                 </div>
               ))}
             </dl>
           </div>
-          <div className="w-full rounded-xl bg-gray-50 p-4 sm:w-64">
-            <p className="text-[11px] text-gray-400">ต้องจ่ายคนไลฟ์</p>
-            <p className="text-2xl font-bold tabular-nums text-gray-800">{formatBaht(pay.pay)} ฿</p>
+          <div className="w-full rounded-xl bg-paper p-4 sm:w-64">
+            <p className="text-[11px] text-stone-400">ต้องจ่ายคนไลฟ์</p>
+            <p className="text-2xl font-bold tabular-nums text-ink">{formatBaht(pay.pay)} ฿</p>
             {!hasResults ? (
-              <p className="mt-1 text-xs text-gray-400">ประมาณการจากขั้นต่ำ — กรอกยอดขายด้านล่างเพื่อคิดจริง</p>
+              <p className="mt-1 text-xs text-stone-400">ประมาณการจากขั้นต่ำ — กรอกยอดขายด้านล่างเพื่อคิดจริง</p>
             ) : pay.hitMinimum ? (
               <div className="mt-2 space-y-1 text-xs">
                 <p className="rounded-md bg-amber-100 px-2 py-1 text-amber-800">คอมมิชชั่นไม่ถึงขั้นต่ำ จ่ายตามขั้นต่ำแทน (เพิ่ม {formatBaht(pay.topUp)} ฿)</p>
-                <p className="text-gray-600">
-                  คิดเป็นคอมมิชชั่นจริง <span className="font-semibold text-gray-800">{pay.effectivePct === null ? "-" : `${formatNum(pay.effectivePct, 1)}%`}</span> ของยอดหลังหัก
+                <p className="text-muted">
+                  คิดเป็นคอมมิชชั่นจริง <span className="font-semibold text-ink">{pay.effectivePct === null ? "-" : `${formatNum(pay.effectivePct, 1)}%`}</span> ของยอดหลังหัก
                 </p>
-                <p className="text-gray-400">ยอดขายต้องถึง {formatBaht(pay.breakEvenSales)} ฿ คอม {formatNum(settings.commissionPct, 2)}% จึงจะพอดีขั้นต่ำ</p>
+                <p className="text-stone-400">ยอดขายต้องถึง {formatBaht(pay.breakEvenSales)} ฿ คอม {formatNum(settings.commissionPct, 2)}% จึงจะพอดีขั้นต่ำ</p>
               </div>
             ) : (
               <p className="mt-1 text-xs text-emerald-700">จ่ายตามคอมมิชชั่น {formatNum(settings.commissionPct, 2)}% (เกินขั้นต่ำ {formatBaht(pay.commission - pay.minPay)} ฿)</p>
@@ -130,8 +130,8 @@ export default async function ShiftDetailPage({ params }: { params: { id: string
         </div>
       </section>
 
-      <h2 className="mb-2 text-sm font-semibold text-gray-700">กรอกยอดหลังไลฟ์เสร็จ</h2>
-      <p className="mb-3 text-xs text-gray-400">
+      <h2 className="mb-2 font-display text-[15px] font-semibold text-ink">กรอกยอดหลังไลฟ์เสร็จ</h2>
+      <p className="mb-3 text-xs text-stone-400">
         กรอกคนดูเฉลี่ยของแต่ละชั่วโมงในกะ (ระบบเฉลี่ยทั้งกะให้) และยอดขายรวมทั้งกะ — ยอดขายรวมถูกนำไปคิดค่าตอบแทนด้านบน ส่วนตัวเลขรายชั่วโมงไปเข้าหน้าวิเคราะห์
       </p>
       <ShiftResultsForm

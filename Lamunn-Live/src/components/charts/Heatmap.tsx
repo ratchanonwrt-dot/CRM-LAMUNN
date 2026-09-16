@@ -25,7 +25,7 @@ export default function Heatmap({
 }) {
   const values = cells.flat().map((c) => c.value).filter((v): v is number => v !== null && v > 0);
   const max = values.length ? Math.max(...values) : 0;
-  const steps = ["bg-brand-50 text-gray-600", "bg-brand-100 text-gray-700", "bg-brand-200 text-gray-800", "bg-brand-300 text-gray-900", "bg-brand-500 text-white", "bg-brand-700 text-white"];
+  const steps = ["bg-brand-50 text-muted", "bg-brand-100 text-ink/80", "bg-brand-200 text-ink", "bg-brand-300 text-gray-900", "bg-brand-500 text-white", "bg-brand-700 text-white"];
   const stepOf = (v: number) => {
     if (max <= 0) return steps[0];
     const t = v / max;
@@ -38,7 +38,7 @@ export default function Heatmap({
           <tr>
             <th className="sticky left-0 z-10 bg-white" />
             {colLabels.map((c) => (
-              <th key={c} className={clsx("font-normal text-gray-400", compact ? "min-w-[26px]" : "min-w-[34px]")}>
+              <th key={c} className={clsx("font-normal text-stone-400", compact ? "min-w-[26px]" : "min-w-[34px]")}>
                 {c}
               </th>
             ))}
@@ -47,7 +47,7 @@ export default function Heatmap({
         <tbody>
           {rowLabels.map((r, ri) => (
             <tr key={r}>
-              <th className="sticky left-0 z-10 max-w-[140px] truncate bg-white pr-2 text-left font-medium text-gray-600">{r}</th>
+              <th className="sticky left-0 z-10 max-w-[140px] truncate bg-white pr-2 text-left font-medium text-muted">{r}</th>
               {colLabels.map((c, ci) => {
                 const cell = cells[ri]?.[ci];
                 const v = cell?.value ?? null;
@@ -58,7 +58,7 @@ export default function Heatmap({
                     className={clsx(
                       "rounded-[4px] text-center tabular-nums",
                       compact ? "h-6" : "h-8",
-                      v === null ? "bg-gray-50 text-gray-200" : stepOf(v)
+                      v === null ? "bg-paper text-gray-200" : stepOf(v)
                     )}
                   >
                     {v === null ? "·" : compact ? "" : valueFormatter(v)}
@@ -70,7 +70,7 @@ export default function Heatmap({
         </tbody>
       </table>
       {max > 0 && (
-        <div className="mt-2 flex items-center gap-1 text-[10px] text-gray-400">
+        <div className="mt-2 flex items-center gap-1 text-[10px] text-stone-400">
           <span>น้อย</span>
           {steps.map((s) => (
             <span key={s} className={clsx("h-3 w-5 rounded-[3px]", s.split(" ")[0])} />

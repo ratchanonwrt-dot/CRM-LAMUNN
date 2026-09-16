@@ -11,8 +11,8 @@ export default async function StreamersPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold text-gray-800">คนไลฟ์ ({streamers.length})</h1>
-      <p className="mb-6 text-sm text-gray-500">
+      <h1 className="mb-1 font-display text-2xl font-semibold tracking-tight text-ink">คนไลฟ์ ({streamers.length})</h1>
+      <p className="mb-6 text-sm text-muted">
         รายชื่อคนที่ขึ้นไลฟ์ — ใช้เลือกตอนบันทึกแต่ละช่วงเวลา คนที่ไม่ได้ไลฟ์แล้วให้ &quot;ปิดใช้งาน&quot; (ประวัติเก่ายังอยู่ครบ)
       </p>
       <StreamerManager

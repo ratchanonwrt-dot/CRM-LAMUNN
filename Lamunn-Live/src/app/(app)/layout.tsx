@@ -9,9 +9,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <RoleProvider role={staff.role}>
-      <div className="flex min-h-screen flex-col md:flex-row">
+      <div className="flex min-h-screen flex-col bg-paper md:flex-row">
         <Nav role={staff.role} name={staff.staffName} pendingRequests={pendingRequests} />
-        <div className="flex-1 overflow-x-hidden bg-gray-50 p-4 md:p-6">{children}</div>
+        <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-5 md:px-8 md:py-8">
+          <div className="mx-auto max-w-[1400px]">{children}</div>
+        </main>
       </div>
     </RoleProvider>
   );

@@ -12,7 +12,7 @@ interface ChannelRow {
   sessionCount: number;
 }
 
-const inputCls = "rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white";
+const inputCls = "rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10";
 
 function Row({ c, onChanged }: { c: ChannelRow; onChanged: () => void }) {
   const [editing, setEditing] = useState(false);
@@ -47,8 +47,8 @@ function Row({ c, onChanged }: { c: ChannelRow; onChanged: () => void }) {
   }
 
   return (
-    <tr className="border-t border-gray-100">
-      <td className="px-3 py-2 font-medium text-gray-800">
+    <tr className="border-t border-line/60">
+      <td className="px-3 py-2 font-medium text-ink">
         {editing ? (
           <div className="flex items-center gap-2">
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls + " w-48"} />
@@ -57,11 +57,11 @@ function Row({ c, onChanged }: { c: ChannelRow; onChanged: () => void }) {
               onClick={async () => {
                 if (await patch({ name })) setEditing(false);
               }}
-              className="rounded-lg bg-brand-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+              className="rounded-lg bg-ink px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
             >
               บันทึก
             </button>
-            <button onClick={() => setEditing(false)} className="text-xs text-gray-400">
+            <button onClick={() => setEditing(false)} className="text-xs text-stone-400">
               ยกเลิก
             </button>
           </div>
@@ -70,12 +70,12 @@ function Row({ c, onChanged }: { c: ChannelRow; onChanged: () => void }) {
         )}
         {error && <p className="text-xs font-normal text-red-600">{error}</p>}
       </td>
-      <td className="px-3 py-2 text-right text-gray-500">{c.sessionCount}</td>
+      <td className="px-3 py-2 text-right text-muted">{c.sessionCount}</td>
       <td className="px-3 py-2">
         <button
           disabled={busy}
           onClick={() => patch({ isActive: !c.isActive })}
-          className={`rounded-full px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${c.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-500"}`}
+          className={`rounded-full px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${c.isActive ? "bg-emerald-100 text-emerald-700" : "bg-stone-200 text-muted"}`}
         >
           {c.isActive ? "ใช้งานอยู่" : "ปิดใช้งาน"}
         </button>
@@ -85,7 +85,7 @@ function Row({ c, onChanged }: { c: ChannelRow; onChanged: () => void }) {
           disabled={busy || !c.isActive}
           onClick={() => patch({ publicBooking: !c.publicBooking })}
           title={c.isActive ? "เปิด/ปิดให้คนภายนอกขอจองช่องนี้ผ่านเว็บจอง" : "ต้องเปิดใช้งานช่องก่อน"}
-          className={`rounded-full px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${c.publicBooking ? "bg-brand-100 text-brand-700" : "bg-gray-100 text-gray-500"}`}
+          className={`rounded-full px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${c.publicBooking ? "bg-brand-100 text-brand-700" : "bg-stone-100 text-muted"}`}
         >
           {c.publicBooking ? "เปิดรับจอง" : "ปิดรับจอง"}
         </button>
@@ -98,7 +98,7 @@ function Row({ c, onChanged }: { c: ChannelRow; onChanged: () => void }) {
             </button>
           )}
           {c.sessionCount === 0 && (
-            <button onClick={remove} disabled={busy} className="text-gray-400 hover:text-red-600">
+            <button onClick={remove} disabled={busy} className="text-stone-400 hover:text-red-600">
               ลบ
             </button>
           )}
@@ -131,20 +131,20 @@ export default function ChannelManager({ channels }: { channels: ChannelRow[] })
 
   return (
     <div>
-      <form onSubmit={add} className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4">
+      <form onSubmit={add} className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-white shadow-card p-4">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">ชื่อช่องทาง (เช่น TikTok, Facebook, Shopee Live)</label>
+          <label className="mb-1 block text-xs font-medium text-muted">ชื่อช่องทาง (เช่น TikTok, Facebook, Shopee Live)</label>
           <input required value={name} onChange={(e) => setName(e.target.value)} className={inputCls + " w-64"} />
         </div>
-        <button type="submit" disabled={saving} className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
+        <button type="submit" disabled={saving} className="rounded-xl bg-ink px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">
           {saving ? "กำลังเพิ่ม..." : "+ เพิ่มช่องทาง"}
         </button>
         {error && <p className="w-full text-sm text-red-600">{error}</p>}
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-card">
         <table className="w-full min-w-[480px] text-sm">
-          <thead className="bg-gray-50 text-left text-gray-500">
+          <thead className="bg-paper/70 text-left text-[11px] font-semibold uppercase tracking-wider text-muted">
             <tr>
               <th className="px-3 py-2">ช่องทาง</th>
               <th className="px-3 py-2 text-right">รอบไลฟ์</th>
@@ -159,7 +159,7 @@ export default function ChannelManager({ channels }: { channels: ChannelRow[] })
             ))}
             {channels.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">
+                <td colSpan={5} className="px-4 py-6 text-center text-stone-400">
                   ยังไม่มีช่องทาง
                 </td>
               </tr>

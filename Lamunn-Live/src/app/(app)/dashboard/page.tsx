@@ -37,10 +37,10 @@ export default async function DashboardPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">สวัสดี {staff.staffName}</h1>
-          <p className="text-sm text-gray-500">ภาพรวม{thaiMonthLabel(year, month)}</p>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">สวัสดี {staff.staffName}</h1>
+          <p className="text-sm text-muted">ภาพรวม{thaiMonthLabel(year, month)}</p>
         </div>
-        <Link href="/sessions/new" className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-md shadow-brand-600/20 hover:bg-brand-700">
+        <Link href="/sessions/new" className="rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600">
           + บันทึกรอบไลฟ์วันนี้
         </Link>
       </div>
@@ -68,18 +68,18 @@ export default async function DashboardPage() {
             sub: topStreamer && topStreamer.index !== null ? `${topStreamer.index >= 1 ? "+" : ""}${Math.round((topStreamer.index - 1) * 100)}% เทียบช่วงเดียวกัน` : topStreamer ? `เฉลี่ย ${formatNum(topStreamer.avgViewers)} คน` : undefined,
           },
         ].map((c) => (
-          <div key={c.label} className="rounded-xl border border-gray-200 bg-white p-3">
-            <p className="text-[11px] text-gray-400">{c.label}</p>
-            <p className="mt-0.5 truncate text-lg font-semibold tabular-nums text-gray-800">{c.value}</p>
-            {c.sub && <p className="truncate text-[11px] text-gray-400">{c.sub}</p>}
+          <div key={c.label} className="rounded-2xl border border-line bg-white shadow-card p-3">
+            <p className="text-[11px] text-stone-400">{c.label}</p>
+            <p className="mt-0.5 truncate text-lg font-semibold tabular-nums text-ink">{c.value}</p>
+            {c.sub && <p className="truncate text-[11px] text-stone-400">{c.sub}</p>}
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 xl:col-span-2">
+        <section className="rounded-2xl border border-line bg-white shadow-card p-5 xl:col-span-2">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-700">คนดูเฉลี่ยตามช่วงเวลา (เดือนนี้)</h2>
+            <h2 className="font-display text-[15px] font-semibold text-ink">คนดูเฉลี่ยตามช่วงเวลา (เดือนนี้)</h2>
             <Link href="/analysis" className="text-xs font-medium text-brand-600 hover:underline">
               วิเคราะห์เต็ม →
             </Link>
@@ -96,13 +96,13 @@ export default async function DashboardPage() {
               }))}
             />
           ) : (
-            <p className="py-10 text-center text-sm text-gray-400">ยังไม่มีข้อมูลเดือนนี้</p>
+            <p className="py-10 text-center text-sm text-stone-400">ยังไม่มีข้อมูลเดือนนี้</p>
           )}
         </section>
 
-        <section className="rounded-xl border border-gray-200 bg-white xl:col-span-3">
+        <section className="rounded-2xl border border-line bg-white shadow-card xl:col-span-3">
           <div className="flex items-center justify-between px-5 pt-5">
-            <h2 className="text-sm font-semibold text-gray-700">รอบไลฟ์ล่าสุด</h2>
+            <h2 className="font-display text-[15px] font-semibold text-ink">รอบไลฟ์ล่าสุด</h2>
             <Link href="/sessions" className="text-xs font-medium text-brand-600 hover:underline">
               ดูทั้งหมด →
             </Link>
@@ -117,15 +117,15 @@ export default async function DashboardPage() {
                   const sales = s.slots.reduce((x, sl) => x + sl.sales, 0);
                   const names = Array.from(new Set(s.slots.length ? s.slots.map((sl) => sl.streamer.name) : s.shifts.map((sh) => sh.streamer.name)));
                   return (
-                    <tr key={s.id} className="border-t border-gray-100 first:border-t-0">
-                      <td className="px-3 py-2 font-medium text-gray-800">{formatThaiDateShort(s.date)}</td>
-                      <td className="px-3 py-2 text-gray-500">{s.channel?.name ?? "-"}</td>
-                      <td className="px-3 py-2 text-gray-600">
-                        {names.length ? names.join(", ") : <span className="text-gray-300">ยังไม่บันทึก</span>}
+                    <tr key={s.id} className="border-t border-line/60 first:border-t-0">
+                      <td className="px-3 py-2 font-medium text-ink">{formatThaiDateShort(s.date)}</td>
+                      <td className="px-3 py-2 text-muted">{s.channel?.name ?? "-"}</td>
+                      <td className="px-3 py-2 text-muted">
+                        {names.length ? names.join(", ") : <span className="text-stone-300">ยังไม่บันทึก</span>}
                         {!s.slots.length && s.shifts.length > 0 && <span className="ml-1 text-xs text-amber-700">(รอกรอก)</span>}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums text-gray-800">{w > 0 ? `${formatNum(vw / w)} คน` : ""}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-gray-800">{s.slots.length ? `${formatBaht(sales)} ฿` : ""}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-ink">{w > 0 ? `${formatNum(vw / w)} คน` : ""}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-ink">{s.slots.length ? `${formatBaht(sales)} ฿` : ""}</td>
                       <td className="px-3 py-2 text-right">
                         <Link href={`/sessions/${s.id}`} className="text-xs font-medium text-brand-600 hover:underline">
                           {s.slots.length ? "เปิด" : "บันทึกยอด"}
@@ -136,7 +136,7 @@ export default async function DashboardPage() {
                 })}
                 {recent.length === 0 && (
                   <tr>
-                    <td className="px-3 py-8 text-center text-gray-400">ยังไม่มีรอบไลฟ์</td>
+                    <td className="px-3 py-8 text-center text-stone-400">ยังไม่มีรอบไลฟ์</td>
                   </tr>
                 )}
               </tbody>

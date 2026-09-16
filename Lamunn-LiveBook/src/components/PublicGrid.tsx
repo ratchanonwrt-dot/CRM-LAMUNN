@@ -13,7 +13,7 @@ const HOUR_PX = 30;
 const HOURS = Array.from({ length: (GRID_END_MIN - DAY_START_MIN) / 60 + 1 }, (_, i) => DAY_START_MIN + i * 60);
 const COL_HEIGHT = ((GRID_END_MIN - DAY_START_MIN) / 60) * HOUR_PX;
 const HOUR_CHOICES = [1, 1.5, 2, 2.5, 3, 4, 5, 6];
-const inputCls = "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white";
+const inputCls = "w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10";
 
 function endFromStart(startTime: string, hours: number): { endTime: string; crossesMidnight: boolean } {
   const s = timeToMinutes(startTime);
@@ -104,21 +104,21 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-card">
         <div className="min-w-[860px]">
-          <div className="grid border-b border-gray-200" style={{ gridTemplateColumns: `52px repeat(${days.length}, 1fr)` }}>
+          <div className="grid border-b border-line" style={{ gridTemplateColumns: `52px repeat(${days.length}, 1fr)` }}>
             <div />
             {days.map((d) => (
-              <div key={d.date} className={clsx("border-l border-gray-100 px-2 py-2 text-center", d.isToday && "bg-brand-50")}>
-                <p className={clsx("text-sm font-semibold", d.isToday ? "text-brand-700" : "text-gray-700")}>{d.dayLabel}</p>
-                <p className="text-[11px] text-gray-400">{d.isPast ? "ผ่านไปแล้ว" : d.free.length ? `ว่าง ${d.free.length} ช่วง` : "เต็ม"}</p>
+              <div key={d.date} className={clsx("border-l border-line/60 px-2 py-2 text-center", d.isToday && "bg-brand-50")}>
+                <p className={clsx("text-sm font-semibold", d.isToday ? "text-brand-700" : "text-ink/80")}>{d.dayLabel}</p>
+                <p className="text-[11px] text-stone-400">{d.isPast ? "ผ่านไปแล้ว" : d.free.length ? `ว่าง ${d.free.length} ช่วง` : "เต็ม"}</p>
               </div>
             ))}
           </div>
           <div className="grid" style={{ gridTemplateColumns: `52px repeat(${days.length}, 1fr)` }}>
             <div className="relative" style={{ height: COL_HEIGHT }}>
               {HOURS.map((h) => (
-                <span key={h} className="absolute right-2 -translate-y-1/2 text-[10px] tabular-nums text-gray-400" style={{ top: ((h - DAY_START_MIN) / 60) * HOUR_PX }}>
+                <span key={h} className="absolute right-2 -translate-y-1/2 text-[10px] tabular-nums text-stone-400" style={{ top: ((h - DAY_START_MIN) / 60) * HOUR_PX }}>
                   {minutesToLabel(h)}
                 </span>
               ))}
@@ -127,12 +127,12 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
               <div
                 key={d.date}
                 onClick={(ev) => onColumnClick(ev, d)}
-                className={clsx("relative border-l border-gray-100", d.isPast ? "bg-gray-50" : "cursor-pointer", d.isToday && !d.isPast && "bg-brand-50/30")}
+                className={clsx("relative border-l border-line/60", d.isPast ? "bg-paper" : "cursor-pointer", d.isToday && !d.isPast && "bg-brand-50/30")}
                 style={{ height: COL_HEIGHT }}
                 title={d.isPast ? "" : "คลิกช่องว่างเพื่อขอจอง"}
               >
                 {HOURS.slice(1).map((h) => (
-                  <div key={h} className="absolute inset-x-0 border-t border-dashed border-gray-100" style={{ top: ((h - DAY_START_MIN) / 60) * HOUR_PX }} />
+                  <div key={h} className="absolute inset-x-0 border-t border-dashed border-line/60" style={{ top: ((h - DAY_START_MIN) / 60) * HOUR_PX }} />
                 ))}
                 {/* ช่องว่าง (เฉพาะวันที่ยังไม่ผ่าน) */}
                 {!d.isPast &&
@@ -161,7 +161,7 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
                       data-block
                       className={clsx(
                         "absolute inset-x-1 overflow-hidden rounded-lg border px-1.5 py-1 text-[11px] leading-tight",
-                        b.status === "booked" ? "border-gray-300 bg-gray-200 text-gray-600" : b.status === "blocked" ? "border-gray-900 bg-gray-900 text-white" : "border-amber-300 bg-amber-100 text-amber-800"
+                        b.status === "booked" ? "border-line bg-stone-200 text-muted" : b.status === "blocked" ? "border-gray-900 bg-gray-900 text-white" : "border-amber-300 bg-amber-100 text-amber-800"
                       )}
                       style={{ top: top + 1, height: Math.max(bottom - top - 2, 18) }}
                       title={`${b.startTime}–${b.endTime} ${b.status === "booked" ? "มีคนไลฟ์แล้ว" : b.status === "blocked" ? "unavailable" : "มีคนขอแล้ว รออนุมัติ"}`}
@@ -184,23 +184,23 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
           <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-gray-700">ขอจองช่วงไลฟ์</h2>
-                <p className="text-xs text-gray-400">
+                <h2 className="font-display text-[15px] font-semibold text-ink">ขอจองช่วงไลฟ์</h2>
+                <p className="text-xs text-stone-400">
                   {dayLabel(form.date)}
                   {channelName ? ` · ${channelName}` : ""}
                 </p>
               </div>
-              <button type="button" onClick={() => setForm(null)} className="text-gray-400 hover:text-gray-600">
+              <button type="button" onClick={() => setForm(null)} className="text-stone-400 hover:text-muted">
                 <X size={18} />
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">เวลาเริ่ม</label>
+                <label className="mb-1 block text-xs font-medium text-muted">เวลาเริ่ม</label>
                 <TimeSelect value={form.startTime} onChange={(v) => setForm({ ...form, startTime: v })} required minuteStep={30} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">ไลฟ์กี่ชั่วโมง</label>
+                <label className="mb-1 block text-xs font-medium text-muted">ไลฟ์กี่ชั่วโมง</label>
                 <input type="number" inputMode="decimal" min={1} max={12} step={0.5} required value={form.hours} onChange={(e) => setForm({ ...form, hours: e.target.value })} className={inputCls} />
               </div>
               <div className="col-span-2">
@@ -210,17 +210,17 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
                       key={h}
                       type="button"
                       onClick={() => setForm({ ...form, hours: String(h) })}
-                      className={clsx("rounded-lg border px-2.5 py-1 text-xs tabular-nums", Number(form.hours) === h ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-gray-200 text-gray-600 hover:bg-gray-50")}
+                      className={clsx("rounded-lg border px-2.5 py-1 text-xs tabular-nums", Number(form.hours) === h ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line text-muted hover:bg-paper")}
                     >
                       {h} ชม.
                     </button>
                   ))}
                 </div>
-                <p className="mt-1.5 text-xs text-gray-500">
+                <p className="mt-1.5 text-xs text-muted">
                   {derived?.endTime ? (
                     <>
-                      ขอช่วง <span className="font-semibold tabular-nums text-gray-800">{form.startTime}–{derived.endTime}</span>
-                      {derived.crossesMidnight && <span className="text-gray-400"> (ข้ามเที่ยงคืน)</span>}
+                      ขอช่วง <span className="font-semibold tabular-nums text-ink">{form.startTime}–{derived.endTime}</span>
+                      {derived.crossesMidnight && <span className="text-stone-400"> (ข้ามเที่ยงคืน)</span>}
                     </>
                   ) : (
                     "เลือกเวลาเริ่มและจำนวนชั่วโมง"
@@ -228,7 +228,7 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
                 </p>
               </div>
               <div className="col-span-2">
-                <label className="mb-1 block text-xs font-medium text-gray-500">เคยไลฟ์กับละมุนมาก่อนไหม</label>
+                <label className="mb-1 block text-xs font-medium text-muted">เคยไลฟ์กับละมุนมาก่อนไหม</label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { v: "yes", label: "เคยไลฟ์แล้ว (คนเก่า)" },
@@ -240,7 +240,7 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
                       onClick={() => setForm({ ...form, isReturning: o.v as "yes" | "no" })}
                       className={clsx(
                         "rounded-lg border px-3 py-2 text-sm",
-                        form.isReturning === o.v ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                        form.isReturning === o.v ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line text-muted hover:bg-paper"
                       )}
                     >
                       {o.label}
@@ -249,30 +249,30 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
                 </div>
               </div>
               <div className="col-span-2">
-                <label className="mb-1 block text-xs font-medium text-gray-500">ชื่อ</label>
+                <label className="mb-1 block text-xs font-medium text-muted">ชื่อ</label>
                 <input required value={form.requesterName} onChange={(e) => setForm({ ...form, requesterName: e.target.value })} className={inputCls} placeholder="ชื่อที่ใช้ไลฟ์" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">เบอร์โทร</label>
+                <label className="mb-1 block text-xs font-medium text-muted">เบอร์โทร</label>
                 <input required inputMode="tel" value={form.requesterPhone} onChange={(e) => setForm({ ...form, requesterPhone: e.target.value })} className={inputCls} placeholder="08x-xxx-xxxx" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-500">LINE ID (ถ้ามี)</label>
+                <label className="mb-1 block text-xs font-medium text-muted">LINE ID (ถ้ามี)</label>
                 <input value={form.requesterLine} onChange={(e) => setForm({ ...form, requesterLine: e.target.value })} className={inputCls} />
               </div>
               <div className="col-span-2">
-                <label className="mb-1 block text-xs font-medium text-gray-500">หมายเหตุถึงทีมงาน</label>
+                <label className="mb-1 block text-xs font-medium text-muted">หมายเหตุถึงทีมงาน</label>
                 <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className={inputCls} placeholder="เช่น ไลฟ์สินค้าหมวดไหน / เคยไลฟ์กับเรามาแล้ว" />
               </div>
               <input tabIndex={-1} autoComplete="off" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} className="hidden" aria-hidden="true" />
             </div>
             {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-            <p className="mt-3 text-[11px] text-gray-400">คำขอจะยังไม่ยืนยันจนกว่าทีมงานจะอนุมัติ ช่วงนี้จะขึ้นเป็น &quot;มีคนขอแล้ว&quot; ให้คนอื่นเห็นทันที</p>
+            <p className="mt-3 text-[11px] text-stone-400">คำขอจะยังไม่ยืนยันจนกว่าทีมงานจะอนุมัติ ช่วงนี้จะขึ้นเป็น &quot;มีคนขอแล้ว&quot; ให้คนอื่นเห็นทันที</p>
             <div className="mt-4 flex gap-2">
-              <button type="submit" disabled={saving} className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
+              <button type="submit" disabled={saving} className="rounded-xl bg-ink px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">
                 {saving ? "กำลังส่ง..." : "ส่งคำขอจอง"}
               </button>
-              <button type="button" onClick={() => setForm(null)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm text-gray-600 hover:bg-gray-50">
+              <button type="button" onClick={() => setForm(null)} className="rounded-xl border border-line px-5 py-2.5 text-sm text-muted hover:bg-paper">
                 ยกเลิก
               </button>
             </div>

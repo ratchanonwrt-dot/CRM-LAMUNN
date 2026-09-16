@@ -3,14 +3,23 @@
 @tailwind utilities;
 
 html {
-  font-family: "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-paper text-ink;
 }
 
-/* Plain numeric key-in — no up/down spinner arrows */
+::selection {
+  @apply bg-brand-200 text-ink;
+}
+
+:focus-visible {
+  outline: 2px solid theme("colors.ink");
+  outline-offset: 2px;
+}
+
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
@@ -18,4 +27,9 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 input[type="number"] {
   -moz-appearance: textfield;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: theme("colors.line") transparent;
 }
