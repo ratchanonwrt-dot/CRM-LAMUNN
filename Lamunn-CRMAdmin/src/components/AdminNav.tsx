@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import clsx from "clsx";
+import AppSwitcher from "./AppSwitcher";
 import {
   LayoutDashboard,
   Building2,
@@ -146,7 +147,7 @@ export default function AdminNav({ role, name, allowedFeatures }: { role: string
   const [open, setOpen] = useState(false);
 
   const profileBlock = (
-    <div className="mb-6 flex items-center gap-3">
+    <div className="flex items-center gap-3">
       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 shadow-inner">
         {name.slice(0, 1) || "?"}
       </div>
@@ -197,6 +198,7 @@ export default function AdminNav({ role, name, allowedFeatures }: { role: string
                 <X size={18} />
               </button>
             </div>
+            <AppSwitcher current="crm" />
             <NavLinks links={links} pathname={pathname} onNavigate={() => setOpen(false)} />
             {signOutButton}
           </aside>
@@ -205,7 +207,8 @@ export default function AdminNav({ role, name, allowedFeatures }: { role: string
 
       {/* Desktop sidebar */}
       <aside className="hidden w-56 shrink-0 flex-col border-r border-gray-200 bg-white px-4 py-6 md:flex">
-        {profileBlock}
+        <div className="mb-6">{profileBlock}</div>
+        <AppSwitcher current="crm" />
         <NavLinks links={links} pathname={pathname} />
         {signOutButton}
       </aside>

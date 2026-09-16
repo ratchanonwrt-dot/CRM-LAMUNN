@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import AppSwitcher from "./AppSwitcher";
 import clsx from "clsx";
 import { LayoutDashboard, CalendarDays, Inbox, Radio, BarChart3, Wallet, Users, Tv, UserCog, LogOut, Menu, X } from "lucide-react";
 
@@ -74,6 +75,8 @@ export default function Nav({ role, name, pendingRequests = 0 }: { role: string;
           <p className="text-[11px] text-stone-500">หลังบ้านทีมไลฟ์</p>
         </div>
       </div>
+
+      <AppSwitcher current="live" />
 
       <nav className="flex flex-1 flex-col gap-0.5">
         <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-600">งานประจำวัน</p>
