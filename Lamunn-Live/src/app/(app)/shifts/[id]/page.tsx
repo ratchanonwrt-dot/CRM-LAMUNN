@@ -49,6 +49,8 @@ export default async function ShiftDetailPage({ params }: { params: { id: string
       value: `${formatBaht(pay.minPay)} ฿`,
       sub: hasResults ? "ชั่วโมงจากช่วงที่กรอกจริง" : "ชั่วโมงตามที่วางกะไว้ (ยังไม่กรอกยอด)",
     },
+    { label: "ระบบคำนวณได้", value: `${formatBaht(pay.computedPay)} ฿` },
+    ...(pay.overridden ? [{ label: "แอดมินกำหนดยอดจ่ายเอง", value: `${formatBaht(pay.pay)} ฿`, sub: shift.payNote ?? undefined, strong: true }] : []),
   ];
 
   return (
@@ -109,7 +111,7 @@ export default async function ShiftDetailPage({ params }: { params: { id: string
                     {r.label}
                     {r.sub && <span className="block text-[11px] text-stone-400">{r.sub}</span>}
                   </dt>
-                  <dd className="tabular-nums text-ink">{r.value}</dd>
+                  <dd className={clsx("tabular-nums", r.strong ? "font-semibold text-brand-800" : "text-ink")}>{r.value}</dd>
                 </div>
               ))}
             </dl>
@@ -148,6 +150,7 @@ export default async function ShiftDetailPage({ params }: { params: { id: string
         endTime={shift.endTime}
         settings={{ shippingPct: settings.shippingPct, commissionPct: settings.commissionPct, minHourly: settings.minHourly }}
         existing={shift.slots.map((s) => ({ startTime: s.startTime, endTime: s.endTime, viewers: s.viewers, sales: s.sales, peakViewers: s.peakViewers, orders: s.orders }))}
+        payOverride={shift.payOverride}
       />
 
     </div>

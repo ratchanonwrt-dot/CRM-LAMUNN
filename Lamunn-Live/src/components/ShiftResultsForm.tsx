@@ -44,12 +44,14 @@ export default function ShiftResultsForm({
   endTime,
   settings,
   existing,
+  payOverride = null,
 }: {
   shiftId: string;
   startTime: string;
   endTime: string;
   settings: PaySettings;
   existing: ExistingSlot[];
+  payOverride?: number | null; // ยอดที่แอดมินกำหนดเอง (ถ้ามี) — ต้องแสดงตัวเลขเดียวกับกล่องค่าตอบแทน
 }) {
   const router = useRouter();
   const hasExisting = existing.length > 0;
@@ -234,12 +236,23 @@ export default function ShiftResultsForm({
           </dl>
           <div className="mt-3 border-t border-line pt-3">
             <p className="text-[11px] text-stone-400">จ่ายคนไลฟ์</p>
-            <p className={clsx("text-xl font-bold tabular-nums", preview.pay.hitMinimum ? "text-amber-700" : "text-ink")}>{formatBaht(preview.pay.pay)} ฿</p>
-            <p className="text-xs text-muted">
-              {preview.pay.hitMinimum
-                ? `ไม่ถึงขั้นต่ำ จ่ายตามขั้นต่ำ = คอมจริง ${preview.pay.effectivePct === null ? "-" : formatNum(preview.pay.effectivePct, 1) + "%"}`
-                : `ตามคอมมิชชั่น ${formatNum(settings.commissionPct, 2)}%`}
-            </p>
+            {payOverride !== null ? (
+              <>
+                <p className="text-xl font-bold tabular-nums text-brand-800">{formatBaht(payOverride)} ฿</p>
+                <p className="text-xs text-muted">
+                  แอดมินกำหนดยอดนี้เอง · ระบบคำนวณจากที่กรอกได้ {formatBaht(preview.pay.pay)} ฿
+                </p>
+              </>
+            ) : (
+              <>
+                <p className={clsx("text-xl font-bold tabular-nums", preview.pay.hitMinimum ? "text-amber-700" : "text-ink")}>{formatBaht(preview.pay.pay)} ฿</p>
+                <p className="text-xs text-muted">
+                  {preview.pay.hitMinimum
+                    ? `ไม่ถึงขั้นต่ำ จ่ายตามขั้นต่ำ = คอมจริง ${preview.pay.effectivePct === null ? "-" : formatNum(preview.pay.effectivePct, 1) + "%"}`
+                    : `ตามคอมมิชชั่น ${formatNum(settings.commissionPct, 2)}%`}
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>
