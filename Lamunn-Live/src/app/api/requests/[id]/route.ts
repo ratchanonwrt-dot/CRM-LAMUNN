@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@lamunn/db-live";
 import { requireStaff, EDITOR_ROLES } from "@/lib/requireStaff";
 import { checkShiftConflicts } from "@/lib/shiftValidation";
-import { attachShiftToSession } from "@/lib/shiftSession";
+import { attachShiftToSession, syncSessionTimes } from "@/lib/shiftSession";
 import { optionalText } from "@/lib/validation";
 import { pickUnusedColor } from "@/lib/schedule";
 
@@ -10,6 +10,7 @@ import { pickUnusedColor } from "@/lib/schedule";
  * อนุมัติ / ปฏิเสธ คำขอจองกะ (ผู้จัดการขึ้นไป)
  * body: { action: "approve", streamerId?: string, createStreamer?: boolean, note?: string }
  *       { action: "reject", note?: string }
+ * คำขอที่มี replacesShiftId = คนไลฟ์ขอเปลี่ยนเวลาของกะที่อนุมัติแล้ว → อนุมัติแล้วจะแก้เวลากะเดิม (ไม่สร้างกะใหม่)
  */
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const staff = await requireStaff(EDITOR_ROLES);
@@ -32,7 +33,29 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   if (body.action !== "approve") return NextResponse.json({ error: "action ไม่ถูกต้อง" }, { status: 400 });
 
-  // เลือกคนไลฟ์: ที่ส่งมา / สร้างใหม่จากข้อมูลคำขอ
+  // ---- คำขอเปลี่ยนเวลาของกะที่อนุมัติแล้ว: แก้กะเดิม ----
+  const replaces = request.replacesShiftId ? await prisma.liveShift.findUnique({ where: { id: request.replacesShiftId }, include: { request: { select: { id: true } } } }) : null;
+  if (replaces) {
+    const shiftData = { date: replaces.date, streamerId: replaces.streamerId, channelId: replaces.channelId, startTime: request.startTime, endTime: request.endTime, note: replaces.note };
+    const conflict = await checkShiftConflicts(shiftData, replaces.id);
+    if (conflict) return NextResponse.json({ error: `อนุมัติไม่ได้: ${conflict}` }, { status: 409 });
+    const log = `ทีมงานอนุมัติเปลี่ยนเวลา ${replaces.startTime}–${replaces.endTime} → ${request.startTime}–${request.endTime}`;
+    const updated = await prisma.$transaction(async (tx) => {
+      // คำขอเดิมที่ผูกกะอยู่ → ปิดเป็น "ถูกแทนที่" เพื่อให้คำขอใหม่ผูกกะแทน (shiftId unique)
+      if (replaces.request) {
+        await tx.slotRequest.update({ where: { id: replaces.request.id }, data: { shiftId: null, status: "CANCELLED", reviewNote: `ถูกแทนที่ด้วยคำขอเปลี่ยนเวลา ${request.startTime}–${request.endTime}`, reviewedByStaffId: staff.staffId, reviewedAt: new Date() } });
+      }
+      await tx.liveShift.update({ where: { id: replaces.id }, data: { startTime: request.startTime, endTime: request.endTime, note: [replaces.note, log, note].filter(Boolean).join(" · ") || null } });
+      return tx.slotRequest.update({
+        where: { id: params.id },
+        data: { status: "APPROVED", streamerId: replaces.streamerId, shiftId: replaces.id, reviewNote: note, reviewedByStaffId: staff.staffId, reviewedAt: new Date() },
+      });
+    });
+    await syncSessionTimes(replaces.sessionId);
+    return NextResponse.json({ request: updated, shiftId: replaces.id });
+  }
+
+  // ---- คำขอปกติ: เลือกคนไลฟ์ (ที่ส่งมา / สร้างใหม่จากข้อมูลคำขอ) แล้วสร้างกะ ----
   let streamerId: string | null = typeof body.streamerId === "string" && body.streamerId ? body.streamerId : null;
   if (!streamerId && body.createStreamer) {
     const used = (await prisma.streamer.findMany({ where: { isActive: true }, select: { color: true } })).map((s) => s.color);

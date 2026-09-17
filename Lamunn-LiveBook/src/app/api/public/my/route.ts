@@ -17,6 +17,8 @@ export async function GET() {
     take: 50,
     include: { channel: { select: { name: true } }, shift: { select: { id: true, startTime: true, endTime: true, slots: { select: { id: true } } } } },
   });
+  // กะที่มีคำขอเปลี่ยนเวลาค้างอยู่ (เพื่อบอกในแถวของกะเดิม)
+  const pendingChangeFor = new Set(rows.filter((r) => r.status === "PENDING" && r.replacesShiftId).map((r) => r.replacesShiftId!));
   return NextResponse.json({
     phone: maskPhone(phone),
     requests: rows.map((r) => {
@@ -31,6 +33,8 @@ export async function GET() {
         endTime,
         channel: r.channel?.name ?? null,
         status: r.status,
+        isChange: r.status === "PENDING" && !!r.replacesShiftId,
+        hasPendingChange: r.status === "APPROVED" && !!r.shiftId && pendingChangeFor.has(r.shiftId),
         note: r.status === "REJECTED" ? r.reviewNote : null,
         editable,
       };

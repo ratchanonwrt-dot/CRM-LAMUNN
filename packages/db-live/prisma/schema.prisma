@@ -224,6 +224,9 @@ model SlotRequest {
   shiftId String?    @unique
   shift   LiveShift? @relation(fields: [shiftId], references: [id], onDelete: SetNull)
 
+  // คำขอเปลี่ยนเวลาของกะที่อนุมัติแล้ว (คนไลฟ์ขยาย/เลื่อนเวลาเอง) — ตอนอนุมัติจะแก้กะเดิมแทนการสร้างใหม่
+  replacesShiftId String?
+
   reviewedByStaffId String?
   reviewedByStaff   StaffUser? @relation(fields: [reviewedByStaffId], references: [id], onDelete: SetNull)
   reviewedAt        DateTime?

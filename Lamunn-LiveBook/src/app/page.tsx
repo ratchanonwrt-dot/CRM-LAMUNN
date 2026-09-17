@@ -76,7 +76,7 @@ export default async function PublicSchedulePage({ searchParams }: { searchParam
               <span className="h-3 w-5 rounded bg-ink" /> unavailable
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="h-3 w-5 rounded border-2 border-brand-600 bg-brand-100" /> ของฉัน
+              <span className="h-3 w-5 rounded border-2 border-violet-600 bg-violet-100" /> ของฉัน
             </span>
           </div>
           {week.channels.length > 0 && (

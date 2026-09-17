@@ -25,7 +25,8 @@ function blockLabel(b: PublicBlock): string {
 }
 
 function blockCls(b: PublicBlock): string {
-  if (b.mine) return b.mine.status === "APPROVED" ? "border-2 border-brand-600 bg-brand-100 text-brand-900" : "border-2 border-dashed border-brand-600 bg-amber-50 text-brand-900";
+  // สีม่วง — ไม่ซ้ำกับช่อง "ว่าง" (เขียว) และช่องรอคนอื่น (เหลือง)
+  if (b.mine) return b.mine.status === "APPROVED" ? "border-2 border-violet-600 bg-violet-100 text-violet-900" : "border-2 border-dashed border-violet-500 bg-violet-50 text-violet-900";
   return b.status === "booked" ? "border-stone-300 bg-stone-200 text-muted" : b.status === "blocked" ? "border-ink bg-ink text-white" : "border-amber-300 bg-amber-100 text-amber-800";
 }
 

@@ -12,6 +12,8 @@ export interface MyRow {
   endTime: string;
   channel: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+  isChange?: boolean; // คำขอเปลี่ยนเวลาของกะที่อนุมัติแล้ว
+  hasPendingChange?: boolean; // กะนี้มีคำขอเปลี่ยนเวลารออยู่
   note: string | null;
   editable: boolean;
 }
@@ -92,7 +94,7 @@ export default function MyPanel({ phoneMasked, onManage }: { phoneMasked: string
           <LogOut size={13} /> ไม่ใช่ฉัน / ลืมเบอร์นี้
         </button>
       </div>
-      <p className="mt-1 text-xs text-muted">ช่วงของคุณบนตารางมีกรอบเขียวเข้มและป้าย &quot;ของฉัน&quot; — กดที่ช่วงเพื่อแก้เวลาหรือยกเลิก</p>
+      <p className="mt-1 text-xs text-muted">ช่วงของคุณบนตารางเป็นสีม่วงมีป้าย &quot;ของฉัน&quot; — กดที่ช่วงเพื่อแก้เวลาหรือยกเลิก · ย่อเวลาให้แคบลงหรือยกเลิกได้ทันที ถ้าขยาย/เลื่อนเวลาต้องรอทีมงานอนุมัติ</p>
       {rows === null ? (
         <p className="mt-3 text-sm text-stone-400">กำลังโหลด...</p>
       ) : rows.length === 0 ? (
@@ -106,7 +108,8 @@ export default function MyPanel({ phoneMasked, onManage }: { phoneMasked: string
                 {r.channel && <span className="text-stone-400"> · {r.channel}</span>}
               </span>
               <span className="flex items-center gap-2">
-                <span className={clsx("rounded-full px-2 py-0.5 text-xs", STATUS[r.status].cls)}>{STATUS[r.status].label}</span>
+                <span className={clsx("rounded-full px-2 py-0.5 text-xs", r.isChange ? "bg-violet-100 text-violet-800" : STATUS[r.status].cls)}>{r.isChange ? "ขอเปลี่ยนเวลา รอทีมงานอนุมัติ" : STATUS[r.status].label}</span>
+                {r.hasPendingChange && <span className="text-xs text-violet-700">มีคำขอเปลี่ยนเวลารออยู่ (เวลาเดิมยังใช้อยู่)</span>}
                 {r.note && <span className="text-xs text-muted">{r.note}</span>}
                 {r.editable && (
                   <button onClick={() => onManage(r)} className="text-xs font-medium text-brand-700 hover:underline">

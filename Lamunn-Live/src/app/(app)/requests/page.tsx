@@ -44,6 +44,7 @@ export default async function RequestsPage({ searchParams }: { searchParams: { s
           status: r.status,
           streamerName: r.streamer?.name ?? null,
           shiftId: r.shiftId,
+          replacesShiftId: r.replacesShiftId,
           reviewNote: r.reviewNote,
           reviewedBy: r.reviewedByStaff?.name ?? null,
           createdAt: r.createdAt.toISOString(),

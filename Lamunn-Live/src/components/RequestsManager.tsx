@@ -23,6 +23,7 @@ interface RequestRow {
   status: Status;
   streamerName: string | null;
   shiftId: string | null;
+  replacesShiftId: string | null; // คำขอเปลี่ยนเวลาของกะที่อนุมัติแล้ว
   reviewNote: string | null;
   reviewedBy: string | null;
   createdAt: string;
@@ -56,7 +57,7 @@ function RequestCard({ r, streamers, onChanged }: { r: RequestRow; streamers: St
     const res = await fetch(`/api/requests/${r.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(action === "approve" ? { action, streamerId: mode === "pick" ? streamerId : null, createStreamer: mode === "create", note } : { action, note }),
+      body: JSON.stringify(action === "approve" ? (r.replacesShiftId ? { action, note } : { action, streamerId: mode === "pick" ? streamerId : null, createStreamer: mode === "create", note }) : { action, note }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -74,6 +75,11 @@ function RequestCard({ r, streamers, onChanged }: { r: RequestRow; streamers: St
           <p className="text-sm font-semibold text-ink">
             {formatThaiDateShort(d)} ({thaiDays[d.getUTCDay()]}) <span className="tabular-nums">{r.startTime}–{r.endTime}</span>
             {r.channelName && <span className="ml-2 font-normal text-muted">· {r.channelName}</span>}
+            {r.replacesShiftId && (
+              <Link href={`/shifts/${r.replacesShiftId}`} className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700 hover:underline">
+                ขอเปลี่ยนเวลากะที่อนุมัติแล้ว · เปิดกะเดิม →
+              </Link>
+            )}
           </p>
           <p className="mt-1 text-sm text-ink/80">
             {r.requesterName}
@@ -106,8 +112,9 @@ function RequestCard({ r, streamers, onChanged }: { r: RequestRow; streamers: St
 
       {r.status === "PENDING" && canEdit && (
         <div className="mt-3 border-t border-line/60 pt-3">
+          {r.replacesShiftId && <p className="mb-2 text-xs text-violet-700">อนุมัติ = แก้เวลากะเดิมเป็น {r.startTime}–{r.endTime} (คนไลฟ์คนเดิม) · ปฏิเสธ = กะเดิมคงเวลาเดิมไว้</p>}
           <div className="flex flex-wrap items-end gap-3">
-            <div>
+            <div className={clsx(r.replacesShiftId && "hidden")}>
               <label className="mb-1 block text-xs font-medium text-muted">
                 ผูกกับคนไลฟ์{matched && <span className="ml-1 text-emerald-600">(เจอจากเบอร์/LINE: {matched.name})</span>}
               </label>
