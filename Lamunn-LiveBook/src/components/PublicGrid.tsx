@@ -3,20 +3,31 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { X } from "lucide-react";
+import { X, ChevronRight, Lock, Clock } from "lucide-react";
 import TimeSelect from "@/components/TimeSelect";
 import ManageMyRequest, { type ManageTarget } from "@/components/ManageMyRequest";
 import MyPanel, { type MyRow } from "@/components/MyPanel";
 import { DAY_START_MIN, GRID_END_MIN, DAY_END_MIN, minutesToLabel, toRange } from "@/lib/schedule";
 import { timeToMinutes } from "@/lib/format";
-import type { PublicDay } from "@/lib/publicWeek";
+import type { PublicDay, PublicBlock } from "@/lib/publicWeek";
 import { PUBLIC_GAP_MINUTES, findGapViolation } from "@/lib/bookingRules";
 
 const HOUR_PX = 30;
 const HOURS = Array.from({ length: (GRID_END_MIN - DAY_START_MIN) / 60 + 1 }, (_, i) => DAY_START_MIN + i * 60);
 const COL_HEIGHT = ((GRID_END_MIN - DAY_START_MIN) / 60) * HOUR_PX;
 const HOUR_CHOICES = [1, 1.5, 2, 2.5, 3, 4, 5, 6];
-const inputCls = "w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10";
+// text-base บนมือถือกัน iOS ซูมตอนโฟกัส
+const inputCls = "w-full rounded-xl border border-line bg-white px-3 py-2.5 text-base text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10 md:text-sm";
+
+function blockLabel(b: PublicBlock): string {
+  if (b.mine) return b.mine.status === "APPROVED" ? "ของฉัน · อนุมัติแล้ว" : "ของฉัน · รออนุมัติ";
+  return b.status === "booked" ? "มีคนไลฟ์แล้ว" : b.status === "blocked" ? "unavailable" : "มีคนขอแล้ว";
+}
+
+function blockCls(b: PublicBlock): string {
+  if (b.mine) return b.mine.status === "APPROVED" ? "border-2 border-brand-600 bg-brand-100 text-brand-900" : "border-2 border-dashed border-brand-600 bg-amber-50 text-brand-900";
+  return b.status === "booked" ? "border-stone-300 bg-stone-200 text-muted" : b.status === "blocked" ? "border-ink bg-ink text-white" : "border-amber-300 bg-amber-100 text-amber-800";
+}
 
 function endFromStart(startTime: string, hours: number): { endTime: string; crossesMidnight: boolean } {
   const s = timeToMinutes(startTime);
@@ -37,13 +48,15 @@ interface FormState {
   website: string; // honeypot
 }
 
-export default function PublicGrid({ days, channelId, channelName, phoneMasked }: { days: PublicDay[]; channelId: string | null; channelName: string | null; phoneMasked: string | null }) {
+export default function PublicGrid({ days, channelId, channelName, phoneMasked, today }: { days: PublicDay[]; channelId: string | null; channelName: string | null; phoneMasked: string | null; today: string }) {
   const router = useRouter();
   const [form, setForm] = useState<FormState | null>(null);
   const [manage, setManage] = useState<ManageTarget | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ date: string; startTime: string; endTime: string } | null>(null);
+  // มือถือ: ดูทีละวัน — เริ่มที่วันนี้ ถ้าไม่อยู่ในสัปดาห์นี้ให้เริ่มวันแรกที่ยังไม่ผ่าน
+  const [selectedDate, setSelectedDate] = useState(() => (days.find((d) => d.date === today) ?? days.find((d) => !d.isPast) ?? days[0])?.date ?? "");
 
   const dayLabel = (iso: string) => days.find((d) => d.date === iso)?.dayLabel ?? iso;
 
@@ -64,9 +77,14 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
     openRequest(day, Math.max(DAY_START_MIN, Math.min(GRID_END_MIN - 60, minutes)));
   }
 
+  function openManage(day: PublicDay, b: PublicBlock) {
+    if (!b.mine?.editable) return;
+    setManage({ requestId: b.mine.requestId, dateLabel: day.dayLabel, startTime: b.startTime, endTime: b.endTime, status: b.mine.status });
+  }
+
   function manageRow(r: MyRow) {
     if (r.status !== "PENDING" && r.status !== "APPROVED") return;
-    setManage({ requestId: r.id, dateLabel: dayLabel(r.date) === r.date ? r.date : dayLabel(r.date), startTime: r.startTime, endTime: r.endTime, status: r.status });
+    setManage({ requestId: r.id, dateLabel: dayLabel(r.date), startTime: r.startTime, endTime: r.endTime, status: r.status });
   }
 
   async function submit(e: React.FormEvent) {
@@ -102,6 +120,7 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
   }
 
   const derived = form ? endFromStart(form.startTime, Number(form.hours)) : null;
+  const selected = days.find((d) => d.date === selectedDate) ?? days[0];
 
   return (
     <div>
@@ -116,7 +135,49 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-card">
+      {/* ===== มือถือ: เลือกวัน แล้วดูช่วงของวันนั้นเป็นรายการ ===== */}
+      <div className="md:hidden">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {days.map((d) => {
+            const active = d.date === selected?.date;
+            const [dow, num] = d.dayLabel.split(" ");
+            return (
+              <button
+                key={d.date}
+                type="button"
+                onClick={() => setSelectedDate(d.date)}
+                className={clsx(
+                  "flex min-w-[56px] shrink-0 flex-col items-center rounded-2xl border px-2 py-2 transition",
+                  active ? "border-ink bg-ink text-white shadow-card" : d.isPast ? "border-line bg-paper text-stone-400" : "border-line bg-white text-ink"
+                )}
+              >
+                <span className={clsx("text-[11px]", active ? "text-stone-300" : "text-muted")}>{dow}</span>
+                <span className="font-display text-lg font-semibold leading-tight tabular-nums">{num}</span>
+                <span className={clsx("mt-0.5 text-[10px]", active ? "text-brand-300" : d.isPast ? "text-stone-400" : d.free.length ? "text-brand-700" : "text-muted")}>
+                  {d.isPast ? "ผ่านแล้ว" : d.free.length ? `ว่าง ${d.free.length}` : "เต็ม"}
+                </span>
+                {d.isToday && <span className={clsx("mt-1 h-1 w-1 rounded-full", active ? "bg-brand-300" : "bg-brand-600")} />}
+              </button>
+            );
+          })}
+        </div>
+
+        {selected && (
+          <div className="mt-3 rounded-2xl border border-line bg-white p-3 shadow-card">
+            <div className="mb-2 flex items-center justify-between px-1">
+              <p className="font-display text-[15px] font-semibold text-ink">
+                {selected.dayLabel}
+                {selected.isToday && <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-700">วันนี้</span>}
+              </p>
+              <p className="text-[11px] text-muted">10:00 – 01:00</p>
+            </div>
+            <MobileDayList day={selected} onFree={(s) => openRequest(selected, s)} onMine={(b) => openManage(selected, b)} />
+          </div>
+        )}
+      </div>
+
+      {/* ===== เดสก์ท็อป/แท็บเล็ต: ตารางทั้งสัปดาห์ ===== */}
+      <div className="hidden overflow-x-auto rounded-2xl border border-line bg-white shadow-card md:block">
         <div className="min-w-[860px]">
           <div className="grid border-b border-line" style={{ gridTemplateColumns: `52px repeat(${days.length}, 1fr)` }}>
             <div />
@@ -166,28 +227,18 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
                 {d.blocks.map((b, i) => {
                   const top = ((Math.max(b.s, DAY_START_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
                   const bottom = ((Math.min(b.e, GRID_END_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
-                  const mine = b.mine;
-                  const label = mine ? (mine.status === "APPROVED" ? "ของฉัน · อนุมัติแล้ว" : "ของฉัน · รออนุมัติ") : b.status === "booked" ? "มีคนไลฟ์แล้ว" : b.status === "blocked" ? "unavailable" : "มีคนขอแล้ว";
-                  const cls = mine
-                    ? mine.status === "APPROVED"
-                      ? "border-2 border-brand-600 bg-brand-100 text-brand-900"
-                      : "border-2 border-dashed border-brand-600 bg-amber-50 text-brand-900"
-                    : b.status === "booked"
-                      ? "border-stone-300 bg-stone-200 text-muted"
-                      : b.status === "blocked"
-                        ? "border-ink bg-ink text-white"
-                        : "border-amber-300 bg-amber-100 text-amber-800";
-                  const Tag = mine?.editable ? "button" : "div";
+                  const editable = !!b.mine?.editable;
+                  const Tag = editable ? "button" : "div";
                   return (
                     <Tag
                       key={i}
                       data-block
-                      {...(mine?.editable ? { type: "button", onClick: () => setManage({ requestId: mine.requestId, dateLabel: d.dayLabel, startTime: b.startTime, endTime: b.endTime, status: mine.status }) } : {})}
-                      className={clsx("absolute inset-x-1 overflow-hidden rounded-lg border px-1.5 py-1 text-left text-[11px] leading-tight", cls, mine?.editable && "cursor-pointer hover:shadow-md")}
+                      {...(editable ? { type: "button", onClick: () => openManage(d, b) } : {})}
+                      className={clsx("absolute inset-x-1 overflow-hidden rounded-lg border px-1.5 py-1 text-left text-[11px] leading-tight", blockCls(b), editable && "cursor-pointer hover:shadow-md")}
                       style={{ top: top + 1, height: Math.max(bottom - top - 2, 18) }}
-                      title={`${b.startTime}–${b.endTime} ${label}${mine?.editable ? " — กดเพื่อแก้ไข/ยกเลิก" : ""}`}
+                      title={`${b.startTime}–${b.endTime} ${blockLabel(b)}${editable ? " — กดเพื่อแก้ไข/ยกเลิก" : ""}`}
                     >
-                      <p className={clsx("truncate font-semibold", b.status === "blocked" && "uppercase tracking-wide")}>{label}</p>
+                      <p className={clsx("truncate font-semibold", b.status === "blocked" && "uppercase tracking-wide")}>{blockLabel(b)}</p>
                       <p className="truncate opacity-80">
                         {b.startTime}–{b.endTime}
                       </p>
@@ -200,15 +251,16 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
         </div>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-4 md:mt-6">
         <MyPanel phoneMasked={phoneMasked} onManage={manageRow} />
       </div>
 
       {manage && <ManageMyRequest target={manage} onClose={() => setManage(null)} />}
 
       {form && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={() => setForm(null)}>
-          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl bg-white p-5 shadow-pop">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4" onClick={() => setForm(null)}>
+          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-pop sm:rounded-2xl">
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-stone-200 sm:hidden" />
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="font-display text-[15px] font-semibold text-ink">ขอจองช่วงไลฟ์</h2>
@@ -217,7 +269,7 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
                   {channelName ? ` · ${channelName}` : ""}
                 </p>
               </div>
-              <button type="button" onClick={() => setForm(null)} className="text-stone-400 hover:text-muted">
+              <button type="button" onClick={() => setForm(null)} className="flex h-9 w-9 items-center justify-center rounded-full text-stone-400 hover:bg-paper hover:text-muted">
                 <X size={18} />
               </button>
             </div>
@@ -233,7 +285,7 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
               <div className="col-span-2">
                 <div className="flex flex-wrap gap-1.5">
                   {HOUR_CHOICES.map((h) => (
-                    <button key={h} type="button" onClick={() => setForm({ ...form, hours: String(h) })} className={clsx("rounded-lg border px-2.5 py-1 text-xs tabular-nums", Number(form.hours) === h ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line text-muted hover:bg-paper")}>
+                    <button key={h} type="button" onClick={() => setForm({ ...form, hours: String(h) })} className={clsx("rounded-lg border px-2.5 py-1.5 text-xs tabular-nums", Number(form.hours) === h ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line text-muted hover:bg-paper")}>
                       {h} ชม.
                     </button>
                   ))}
@@ -256,7 +308,7 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
                     { v: "yes", label: "เคยไลฟ์แล้ว (คนเก่า)" },
                     { v: "no", label: "ยังไม่เคย (คนใหม่)" },
                   ].map((o) => (
-                    <button key={o.v} type="button" onClick={() => setForm({ ...form, isReturning: o.v as "yes" | "no" })} className={clsx("rounded-lg border px-3 py-2 text-sm", form.isReturning === o.v ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line text-muted hover:bg-paper")}>
+                    <button key={o.v} type="button" onClick={() => setForm({ ...form, isReturning: o.v as "yes" | "no" })} className={clsx("rounded-lg border px-3 py-2.5 text-sm", form.isReturning === o.v ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line text-muted hover:bg-paper")}>
                       {o.label}
                     </button>
                   ))}
@@ -268,7 +320,7 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted">เบอร์โทร</label>
-                <input required inputMode="tel" value={form.requesterPhone} onChange={(e) => setForm({ ...form, requesterPhone: e.target.value })} className={inputCls} placeholder="08x-xxx-xxxx" />
+                <input required inputMode="tel" autoComplete="tel" value={form.requesterPhone} onChange={(e) => setForm({ ...form, requesterPhone: e.target.value })} className={inputCls} placeholder="08x-xxx-xxxx" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted">LINE ID (ถ้ามี)</label>
@@ -286,10 +338,10 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
             )}
             <p className="mt-3 text-[11px] text-stone-400">คำขอจะยังไม่ยืนยันจนกว่าทีมงานจะอนุมัติ ช่วงนี้จะขึ้นเป็น &quot;มีคนขอแล้ว&quot; ให้คนอื่นเห็นทันที · หลังส่ง ระบบจะจำเบอร์ของคุณเพื่อให้แก้ไข/ยกเลิกช่วงของคุณเองได้</p>
             <div className="mt-4 flex gap-2">
-              <button type="submit" disabled={saving} className="rounded-xl bg-ink px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50">
+              <button type="submit" disabled={saving} className="flex-1 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50 sm:flex-none sm:py-2.5">
                 {saving ? "กำลังส่ง..." : "ส่งคำขอจอง"}
               </button>
-              <button type="button" onClick={() => setForm(null)} className="rounded-xl border border-line px-5 py-2.5 text-sm text-muted hover:bg-paper">
+              <button type="button" onClick={() => setForm(null)} className="rounded-xl border border-line px-5 py-3 text-sm text-muted hover:bg-paper sm:py-2.5">
                 ยกเลิก
               </button>
             </div>
@@ -297,5 +349,73 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
         </div>
       )}
     </div>
+  );
+}
+
+/** รายการช่วงของวันเดียว (มือถือ) — เรียงตามเวลา รวมช่วงว่างและช่วงที่มีคนแล้ว */
+function MobileDayList({ day, onFree, onMine }: { day: PublicDay; onFree: (startMin: number) => void; onMine: (b: PublicBlock) => void }) {
+  type Item = { s: number; e: number; kind: "free" } | { s: number; e: number; kind: "block"; block: PublicBlock };
+  const items: Item[] = [
+    ...(day.isPast ? [] : day.free.map((f) => ({ s: f.s, e: f.e, kind: "free" as const }))),
+    ...day.blocks.map((b) => ({ s: b.s, e: b.e, kind: "block" as const, block: b })),
+  ].sort((a, b) => a.s - b.s);
+
+  if (items.length === 0) {
+    return <p className="rounded-xl bg-paper px-4 py-6 text-center text-sm text-muted">{day.isPast ? "วันนี้ผ่านไปแล้ว" : "วันนี้ยังไม่มีข้อมูล"}</p>;
+  }
+
+  return (
+    <ul className="flex flex-col gap-2">
+      {items.map((it, i) => {
+        if (it.kind === "free") {
+          return (
+            <li key={`f${i}`}>
+              <button
+                type="button"
+                onClick={() => onFree(it.s)}
+                className="flex w-full items-center gap-3 rounded-xl border border-dashed border-brand-400 bg-brand-50/70 px-3.5 py-3 text-left transition active:bg-brand-100"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-brand-700 shadow-sm">
+                  <Clock size={16} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-brand-800">ว่าง · กดเพื่อขอจอง</span>
+                  <span className="block text-xs tabular-nums text-brand-700/80">
+                    {minutesToLabel(it.s)}–{minutesToLabel(it.e)} ({Math.round(((it.e - it.s) / 60) * 10) / 10} ชม.)
+                  </span>
+                </span>
+                <ChevronRight size={16} className="text-brand-600" />
+              </button>
+            </li>
+          );
+        }
+        const b = it.block;
+        const editable = !!b.mine?.editable;
+        const Tag = editable ? "button" : "div";
+        return (
+          <li key={`b${i}`}>
+            <Tag
+              {...(editable ? { type: "button", onClick: () => onMine(b) } : {})}
+              className={clsx("flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left", blockCls(b), editable && "active:opacity-80")}
+            >
+              <span className={clsx("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", b.status === "blocked" ? "bg-white/10" : "bg-white/70")}>
+                {b.status === "blocked" ? <Lock size={15} /> : <Clock size={15} />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className={clsx("block text-sm font-semibold", b.status === "blocked" && "uppercase tracking-wide")}>{blockLabel(b)}</span>
+                <span className="block text-xs tabular-nums opacity-80">
+                  {b.startTime}–{b.endTime}
+                </span>
+              </span>
+              {editable && (
+                <span className="inline-flex items-center gap-1 text-xs font-medium">
+                  แก้ไข <ChevronRight size={14} />
+                </span>
+              )}
+            </Tag>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

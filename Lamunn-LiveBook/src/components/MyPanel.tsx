@@ -23,7 +23,7 @@ const STATUS: Record<MyRow["status"], { label: string; cls: string }> = {
   CANCELLED: { label: "ยกเลิกแล้ว", cls: "bg-stone-200 text-muted" },
 };
 
-const inputCls = "rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10";
+const inputCls = "rounded-xl border border-line bg-white px-3 py-2.5 text-base text-ink outline-none md:text-sm transition focus:border-ink focus:ring-2 focus:ring-ink/10";
 
 /** แผง "ของฉัน": ใส่เบอร์ครั้งเดียว ระบบจำไว้ แล้วเห็น/จัดการช่วงของตัวเอง */
 export default function MyPanel({ phoneMasked, onManage }: { phoneMasked: string | null; onManage: (row: MyRow) => void }) {
@@ -70,8 +70,8 @@ export default function MyPanel({ phoneMasked, onManage }: { phoneMasked: string
         </div>
         <p className="mt-1 text-xs text-muted">ใส่เบอร์โทรที่ใช้ขอจอง ระบบจะไฮไลต์ช่วงของคุณบนตาราง และให้แก้เวลา/ยกเลิกช่วงของคุณเองได้</p>
         <form onSubmit={remember} className="mt-3 flex flex-wrap items-center gap-2">
-          <input required inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="เบอร์โทรของคุณ" className={inputCls + " w-56"} />
-          <button type="submit" disabled={busy} className="rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50">
+          <input required inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="เบอร์โทรของคุณ" className={inputCls + " w-full sm:w-56"} />
+          <button type="submit" disabled={busy} className="w-full rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50 sm:w-auto">
             {busy ? "กำลังตรวจ..." : "ดูช่วงของฉัน"}
           </button>
           {error && <p className="text-sm text-red-600">{error}</p>}

@@ -9,7 +9,7 @@ import { toRange, minutesToLabel, DAY_END_MIN } from "@/lib/schedule";
 import { timeToMinutes } from "@/lib/format";
 
 const HOUR_CHOICES = [1, 1.5, 2, 2.5, 3, 4, 5, 6];
-const inputCls = "w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10";
+const inputCls = "w-full rounded-xl border border-line bg-white px-3 py-2.5 text-base text-ink outline-none md:text-sm transition focus:border-ink focus:ring-2 focus:ring-ink/10";
 
 export interface ManageTarget {
   requestId: string;
@@ -62,8 +62,9 @@ export default function ManageMyRequest({ target, onClose }: { target: ManageTar
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={onClose}>
-      <div onClick={(ev) => ev.stopPropagation()} className="w-full max-w-md rounded-2xl bg-white p-5 shadow-pop">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center sm:p-4" onClick={onClose}>
+      <div onClick={(ev) => ev.stopPropagation()} className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-pop sm:rounded-2xl">
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-stone-200 sm:hidden" />
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="font-display text-[15px] font-semibold text-ink">ช่วงของฉัน · {target.dateLabel}</h2>
