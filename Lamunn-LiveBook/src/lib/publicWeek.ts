@@ -1,7 +1,7 @@
 import { prisma } from "@lamunn/db-live";
 import { addDays, freeRanges, isoDate, toRange, weekStartOf } from "@/lib/schedule";
 import { thaiDaysShort } from "@/lib/format";
-import { gapRuleApplies, padRanges } from "@/lib/bookingRules";
+import { gapRuleApplies, padRanges, startsWithin, EDIT_LEAD_HOURS } from "@/lib/bookingRules";
 
 const thaiMonthsShort = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 
@@ -66,13 +66,13 @@ export async function loadPublicWeek(weekParam: string | undefined, channelParam
       const r = toRange(s.startTime, s.endTime);
       if (!r) continue;
       const reqId = myByShift.get(s.id);
-      blocks.push({ startTime: s.startTime, endTime: s.endTime, s: r.s, e: r.e, status: "booked", ...(reqId ? { mine: { requestId: reqId, status: "APPROVED", editable: !isPast && s.slots.length === 0 } } : {}) });
+      blocks.push({ startTime: s.startTime, endTime: s.endTime, s: r.s, e: r.e, status: "booked", ...(reqId ? { mine: { requestId: reqId, status: "APPROVED", editable: !isPast && !startsWithin(iso, s.startTime, EDIT_LEAD_HOURS) && s.slots.length === 0 } } : {}) });
     }
     for (const q of requests) {
       if (isoDate(q.date) !== iso) continue;
       const r = toRange(q.startTime, q.endTime);
       if (!r) continue;
-      blocks.push({ startTime: q.startTime, endTime: q.endTime, s: r.s, e: r.e, status: "requested", ...(myPending.has(q.id) ? { mine: { requestId: q.id, status: "PENDING", editable: !isPast } } : {}) });
+      blocks.push({ startTime: q.startTime, endTime: q.endTime, s: r.s, e: r.e, status: "requested", ...(myPending.has(q.id) ? { mine: { requestId: q.id, status: "PENDING", editable: !isPast && !startsWithin(iso, q.startTime, EDIT_LEAD_HOURS) } } : {}) });
     }
     for (const b of blocks_) {
       if (isoDate(b.date) !== iso) continue;

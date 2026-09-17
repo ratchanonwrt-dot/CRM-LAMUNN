@@ -34,3 +34,16 @@ export function findGapViolation(range: MinuteRange, existing: MinuteRange[], mi
   }
   return null;
 }
+
+/** คนไลฟ์ต้องแก้ไข/ยกเลิกช่วงของตัวเองก่อนถึงเวลาไลฟ์อย่างน้อยกี่ชั่วโมง */
+export const EDIT_LEAD_HOURS = 6;
+export const EDIT_LEAD_MESSAGE = `โปรดแก้ไขหรือยกเลิกก่อนถึงเวลาไลฟ์อย่างน้อย ${EDIT_LEAD_HOURS} ชม.`;
+
+/** true ถ้าเวลาเริ่มไลฟ์ (วันที่ + HH:mm เวลาไทย) อยู่ห่างจากตอนนี้น้อยกว่า hours ชั่วโมง (รวมที่ผ่านไปแล้ว) */
+export function startsWithin(date: Date | string, startTime: string, hours: number, now: Date = new Date()): boolean {
+  const iso = typeof date === "string" ? date : date.toISOString().slice(0, 10);
+  const [h, m] = startTime.split(":").map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return true;
+  const startUtc = Date.parse(iso + "T00:00:00Z") + (h * 60 + m) * 60000 - 7 * 3600000; // เวลาไทย → UTC
+  return startUtc - now.getTime() < hours * 3600000;
+}

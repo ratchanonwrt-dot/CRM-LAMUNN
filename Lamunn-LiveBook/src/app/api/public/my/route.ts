@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@lamunn/db-live";
 import { phoneFromCookies, maskPhone } from "@/lib/me";
 import { todayTH } from "@/lib/schedule";
+import { EDIT_LEAD_HOURS, startsWithin } from "@/lib/bookingRules";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export async function GET() {
       const startTime = r.shift?.startTime ?? r.startTime;
       const endTime = r.shift?.endTime ?? r.endTime;
       const active = r.status === "PENDING" || (r.status === "APPROVED" && !!r.shift);
-      const editable = active && r.date >= today && !(r.shift && r.shift.slots.length > 0);
+      const editable = active && r.date >= today && !startsWithin(r.date, startTime, EDIT_LEAD_HOURS) && !(r.shift && r.shift.slots.length > 0);
       return {
         id: r.id,
         date: r.date.toISOString().slice(0, 10),

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { X, ChevronRight, Lock, Clock } from "lucide-react";
+import { X } from "lucide-react";
 import TimeSelect from "@/components/TimeSelect";
 import ManageMyRequest, { type ManageTarget } from "@/components/ManageMyRequest";
 import MyPanel, { type MyRow } from "@/components/MyPanel";
@@ -49,15 +49,13 @@ interface FormState {
   website: string; // honeypot
 }
 
-export default function PublicGrid({ days, channelId, channelName, phoneMasked, today }: { days: PublicDay[]; channelId: string | null; channelName: string | null; phoneMasked: string | null; today: string }) {
+export default function PublicGrid({ days, channelId, channelName, phoneMasked }: { days: PublicDay[]; channelId: string | null; channelName: string | null; phoneMasked: string | null }) {
   const router = useRouter();
   const [form, setForm] = useState<FormState | null>(null);
   const [manage, setManage] = useState<ManageTarget | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ date: string; startTime: string; endTime: string } | null>(null);
-  // มือถือ: ดูทีละวัน — เริ่มที่วันนี้ ถ้าไม่อยู่ในสัปดาห์นี้ให้เริ่มวันแรกที่ยังไม่ผ่าน
-  const [selectedDate, setSelectedDate] = useState(() => (days.find((d) => d.date === today) ?? days.find((d) => !d.isPast) ?? days[0])?.date ?? "");
 
   const dayLabel = (iso: string) => days.find((d) => d.date === iso)?.dayLabel ?? iso;
 
@@ -121,7 +119,6 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked, 
   }
 
   const derived = form ? endFromStart(form.startTime, Number(form.hours)) : null;
-  const selected = days.find((d) => d.date === selectedDate) ?? days[0];
 
   return (
     <div>
@@ -136,49 +133,8 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked, 
         </div>
       )}
 
-      {/* ===== มือถือ: เลือกวัน แล้วดูช่วงของวันนั้นเป็นรายการ ===== */}
-      <div className="md:hidden">
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {days.map((d) => {
-            const active = d.date === selected?.date;
-            const [dow, num] = d.dayLabel.split(" ");
-            return (
-              <button
-                key={d.date}
-                type="button"
-                onClick={() => setSelectedDate(d.date)}
-                className={clsx(
-                  "flex min-w-[56px] shrink-0 flex-col items-center rounded-2xl border px-2 py-2 transition",
-                  active ? "border-ink bg-ink text-white shadow-card" : d.isPast ? "border-line bg-paper text-stone-400" : "border-line bg-white text-ink"
-                )}
-              >
-                <span className={clsx("text-[11px]", active ? "text-stone-300" : "text-muted")}>{dow}</span>
-                <span className="font-display text-lg font-semibold leading-tight tabular-nums">{num}</span>
-                <span className={clsx("mt-0.5 text-[10px]", active ? "text-brand-300" : d.isPast ? "text-stone-400" : d.free.length ? "text-brand-700" : "text-muted")}>
-                  {d.isPast ? "ผ่านแล้ว" : d.free.length ? `ว่าง ${d.free.length}` : "เต็ม"}
-                </span>
-                {d.isToday && <span className={clsx("mt-1 h-1 w-1 rounded-full", active ? "bg-brand-300" : "bg-brand-600")} />}
-              </button>
-            );
-          })}
-        </div>
-
-        {selected && (
-          <div className="mt-3 rounded-2xl border border-line bg-white p-3 shadow-card">
-            <div className="mb-2 flex items-center justify-between px-1">
-              <p className="font-display text-[15px] font-semibold text-ink">
-                {selected.dayLabel}
-                {selected.isToday && <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-700">วันนี้</span>}
-              </p>
-              <p className="text-[11px] text-muted">10:00 – 01:00</p>
-            </div>
-            <MobileDayList day={selected} onFree={(s) => openRequest(selected, s)} onMine={(b) => openManage(selected, b)} />
-          </div>
-        )}
-      </div>
-
-      {/* ===== เดสก์ท็อป/แท็บเล็ต: ตารางทั้งสัปดาห์ ===== */}
-      <div className="hidden overflow-x-auto rounded-2xl border border-line bg-white shadow-card md:block">
+      {/* ตารางทั้งสัปดาห์ทุกขนาดจอ — บนมือถือเลื่อนซ้าย-ขวาได้ */}
+      <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-card">
         <div className="min-w-[860px]">
           <div className="grid border-b border-line" style={{ gridTemplateColumns: `52px repeat(${days.length}, 1fr)` }}>
             <div />
@@ -350,73 +306,5 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked, 
         </div>
       )}
     </div>
-  );
-}
-
-/** รายการช่วงของวันเดียว (มือถือ) — เรียงตามเวลา รวมช่วงว่างและช่วงที่มีคนแล้ว */
-function MobileDayList({ day, onFree, onMine }: { day: PublicDay; onFree: (startMin: number) => void; onMine: (b: PublicBlock) => void }) {
-  type Item = { s: number; e: number; kind: "free" } | { s: number; e: number; kind: "block"; block: PublicBlock };
-  const items: Item[] = [
-    ...(day.isPast ? [] : day.free.map((f) => ({ s: f.s, e: f.e, kind: "free" as const }))),
-    ...day.blocks.map((b) => ({ s: b.s, e: b.e, kind: "block" as const, block: b })),
-  ].sort((a, b) => a.s - b.s);
-
-  if (items.length === 0) {
-    return <p className="rounded-xl bg-paper px-4 py-6 text-center text-sm text-muted">{day.isPast ? "วันนี้ผ่านไปแล้ว" : "วันนี้ยังไม่มีข้อมูล"}</p>;
-  }
-
-  return (
-    <ul className="flex flex-col gap-2">
-      {items.map((it, i) => {
-        if (it.kind === "free") {
-          return (
-            <li key={`f${i}`}>
-              <button
-                type="button"
-                onClick={() => onFree(it.s)}
-                className="flex w-full items-center gap-3 rounded-xl border border-dashed border-brand-400 bg-brand-50/70 px-3.5 py-3 text-left transition active:bg-brand-100"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-brand-700 shadow-sm">
-                  <Clock size={16} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold text-brand-800">ว่าง · กดเพื่อขอจอง</span>
-                  <span className="block text-xs tabular-nums text-brand-700/80">
-                    {minutesToLabel(it.s)}–{minutesToLabel(it.e)} ({Math.round(((it.e - it.s) / 60) * 10) / 10} ชม.)
-                  </span>
-                </span>
-                <ChevronRight size={16} className="text-brand-600" />
-              </button>
-            </li>
-          );
-        }
-        const b = it.block;
-        const editable = !!b.mine?.editable;
-        const Tag = editable ? "button" : "div";
-        return (
-          <li key={`b${i}`}>
-            <Tag
-              {...(editable ? { type: "button", onClick: () => onMine(b) } : {})}
-              className={clsx("flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left", blockCls(b), editable && "active:opacity-80")}
-            >
-              <span className={clsx("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", b.status === "blocked" ? "bg-white/10" : "bg-white/70")}>
-                {b.status === "blocked" ? <Lock size={15} /> : <Clock size={15} />}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className={clsx("block text-sm font-semibold", b.status === "blocked" && "uppercase tracking-wide")}>{blockLabel(b)}</span>
-                <span className="block text-xs tabular-nums opacity-80">
-                  {b.startTime}–{b.endTime}
-                </span>
-              </span>
-              {editable && (
-                <span className="inline-flex items-center gap-1 text-xs font-medium">
-                  แก้ไข <ChevronRight size={14} />
-                </span>
-              )}
-            </Tag>
-          </li>
-        );
-      })}
-    </ul>
   );
 }

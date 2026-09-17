@@ -60,7 +60,7 @@ export default async function PublicSchedulePage({ searchParams }: { searchParam
       </header>
 
       <div className="mx-auto max-w-6xl px-4 py-4 md:px-6 md:py-6">
-        <p className="mb-3 text-[13px] leading-relaxed text-muted md:hidden">เลือกวัน แล้วกดช่วง &quot;ว่าง&quot; เพื่อส่งคำขอจอง ทีมงานจะติดต่อกลับเพื่อยืนยัน ตารางนี้ไม่แสดงชื่อผู้ไลฟ์</p>
+        <p className="mb-3 text-[13px] leading-relaxed text-muted md:hidden">เลื่อนตารางซ้าย-ขวาเพื่อดูทั้งสัปดาห์ แล้วกดช่วง &quot;ว่าง&quot; เพื่อส่งคำขอจอง ทีมงานจะติดต่อกลับเพื่อยืนยัน ตารางนี้ไม่แสดงชื่อผู้ไลฟ์</p>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3 md:mb-4">
           <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-muted md:gap-x-5 md:text-xs">
             <span className="inline-flex items-center gap-1.5">
@@ -89,7 +89,7 @@ export default async function PublicSchedulePage({ searchParams }: { searchParam
         {week.channels.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-line bg-white p-12 text-center text-muted">ขณะนี้ยังไม่เปิดรับจองช่วงไลฟ์จากภายนอก กรุณาติดต่อทีมงาน Lamunn โดยตรง</div>
         ) : (
-          <PublicGrid days={week.days} channelId={week.channelId} channelName={channelName} phoneMasked={phone ? maskPhone(phone) : null} today={isoDate(today)} />
+          <PublicGrid days={week.days} channelId={week.channelId} channelName={channelName} phoneMasked={phone ? maskPhone(phone) : null} />
         )}
 
         <p className="mt-8 text-center text-[11px] text-stone-400 md:mt-10">การจองจะยืนยันเมื่อทีมงาน Lamunn อนุมัติแล้วเท่านั้น</p>

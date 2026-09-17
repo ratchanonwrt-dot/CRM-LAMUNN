@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { UserRound, LogOut } from "lucide-react";
+import { EDIT_LEAD_MESSAGE } from "@/lib/bookingRules";
 
 export interface MyRow {
   id: string;
@@ -95,6 +96,7 @@ export default function MyPanel({ phoneMasked, onManage }: { phoneMasked: string
         </button>
       </div>
       <p className="mt-1 text-xs text-muted">ช่วงของคุณบนตารางเป็นสีม่วงมีป้าย &quot;ของฉัน&quot; — กดที่ช่วงเพื่อแก้เวลาหรือยกเลิก · ย่อเวลาให้แคบลงหรือยกเลิกได้ทันที ถ้าขยาย/เลื่อนเวลาต้องรอทีมงานอนุมัติ</p>
+      <p className="mt-1 text-xs font-medium text-amber-700">{EDIT_LEAD_MESSAGE}</p>
       {rows === null ? (
         <p className="mt-3 text-sm text-stone-400">กำลังโหลด...</p>
       ) : rows.length === 0 ? (

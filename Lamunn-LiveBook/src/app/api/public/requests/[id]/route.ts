@@ -4,6 +4,7 @@ import { phoneFromCookies } from "@/lib/me";
 import { normalizeTime } from "@/lib/validation";
 import { toRange, todayTH } from "@/lib/schedule";
 import { validatePublicRange } from "@/lib/publicRules";
+import { EDIT_LEAD_HOURS, EDIT_LEAD_MESSAGE, startsWithin } from "@/lib/bookingRules";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,8 @@ async function loadOwn(id: string) {
   if (request.status === "REJECTED" || request.status === "CANCELLED") return { error: NextResponse.json({ error: "ช่วงนี้ถูกปิดไปแล้ว แก้ไขไม่ได้" }, { status: 400 }) };
   if (request.status === "APPROVED" && !request.shift) return { error: NextResponse.json({ error: "กะนี้ถูกทีมงานเปลี่ยนแปลงแล้ว กรุณาติดต่อทีมงาน" }, { status: 400 }) };
   if (request.date < todayTH()) return { error: NextResponse.json({ error: "ช่วงที่ผ่านไปแล้วแก้ไขไม่ได้" }, { status: 400 }) };
+  // ต้องแก้/ยกเลิกล่วงหน้าอย่างน้อย 6 ชม. ก่อนเวลาเริ่มไลฟ์ (ใช้เวลาของกะถ้าอนุมัติแล้ว)
+  if (startsWithin(request.date, request.shift?.startTime ?? request.startTime, EDIT_LEAD_HOURS)) return { error: NextResponse.json({ error: `ใกล้ถึงเวลาไลฟ์แล้ว — ${EDIT_LEAD_MESSAGE} หากจำเป็นกรุณาติดต่อทีมงาน` }, { status: 400 }) };
   if (request.shift && request.shift.slots.length > 0) return { error: NextResponse.json({ error: "กะนี้มีการกรอกยอดแล้ว กรุณาติดต่อทีมงานหากต้องการแก้ไข" }, { status: 400 }) };
   return { request, phone };
 }
