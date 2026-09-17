@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function RequestsPage({ searchParams }: { searchParams: { status?: string } }) {
   await requirePageRole();
-  const status = (["PENDING", "APPROVED", "REJECTED", "ALL"].includes(searchParams.status ?? "") ? searchParams.status : "PENDING") as "PENDING" | "APPROVED" | "REJECTED" | "ALL";
+  const status = (["PENDING", "APPROVED", "REJECTED", "CANCELLED", "ALL"].includes(searchParams.status ?? "") ? searchParams.status : "PENDING") as "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | "ALL";
 
   const [requests, streamers, counts] = await Promise.all([
     prisma.slotRequest.findMany({
@@ -28,7 +28,7 @@ export default async function RequestsPage({ searchParams }: { searchParams: { s
       </p>
       <RequestsManager
         status={status}
-        counts={{ PENDING: countOf("PENDING"), APPROVED: countOf("APPROVED"), REJECTED: countOf("REJECTED") }}
+        counts={{ PENDING: countOf("PENDING"), APPROVED: countOf("APPROVED"), REJECTED: countOf("REJECTED"), CANCELLED: countOf("CANCELLED") }}
         streamers={streamers}
         requests={requests.map((r) => ({
           id: r.id,

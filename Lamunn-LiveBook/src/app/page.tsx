@@ -5,13 +5,14 @@ import { loadPublicWeek } from "@/lib/publicWeek";
 import { todayTH, weekStartOf, isoDate } from "@/lib/schedule";
 import { formatThaiDateShort } from "@/lib/format";
 import PublicGrid from "@/components/PublicGrid";
-import StatusLookup from "@/components/StatusLookup";
+import { phoneFromCookies, maskPhone } from "@/lib/me";
 
 export const dynamic = "force-dynamic";
 
 export default async function PublicSchedulePage({ searchParams }: { searchParams: { week?: string; channel?: string } }) {
   const today = todayTH();
-  const week = await loadPublicWeek(searchParams.week, searchParams.channel, today);
+  const phone = phoneFromCookies();
+  const week = await loadPublicWeek(searchParams.week, searchParams.channel, today, phone);
   const ws = new Date(week.weekStart + "T00:00:00Z");
   const we = new Date(week.weekEnd + "T00:00:00Z");
   const prev = isoDate(new Date(ws.getTime() - 7 * 86400000));
@@ -87,6 +88,9 @@ export default async function PublicSchedulePage({ searchParams }: { searchParam
             <span className="inline-flex items-center gap-1.5">
               <span className="h-3 w-5 rounded bg-ink" /> unavailable
             </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-3 w-5 rounded border-2 border-brand-600 bg-brand-100" /> ของฉัน
+            </span>
           </div>
           {week.channels.length > 0 && (
             <p className="text-xs text-muted">
@@ -98,12 +102,8 @@ export default async function PublicSchedulePage({ searchParams }: { searchParam
         {week.channels.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-line bg-white p-12 text-center text-muted">ขณะนี้ยังไม่เปิดรับจองช่วงไลฟ์จากภายนอก กรุณาติดต่อทีมงาน Lamunn โดยตรง</div>
         ) : (
-          <PublicGrid days={week.days} channelId={week.channelId} channelName={week.channels.find((c) => c.id === week.channelId)?.name ?? null} />
+          <PublicGrid days={week.days} channelId={week.channelId} channelName={week.channels.find((c) => c.id === week.channelId)?.name ?? null} phoneMasked={phone ? maskPhone(phone) : null} />
         )}
-
-        <div className="mt-8">
-          <StatusLookup />
-        </div>
 
         <p className="mt-10 text-center text-[11px] text-stone-400">การจองจะยืนยันเมื่อทีมงาน Lamunn อนุมัติแล้วเท่านั้น</p>
       </div>

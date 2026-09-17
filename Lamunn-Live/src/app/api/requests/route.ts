@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const status = req.nextUrl.searchParams.get("status") ?? "PENDING";
-  const where = status === "ALL" ? {} : { status: status as "PENDING" | "APPROVED" | "REJECTED" };
+  const where = status === "ALL" ? {} : { status: status as "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" };
   const requests = await prisma.slotRequest.findMany({
     where,
     include: { channel: true, streamer: true, shift: { select: { id: true } }, reviewedByStaff: { select: { name: true } } },

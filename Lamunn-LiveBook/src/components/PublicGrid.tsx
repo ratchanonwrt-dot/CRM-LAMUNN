@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { X } from "lucide-react";
 import TimeSelect from "@/components/TimeSelect";
-import { DAY_START_MIN, GRID_END_MIN, DAY_END_MIN, minutesToLabel } from "@/lib/schedule";
+import ManageMyRequest, { type ManageTarget } from "@/components/ManageMyRequest";
+import MyPanel, { type MyRow } from "@/components/MyPanel";
+import { DAY_START_MIN, GRID_END_MIN, DAY_END_MIN, minutesToLabel, toRange } from "@/lib/schedule";
 import { timeToMinutes } from "@/lib/format";
 import type { PublicDay } from "@/lib/publicWeek";
 import { PUBLIC_GAP_MINUTES, findGapViolation } from "@/lib/bookingRules";
-import { toRange } from "@/lib/schedule";
 
 const HOUR_PX = 30;
 const HOURS = Array.from({ length: (GRID_END_MIN - DAY_START_MIN) / 60 + 1 }, (_, i) => DAY_START_MIN + i * 60);
@@ -36,12 +37,15 @@ interface FormState {
   website: string; // honeypot
 }
 
-export default function PublicGrid({ days, channelId, channelName }: { days: PublicDay[]; channelId: string | null; channelName: string | null }) {
+export default function PublicGrid({ days, channelId, channelName, phoneMasked }: { days: PublicDay[]; channelId: string | null; channelName: string | null; phoneMasked: string | null }) {
   const router = useRouter();
   const [form, setForm] = useState<FormState | null>(null);
+  const [manage, setManage] = useState<ManageTarget | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ date: string; startTime: string; endTime: string } | null>(null);
+
+  const dayLabel = (iso: string) => days.find((d) => d.date === iso)?.dayLabel ?? iso;
 
   function openRequest(day: PublicDay, startMin: number) {
     const gap = day.free.find((f) => startMin >= f.s && startMin < f.e) ?? day.free.find((f) => f.s >= startMin) ?? day.free[0];
@@ -60,27 +64,23 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
     openRequest(day, Math.max(DAY_START_MIN, Math.min(GRID_END_MIN - 60, minutes)));
   }
 
+  function manageRow(r: MyRow) {
+    if (r.status !== "PENDING" && r.status !== "APPROVED") return;
+    setManage({ requestId: r.id, dateLabel: dayLabel(r.date) === r.date ? r.date : dayLabel(r.date), startTime: r.startTime, endTime: r.endTime, status: r.status });
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form) return;
     const { endTime } = endFromStart(form.startTime, Number(form.hours));
-    if (!endTime) {
-      setError("กรุณาเลือกเวลาเริ่มและจำนวนชั่วโมง");
-      return;
-    }
-    if (!form.isReturning) {
-      setError("กรุณาเลือกว่าเคยไลฟ์กับละมุนมาก่อนหรือไม่");
-      return;
-    }
+    if (!endTime) return setError("กรุณาเลือกเวลาเริ่มและจำนวนชั่วโมง");
+    if (!form.isReturning) return setError("กรุณาเลือกว่าเคยไลฟ์กับละมุนมาก่อนหรือไม่");
     // เตือนทันทีถ้าชิดช่วงที่มีคนแล้วน้อยกว่า 30 นาที (ระบบฝั่งเซิร์ฟเวอร์เช็กซ้ำอีกชั้น)
     const day = days.find((d) => d.date === form.date);
     const range = toRange(form.startTime, endTime);
     if (day?.gapRule && range) {
       const v = findGapViolation(range, day.blocks.filter((b) => b.status !== "blocked").map((b) => ({ s: b.s, e: b.e })));
-      if (v) {
-        setError(v.message);
-        return;
-      }
+      if (v) return setError(v.message);
     }
     setSaving(true);
     setError(null);
@@ -92,16 +92,16 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
     setSaving(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "ส่งคำขอไม่สำเร็จ");
-      return;
+      return setError(body.error ?? "ส่งคำขอไม่สำเร็จ");
     }
+    // จำเบอร์ที่เพิ่งใช้ขอ เพื่อให้เห็นช่วงของตัวเองทันที
+    await fetch("/api/public/me", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: form.requesterPhone }) }).catch(() => null);
     setDone({ date: form.date, startTime: form.startTime, endTime });
     setForm(null);
     router.refresh();
   }
 
   const derived = form ? endFromStart(form.startTime, Number(form.hours)) : null;
-  const dayLabel = (iso: string) => days.find((d) => d.date === iso)?.dayLabel ?? iso;
 
   return (
     <div>
@@ -146,7 +146,6 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
                 {HOURS.slice(1).map((h) => (
                   <div key={h} className="absolute inset-x-0 border-t border-dashed border-line/60" style={{ top: ((h - DAY_START_MIN) / 60) * HOUR_PX }} />
                 ))}
-                {/* ช่องว่าง (เฉพาะวันที่ยังไม่ผ่าน) */}
                 {!d.isPast &&
                   d.free.map((f) => {
                     const top = ((f.s - DAY_START_MIN) / 60) * HOUR_PX;
@@ -167,22 +166,32 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
                 {d.blocks.map((b, i) => {
                   const top = ((Math.max(b.s, DAY_START_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
                   const bottom = ((Math.min(b.e, GRID_END_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
+                  const mine = b.mine;
+                  const label = mine ? (mine.status === "APPROVED" ? "ของฉัน · อนุมัติแล้ว" : "ของฉัน · รออนุมัติ") : b.status === "booked" ? "มีคนไลฟ์แล้ว" : b.status === "blocked" ? "unavailable" : "มีคนขอแล้ว";
+                  const cls = mine
+                    ? mine.status === "APPROVED"
+                      ? "border-2 border-brand-600 bg-brand-100 text-brand-900"
+                      : "border-2 border-dashed border-brand-600 bg-amber-50 text-brand-900"
+                    : b.status === "booked"
+                      ? "border-stone-300 bg-stone-200 text-muted"
+                      : b.status === "blocked"
+                        ? "border-ink bg-ink text-white"
+                        : "border-amber-300 bg-amber-100 text-amber-800";
+                  const Tag = mine?.editable ? "button" : "div";
                   return (
-                    <div
+                    <Tag
                       key={i}
                       data-block
-                      className={clsx(
-                        "absolute inset-x-1 overflow-hidden rounded-lg border px-1.5 py-1 text-[11px] leading-tight",
-                        b.status === "booked" ? "border-line bg-stone-200 text-muted" : b.status === "blocked" ? "border-gray-900 bg-gray-900 text-white" : "border-amber-300 bg-amber-100 text-amber-800"
-                      )}
+                      {...(mine?.editable ? { type: "button", onClick: () => setManage({ requestId: mine.requestId, dateLabel: d.dayLabel, startTime: b.startTime, endTime: b.endTime, status: mine.status }) } : {})}
+                      className={clsx("absolute inset-x-1 overflow-hidden rounded-lg border px-1.5 py-1 text-left text-[11px] leading-tight", cls, mine?.editable && "cursor-pointer hover:shadow-md")}
                       style={{ top: top + 1, height: Math.max(bottom - top - 2, 18) }}
-                      title={`${b.startTime}–${b.endTime} ${b.status === "booked" ? "มีคนไลฟ์แล้ว" : b.status === "blocked" ? "unavailable" : "มีคนขอแล้ว รออนุมัติ"}`}
+                      title={`${b.startTime}–${b.endTime} ${label}${mine?.editable ? " — กดเพื่อแก้ไข/ยกเลิก" : ""}`}
                     >
-                      <p className={clsx("truncate font-semibold", b.status === "blocked" && "uppercase tracking-wide")}>{b.status === "booked" ? "มีคนไลฟ์แล้ว" : b.status === "blocked" ? "unavailable" : "มีคนขอแล้ว"}</p>
+                      <p className={clsx("truncate font-semibold", b.status === "blocked" && "uppercase tracking-wide")}>{label}</p>
                       <p className="truncate opacity-80">
                         {b.startTime}–{b.endTime}
                       </p>
-                    </div>
+                    </Tag>
                   );
                 })}
               </div>
@@ -191,9 +200,15 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
         </div>
       </div>
 
+      <div className="mt-6">
+        <MyPanel phoneMasked={phoneMasked} onManage={manageRow} />
+      </div>
+
+      {manage && <ManageMyRequest target={manage} onClose={() => setManage(null)} />}
+
       {form && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={() => setForm(null)}>
-          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
+          <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl bg-white p-5 shadow-pop">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="font-display text-[15px] font-semibold text-ink">ขอจองช่วงไลฟ์</h2>
@@ -218,12 +233,7 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
               <div className="col-span-2">
                 <div className="flex flex-wrap gap-1.5">
                   {HOUR_CHOICES.map((h) => (
-                    <button
-                      key={h}
-                      type="button"
-                      onClick={() => setForm({ ...form, hours: String(h) })}
-                      className={clsx("rounded-lg border px-2.5 py-1 text-xs tabular-nums", Number(form.hours) === h ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line text-muted hover:bg-paper")}
-                    >
+                    <button key={h} type="button" onClick={() => setForm({ ...form, hours: String(h) })} className={clsx("rounded-lg border px-2.5 py-1 text-xs tabular-nums", Number(form.hours) === h ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line text-muted hover:bg-paper")}>
                       {h} ชม.
                     </button>
                   ))}
@@ -246,15 +256,7 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
                     { v: "yes", label: "เคยไลฟ์แล้ว (คนเก่า)" },
                     { v: "no", label: "ยังไม่เคย (คนใหม่)" },
                   ].map((o) => (
-                    <button
-                      key={o.v}
-                      type="button"
-                      onClick={() => setForm({ ...form, isReturning: o.v as "yes" | "no" })}
-                      className={clsx(
-                        "rounded-lg border px-3 py-2 text-sm",
-                        form.isReturning === o.v ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line text-muted hover:bg-paper"
-                      )}
-                    >
+                    <button key={o.v} type="button" onClick={() => setForm({ ...form, isReturning: o.v as "yes" | "no" })} className={clsx("rounded-lg border px-3 py-2 text-sm", form.isReturning === o.v ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-line text-muted hover:bg-paper")}>
                       {o.label}
                     </button>
                   ))}
@@ -282,9 +284,9 @@ export default function PublicGrid({ days, channelId, channelName }: { days: Pub
             {days.find((d) => d.date === form.date)?.gapRule && (
               <p className="mt-3 text-[11px] text-amber-700">กติกา: ต้องเว้นอย่างน้อย {PUBLIC_GAP_MINUTES} นาทีจากช่วงที่มีคนไลฟ์/มีคนขอแล้ว ระบบกันระยะให้ในช่อง &quot;ว่าง&quot; แล้ว</p>
             )}
-            <p className="mt-3 text-[11px] text-stone-400">คำขอจะยังไม่ยืนยันจนกว่าทีมงานจะอนุมัติ ช่วงนี้จะขึ้นเป็น &quot;มีคนขอแล้ว&quot; ให้คนอื่นเห็นทันที</p>
+            <p className="mt-3 text-[11px] text-stone-400">คำขอจะยังไม่ยืนยันจนกว่าทีมงานจะอนุมัติ ช่วงนี้จะขึ้นเป็น &quot;มีคนขอแล้ว&quot; ให้คนอื่นเห็นทันที · หลังส่ง ระบบจะจำเบอร์ของคุณเพื่อให้แก้ไข/ยกเลิกช่วงของคุณเองได้</p>
             <div className="mt-4 flex gap-2">
-              <button type="submit" disabled={saving} className="rounded-xl bg-ink px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">
+              <button type="submit" disabled={saving} className="rounded-xl bg-ink px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50">
                 {saving ? "กำลังส่ง..." : "ส่งคำขอจอง"}
               </button>
               <button type="button" onClick={() => setForm(null)} className="rounded-xl border border-line px-5 py-2.5 text-sm text-muted hover:bg-paper">

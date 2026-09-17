@@ -7,7 +7,7 @@ import clsx from "clsx";
 import { useCanEdit } from "@/lib/RoleContext";
 import { formatThaiDateShort, thaiDays } from "@/lib/format";
 
-type Status = "PENDING" | "APPROVED" | "REJECTED";
+type Status = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 
 interface RequestRow {
   id: string;
@@ -98,6 +98,7 @@ function RequestCard({ r, streamers, onChanged }: { r: RequestRow; streamers: St
             </div>
           )}
           {r.status === "REJECTED" && <span className="rounded-full bg-stone-200 px-2.5 py-1 text-xs font-medium text-muted">ปฏิเสธแล้ว</span>}
+          {r.status === "CANCELLED" && <span className="rounded-full bg-stone-200 px-2.5 py-1 text-xs font-medium text-muted">คนไลฟ์ยกเลิกเอง</span>}
           {r.status !== "PENDING" && r.reviewedBy && <p className="mt-1 text-[11px] text-stone-400">โดย {r.reviewedBy}</p>}
           {r.status !== "PENDING" && r.reviewNote && <p className="mt-1 text-xs text-muted">{r.reviewNote}</p>}
         </div>
@@ -167,6 +168,7 @@ export default function RequestsManager({
     { key: "PENDING", label: `รออนุมัติ (${counts.PENDING})` },
     { key: "APPROVED", label: `อนุมัติแล้ว (${counts.APPROVED})` },
     { key: "REJECTED", label: `ปฏิเสธ (${counts.REJECTED})` },
+    { key: "CANCELLED", label: `ยกเลิกเอง (${counts.CANCELLED})` },
     { key: "ALL", label: "ทั้งหมด" },
   ];
   return (
