@@ -30,6 +30,9 @@ export async function POST(req: NextRequest) {
       hrEmployeeId: body.hrEmployeeId ? String(body.hrEmployeeId).trim() : null,
       phone: body.phone ? String(body.phone).trim() : null,
       lineId: body.lineId ? String(body.lineId).trim() : null,
+      bankName: body.bankName ? String(body.bankName).trim() : null,
+      bankAccountNo: body.bankAccountNo ? String(body.bankAccountNo).replace(/[^\d-]/g, "") : null,
+      bankAccountName: body.bankAccountName ? String(body.bankAccountName).trim() : null,
       sortOrder: Number.isFinite(Number(body.sortOrder)) ? Number(body.sortOrder) : 0,
     },
   });

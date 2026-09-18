@@ -35,6 +35,7 @@ model StaffUser {
   sessionsCreated LiveSession[]
   shiftsCreated   LiveShift[]
   requestsReviewed SlotRequest[]
+  payoutsApproved  DailyPayout[]
   blocksCreated    ScheduleBlock[]
 
   @@map("staff_users")
@@ -49,6 +50,10 @@ model Streamer {
   hrEmployeeId String?
   phone   String? // เบอร์โทรติดต่อ
   lineId  String? // LINE ID
+  // บัญชีรับเงินสำหรับทำจ่ายรายวัน (บัญชีเห็นผ่านเว็บ Finance)
+  bankName        String?
+  bankAccountNo   String?
+  bankAccountName String?
   color   String? // สีประจำตัวในตารางไลฟ์ (ชื่อสีจาก palette เช่น "rose")
   isActive  Boolean  @default(true)
   sortOrder Int      @default(0)
@@ -59,6 +64,7 @@ model Streamer {
   slots    LiveSlot[]
   shifts   LiveShift[]
   requests SlotRequest[]
+  payouts  DailyPayout[]
 
   @@map("streamers")
 }
@@ -261,4 +267,46 @@ model ScheduleBlock {
 
   @@index([date])
   @@map("schedule_blocks")
+}
+
+// ยอดจ่ายคนไลฟ์รายวัน — แอดมิน Live อนุมัติ (snapshot ยอด ณ ตอนอนุมัติ) แล้วบัญชี (เว็บ Finance) เห็นเฉพาะที่อนุมัติแล้วเพื่อทำจ่าย
+enum PayoutStatus {
+  APPROVED
+  PAID
+}
+
+model DailyPayout {
+  id String @id @default(cuid())
+
+  date       DateTime @db.Date
+  streamerId String
+  streamer   Streamer @relation(fields: [streamerId], references: [id])
+
+  amount     Float // ยอดจ่ายที่อนุมัติ (บาท)
+  hours      Float
+  sales      Float
+  shiftCount Int   @default(0)
+
+  // snapshot ข้อมูลผู้รับเงิน ณ ตอนอนุมัติ
+  payeeName     String
+  bankName      String?
+  bankAccountNo String?
+  note          String?
+
+  status PayoutStatus @default(APPROVED)
+
+  approvedByStaffId String?
+  approvedBy        StaffUser? @relation(fields: [approvedByStaffId], references: [id], onDelete: SetNull)
+  approvedAt        DateTime   @default(now())
+
+  // ฝั่งบัญชีทำจ่ายแล้ว (บันทึกผ่าน API จากเว็บ Finance)
+  paidAt  DateTime?
+  paidBy  String?
+  paidRef String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([date, streamerId])
+  @@map("daily_payouts")
 }

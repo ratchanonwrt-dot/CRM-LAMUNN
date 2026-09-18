@@ -1,0 +1,26 @@
+import { requireSectionPage } from "@/lib/permissions";
+import { fetchLivePayouts } from "@/lib/accounting/livePayouts";
+import LivePayoutsPanel from "@/components/accounting/LivePayoutsPanel";
+
+export const dynamic = "force-dynamic";
+
+const isoOr = (s: string | undefined, fallback: string) => (s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : fallback);
+
+export default async function LivePayoutsPage({ searchParams }: { searchParams: { from?: string; to?: string; status?: string } }) {
+  const { permissions } = await requireSectionPage("ACCOUNTING");
+  const todayTH = new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
+  const from = isoOr(searchParams.from, new Date(Date.now() - 23 * 86400e3).toISOString().slice(0, 10));
+  const to = isoOr(searchParams.to, todayTH);
+  const status = searchParams.status === "APPROVED" || searchParams.status === "PAID" ? searchParams.status : "ALL";
+  const { rows, error } = await fetchLivePayouts(from, to, status);
+
+  return (
+    <div>
+      <h1 className="mb-1 text-xl font-bold text-gray-900">ทำจ่ายคนไลฟ์ (รายวัน)</h1>
+      <p className="mb-4 text-sm text-gray-500">
+        ยอดที่แอดมินเว็บ Live <b>อนุมัติแล้ว</b> เท่านั้น พร้อมชื่อบัญชีและเลขบัญชีสำหรับโอน — โอนแล้วกด &ldquo;ทำจ่ายแล้ว&rdquo; สถานะจะกลับไปแสดงที่เว็บ Live ด้วย
+      </p>
+      <LivePayoutsPanel rows={rows} error={error} from={from} to={to} status={status} canEdit={permissions.ACCOUNTING.canEdit} />
+    </div>
+  );
+}

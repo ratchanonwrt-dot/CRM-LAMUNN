@@ -13,6 +13,9 @@ interface StreamerRow {
   hrEmployeeId: string | null;
   phone: string | null;
   lineId: string | null;
+  bankName: string | null;
+  bankAccountNo: string | null;
+  bankAccountName: string | null;
   color: string | null;
   sortOrder: number;
   isActive: boolean;
@@ -45,6 +48,9 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
   const [hrEmployeeId, setHrEmployeeId] = useState(s.hrEmployeeId ?? "");
   const [phone, setPhone] = useState(s.phone ?? "");
   const [lineId, setLineId] = useState(s.lineId ?? "");
+  const [bankName, setBankName] = useState(s.bankName ?? "");
+  const [bankAccountNo, setBankAccountNo] = useState(s.bankAccountNo ?? "");
+  const [bankAccountName, setBankAccountName] = useState(s.bankAccountName ?? "");
   const [color, setColor] = useState(s.color);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +84,7 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
   if (editing) {
     return (
       <tr className="border-t border-line/60 bg-brand-50/40">
-        <td className="px-3 py-2" colSpan={3}>
+        <td className="px-3 py-2" colSpan={4}>
           <div className="flex flex-wrap gap-2">
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls + " max-w-[180px]"} placeholder="ชื่อ" />
             <input value={nickname} onChange={(e) => setNickname(e.target.value)} className={inputCls + " max-w-[140px]"} placeholder="ชื่อเล่น" />
@@ -86,6 +92,12 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
             <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls + " max-w-[150px]"} placeholder="เบอร์โทร" inputMode="tel" />
             <input value={lineId} onChange={(e) => setLineId(e.target.value)} className={inputCls + " max-w-[150px]"} placeholder="LINE ID" />
             <input value={hrEmployeeId} onChange={(e) => setHrEmployeeId(e.target.value)} className={inputCls + " max-w-[150px]"} placeholder="รหัสพนักงาน HR" />
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted">บัญชีรับเงิน</span>
+            <input value={bankName} onChange={(e) => setBankName(e.target.value)} className={inputCls + " max-w-[140px]"} placeholder="ธนาคาร เช่น กสิกร" />
+            <input value={bankAccountNo} onChange={(e) => setBankAccountNo(e.target.value)} className={inputCls + " max-w-[180px]"} placeholder="เลขบัญชี" inputMode="numeric" />
+            <input value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} className={inputCls + " max-w-[200px]"} placeholder="ชื่อบัญชี (ถ้าต่างจากชื่อ)" />
           </div>
           <div className="mt-2 flex items-center gap-2">
             <span className="text-xs text-muted">สีในตาราง</span>
@@ -99,7 +111,7 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
             <button
               disabled={busy || !name.trim()}
               onClick={async () => {
-                if (await patch({ name, nickname, note, hrEmployeeId, phone, lineId, color })) setEditing(false);
+                if (await patch({ name, nickname, note, hrEmployeeId, phone, lineId, color, bankName, bankAccountNo, bankAccountName })) setEditing(false);
               }}
               className="rounded-lg bg-ink px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
             >
@@ -131,6 +143,16 @@ function Row({ s, onChanged }: { s: StreamerRow; onChanged: () => void }) {
           </div>
         ) : (
           <span className="text-xs text-stone-300">ยังไม่กรอก</span>
+        )}
+      </td>
+      <td className="px-3 py-2 text-xs">
+        {s.bankAccountNo ? (
+          <div className="leading-5 text-muted">
+            <p className="tabular-nums text-ink">{s.bankName ? `${s.bankName} ` : ""}{s.bankAccountNo}</p>
+            {s.bankAccountName && <p>{s.bankAccountName}</p>}
+          </div>
+        ) : (
+          <span className="text-red-500">ยังไม่มีเลขบัญชี</span>
         )}
       </td>
       <td className="px-3 py-2 text-muted">{s.note ?? ""}</td>
@@ -219,11 +241,12 @@ export default function StreamerManager({ streamers }: { streamers: StreamerRow[
       </form>
 
       <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-card">
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="w-full min-w-[900px] text-sm">
           <thead className="bg-paper/70 text-left text-[11px] font-semibold uppercase tracking-wider text-muted">
             <tr>
               <th className="px-3 py-2">ชื่อ</th>
               <th className="px-3 py-2">ติดต่อ</th>
+              <th className="px-3 py-2">บัญชีรับเงิน</th>
               <th className="px-3 py-2">หมายเหตุ</th>
               <th className="px-3 py-2 text-right">ช่วงที่บันทึก</th>
               <th className="px-3 py-2">สถานะ</th>
@@ -236,7 +259,7 @@ export default function StreamerManager({ streamers }: { streamers: StreamerRow[
             ))}
             {streamers.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-stone-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-stone-400">
                   ยังไม่มีคนไลฟ์ — เพิ่มชื่อด้านบนก่อน แล้วค่อยไปบันทึกรอบไลฟ์
                 </td>
               </tr>

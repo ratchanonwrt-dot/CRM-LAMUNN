@@ -5,7 +5,10 @@ import type { NextRequest } from "next/server";
 export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (pathname !== "/login" && !pathname.startsWith("/api/auth")) {
+  // API สำหรับเว็บ Finance (ทำจ่าย) ใช้กุญแจลับใน header แทนคุกกี้ — ตรวจสิทธิ์ใน route เอง
+  const payoutApi = pathname === "/api/payouts/export" || /^\/api\/payouts\/[^/]+\/paid$/.test(pathname);
+
+  if (pathname !== "/login" && !pathname.startsWith("/api/auth") && !payoutApi) {
     const token = await getToken({
       req,
       secret: process.env.NEXTAUTH_SECRET,

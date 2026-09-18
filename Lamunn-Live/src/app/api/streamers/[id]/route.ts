@@ -8,7 +8,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { name, nickname, note, hrEmployeeId, phone, lineId, color, sortOrder, isActive } = body;
+  const { name, nickname, note, hrEmployeeId, phone, lineId, color, sortOrder, isActive, bankName, bankAccountNo, bankAccountName } = body;
   if (color !== undefined && color !== null && !PALETTE_KEYS.includes(color)) return NextResponse.json({ error: "สีไม่ถูกต้อง" }, { status: 400 });
 
   const streamer = await prisma.streamer.update({
@@ -20,6 +20,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(hrEmployeeId !== undefined ? { hrEmployeeId: hrEmployeeId ? String(hrEmployeeId).trim() : null } : {}),
       ...(phone !== undefined ? { phone: phone ? String(phone).trim() : null } : {}),
       ...(lineId !== undefined ? { lineId: lineId ? String(lineId).trim() : null } : {}),
+      ...(bankName !== undefined ? { bankName: bankName ? String(bankName).trim() : null } : {}),
+      ...(bankAccountNo !== undefined ? { bankAccountNo: bankAccountNo ? String(bankAccountNo).replace(/[^\d-]/g, "") : null } : {}),
+      ...(bankAccountName !== undefined ? { bankAccountName: bankAccountName ? String(bankAccountName).trim() : null } : {}),
       ...(color !== undefined ? { color } : {}),
       ...(sortOrder !== undefined ? { sortOrder: Number(sortOrder) || 0 } : {}),
       ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
