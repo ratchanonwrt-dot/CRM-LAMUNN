@@ -96,7 +96,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: { w
         <div>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">ตารางไลฟ์รายสัปดาห์</h1>
           <p className="text-sm text-muted">
-            ตารางเปิด 10:00–01:00 (กะที่เลยเที่ยงคืนนับเป็นวันเดิม) · คลิกช่องว่างหรือปุ่มเวลาว่างเพื่อลงกะ แล้วระบบพาไปหน้ากรอกยอดทันที · คลิกกะเดิมเพื่อกรอก/แก้ยอด · สัปดาห์นี้ลงแล้ว{" "}
+            ตารางเปิด 10:00–03:00 (กะที่เลยเที่ยงคืนนับเป็นวันเดิม) · คลิกช่องว่างหรือปุ่มเวลาว่างเพื่อลงกะ แล้วระบบพาไปหน้ากรอกยอดทันที · คลิกกะเดิมเพื่อกรอก/แก้ยอด · สัปดาห์นี้ลงแล้ว{" "}
             {totalHours ? `${totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)} ชม.` : "0 ชม."}
           </p>
         </div>
