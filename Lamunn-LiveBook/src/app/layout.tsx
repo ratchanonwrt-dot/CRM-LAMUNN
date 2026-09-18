@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Thai, Anuphan } from "next/font/google";
 import "./globals.css";
+import KeepWarm from "@/components/KeepWarm";
 
 const sans = IBM_Plex_Sans_Thai({ subsets: ["thai", "latin"], weight: ["400", "500", "600"], variable: "--font-sans", display: "swap" });
 const display = Anuphan({ subsets: ["thai", "latin"], weight: ["500", "600", "700"], variable: "--font-display", display: "swap" });
@@ -23,7 +24,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="th" className={`${sans.variable} ${display.variable}`}>
-      <body className="bg-paper text-ink">{children}</body>
+      <body className="bg-paper text-ink">
+        {children}
+        <KeepWarm />
+      </body>
     </html>
   );
 }

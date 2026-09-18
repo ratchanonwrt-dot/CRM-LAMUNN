@@ -1,23 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { UserRound, LogOut } from "lucide-react";
 import { EDIT_LEAD_MESSAGE } from "@/lib/bookingRules";
-
-export interface MyRow {
-  id: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  channel: string | null;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
-  isChange?: boolean; // คำขอเปลี่ยนเวลาของกะที่อนุมัติแล้ว
-  hasPendingChange?: boolean; // กะนี้มีคำขอเปลี่ยนเวลารออยู่
-  note: string | null;
-  editable: boolean;
-}
+import type { MyRow } from "@/lib/myRequests";
 
 const STATUS: Record<MyRow["status"], { label: string; cls: string }> = {
   PENDING: { label: "รอทีมงานอนุมัติ", cls: "bg-amber-100 text-amber-800" },
@@ -28,21 +16,13 @@ const STATUS: Record<MyRow["status"], { label: string; cls: string }> = {
 
 const inputCls = "rounded-xl border border-line bg-white px-3 py-2.5 text-base text-ink outline-none md:text-sm transition focus:border-ink focus:ring-2 focus:ring-ink/10";
 
-/** แผง "ของฉัน": ใส่เบอร์ครั้งเดียว ระบบจำไว้ แล้วเห็น/จัดการช่วงของตัวเอง */
-export default function MyPanel({ phoneMasked, onManage }: { phoneMasked: string | null; onManage: (row: MyRow) => void }) {
+/** แผง "ของฉัน": ใส่เบอร์ครั้งเดียว ระบบจำไว้ แล้วเห็น/จัดการช่วงของตัวเอง — รายการมาจากเซิร์ฟเวอร์พร้อมหน้า ไม่ต้องโหลดซ้ำ */
+export default function MyPanel({ phoneMasked, rows, onManage }: { phoneMasked: string | null; rows: MyRow[] | null; onManage: (row: MyRow) => void }) {
   const router = useRouter();
   const [phone, setPhone] = useState("");
-  const [rows, setRows] = useState<MyRow[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!phoneMasked) return;
-    fetch("/api/public/my")
-      .then((r) => r.json())
-      .then((b) => setRows(b.requests ?? []))
-      .catch(() => setRows([]));
-  }, [phoneMasked]);
+  const [refreshing, startRefresh] = useTransition();
 
   async function remember(e: React.FormEvent) {
     e.preventDefault();
@@ -55,13 +35,12 @@ export default function MyPanel({ phoneMasked, onManage }: { phoneMasked: string
       setError(b.error ?? "ไม่สำเร็จ");
       return;
     }
-    router.refresh();
+    startRefresh(() => router.refresh());
   }
 
   async function forget() {
     await fetch("/api/public/me", { method: "DELETE" });
-    setRows(null);
-    router.refresh();
+    startRefresh(() => router.refresh());
   }
 
   if (!phoneMasked) {
@@ -73,9 +52,9 @@ export default function MyPanel({ phoneMasked, onManage }: { phoneMasked: string
         </div>
         <p className="mt-1 text-xs text-muted">ใส่เบอร์โทรที่ใช้ขอจอง ระบบจะไฮไลต์ช่วงของคุณบนตาราง และให้แก้เวลา/ยกเลิกช่วงของคุณเองได้</p>
         <form onSubmit={remember} className="mt-3 flex flex-wrap items-center gap-2">
-          <input required inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="เบอร์โทรของคุณ" className={inputCls + " w-full sm:w-56"} />
-          <button type="submit" disabled={busy} className="w-full rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50 sm:w-auto">
-            {busy ? "กำลังตรวจ..." : "ดูช่วงของฉัน"}
+          <input required inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="เบอร์โทรของคุณ" className={inputCls + " w-full sm:w-56"} />
+          <button type="submit" disabled={busy || refreshing} className="w-full rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50 sm:w-auto">
+            {busy ? "กำลังตรวจ..." : refreshing ? "กำลังโหลด..." : "ดูช่วงของฉัน"}
           </button>
           {error && <p className="text-sm text-red-600">{error}</p>}
         </form>
@@ -84,22 +63,20 @@ export default function MyPanel({ phoneMasked, onManage }: { phoneMasked: string
   }
 
   return (
-    <section className="rounded-2xl border border-brand-200 bg-white p-4 shadow-card">
+    <section className={clsx("rounded-2xl border border-brand-200 bg-white p-4 shadow-card transition-opacity", refreshing && "opacity-60")}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <UserRound size={16} className="text-brand-600" />
           <h2 className="font-display text-[15px] font-semibold text-ink">ช่วงของฉัน</h2>
           <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs tabular-nums text-brand-800">{phoneMasked}</span>
         </div>
-        <button onClick={forget} className="inline-flex items-center gap-1 text-xs text-muted hover:text-ink">
+        <button onClick={forget} disabled={refreshing} className="inline-flex items-center gap-1 text-xs text-muted hover:text-ink disabled:opacity-50">
           <LogOut size={13} /> ไม่ใช่ฉัน / ลืมเบอร์นี้
         </button>
       </div>
       <p className="mt-1 text-xs text-muted">ช่วงของคุณบนตารางเป็นสีม่วงมีป้าย &quot;ของฉัน&quot; — กดที่ช่วงเพื่อแก้เวลาหรือยกเลิก · ย่อเวลาให้แคบลงหรือยกเลิกได้ทันที ถ้าขยาย/เลื่อนเวลาต้องรอทีมงานอนุมัติ</p>
       <p className="mt-1 text-xs font-medium text-amber-700">{EDIT_LEAD_MESSAGE}</p>
-      {rows === null ? (
-        <p className="mt-3 text-sm text-stone-400">กำลังโหลด...</p>
-      ) : rows.length === 0 ? (
+      {!rows || rows.length === 0 ? (
         <p className="mt-3 text-sm text-stone-400">ยังไม่มีคำขอของเบอร์นี้ — กดช่วง &quot;ว่าง&quot; บนตารางเพื่อขอจอง</p>
       ) : (
         <ul className="mt-3 divide-y divide-line/60 text-sm">

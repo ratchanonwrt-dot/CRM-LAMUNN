@@ -7,13 +7,15 @@ import { formatThaiDateShort } from "@/lib/format";
 import PublicGrid from "@/components/PublicGrid";
 import { LiveMark, TikTokGlyph } from "@/components/Logo";
 import { phoneFromCookies, maskPhone } from "@/lib/me";
+import { loadMyRequests } from "@/lib/myRequests";
 
 export const dynamic = "force-dynamic";
 
 export default async function PublicSchedulePage({ searchParams }: { searchParams: { week?: string; channel?: string } }) {
   const today = todayTH();
   const phone = phoneFromCookies();
-  const week = await loadPublicWeek(searchParams.week, searchParams.channel, today, phone);
+  // โหลดตาราง + รายการ "ของฉัน" พร้อมกันในรอบเดียว ไม่ต้องให้เบราว์เซอร์ยิงขอทีหลัง
+  const [week, myRows] = await Promise.all([loadPublicWeek(searchParams.week, searchParams.channel, today, phone), phone ? loadMyRequests(phone, today) : null]);
   const ws = new Date(week.weekStart + "T00:00:00Z");
   const we = new Date(week.weekEnd + "T00:00:00Z");
   const prev = isoDate(new Date(ws.getTime() - 7 * 86400000));
@@ -89,7 +91,7 @@ export default async function PublicSchedulePage({ searchParams }: { searchParam
         {week.channels.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-line bg-white p-12 text-center text-muted">ขณะนี้ยังไม่เปิดรับจองช่วงไลฟ์จากภายนอก กรุณาติดต่อทีมงาน Lamunn โดยตรง</div>
         ) : (
-          <PublicGrid days={week.days} channelId={week.channelId} channelName={channelName} phoneMasked={phone ? maskPhone(phone) : null} />
+          <PublicGrid days={week.days} channelId={week.channelId} channelName={channelName} phoneMasked={phone ? maskPhone(phone) : null} myRows={myRows} />
         )}
 
         <p className="mt-8 text-center text-[11px] text-stone-400 md:mt-10">การจองจะยืนยันเมื่อทีมงาน Lamunn อนุมัติแล้วเท่านั้น</p>

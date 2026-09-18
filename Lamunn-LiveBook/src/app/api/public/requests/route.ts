@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "@lamunn/db-live";
 import { parseDateOnly, normalizeTime, optionalText } from "@/lib/validation";
 import { toRange, rangesOverlap, todayTH } from "@/lib/schedule";
 import { gapRuleApplies, findGapViolation } from "@/lib/bookingRules";
+import { ME_COOKIE, cleanPhone } from "@/lib/me";
 
 export const dynamic = "force-dynamic";
 
-function cleanPhone(v: unknown): string | null {
-  if (typeof v !== "string") return null;
-  const digits = v.replace(/[^\d+]/g, "");
-  return digits.length >= 9 && digits.length <= 15 ? digits : null;
-}
-
-/** ส่งคำขอจองช่วงไลฟ์ (สาธารณะ) — เข้าคิวรอทีมงานอนุมัติ */
+/** ส่งคำขอจองช่วงไลฟ์ (สาธารณะ) — เข้าคิวรอทีมงานอนุมัติ และจำเบอร์ไว้ในคุกกี้ให้เลย (ไม่ต้องยิง /api/public/me ซ้ำ) */
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   // honeypot กันบอทง่าย ๆ: ช่อง "website" ต้องว่าง
@@ -35,38 +31,42 @@ export async function POST(req: NextRequest) {
 
   const channelId = typeof body.channelId === "string" && body.channelId ? body.channelId : null;
   if (!channelId) return NextResponse.json({ error: "กรุณาเลือกช่องทาง" }, { status: 400 });
-  const ch = await prisma.channel.findFirst({ where: { id: channelId, isActive: true } });
-  if (!ch) return NextResponse.json({ error: "ไม่พบช่องทางที่เลือก" }, { status: 400 });
-  if (!ch.publicBooking) return NextResponse.json({ error: `${ch.name} ยังไม่เปิดรับจองจากภายนอก` }, { status: 403 });
   if (typeof body.isReturning !== "boolean") return NextResponse.json({ error: "กรุณาระบุว่าเคยไลฟ์กับละมุนมาก่อนหรือไม่" }, { status: 400 });
 
+  // อ่านทุกอย่างที่ต้องเช็กในรอบเดียว (ไม่ต้องรอทีละคำสั่ง)
+  const [ch, booked, pendingOthers, blocked, dup, pendingCount] = await Promise.all([
+    prisma.channel.findFirst({ where: { id: channelId, isActive: true } }),
+    prisma.liveShift.findMany({ where: { date, channelId }, select: { startTime: true, endTime: true } }),
+    prisma.slotRequest.findMany({ where: { date, channelId, status: "PENDING" }, select: { startTime: true, endTime: true } }),
+    prisma.scheduleBlock.findMany({ where: { date, OR: [{ channelId }, { channelId: null }] }, select: { startTime: true, endTime: true } }),
+    prisma.slotRequest.findFirst({ where: { date, channelId, requesterPhone, status: "PENDING" }, select: { startTime: true, endTime: true } }),
+    prisma.slotRequest.count({ where: { requesterPhone, status: "PENDING" } }),
+  ]);
+  if (!ch) return NextResponse.json({ error: "ไม่พบช่องทางที่เลือก" }, { status: 400 });
+  if (!ch.publicBooking) return NextResponse.json({ error: `${ch.name} ยังไม่เปิดรับจองจากภายนอก` }, { status: 403 });
+
   // ชนกับกะที่ยืนยันแล้ว -> ไม่รับ
-  const booked = await prisma.liveShift.findMany({ where: { date, channelId }, select: { startTime: true, endTime: true } });
   for (const b of booked) {
     const r = toRange(b.startTime, b.endTime);
     if (r && rangesOverlap(r, range)) return NextResponse.json({ error: `ช่วง ${b.startTime}–${b.endTime} มีคนไลฟ์แล้ว กรุณาเลือกช่วงอื่น` }, { status: 409 });
   }
   // กติกาเว้นระยะ 30 นาที (คนนอก) — เทียบกับกะที่มีแล้วและคำขอที่รออยู่ของช่องเดียวกัน
   if (gapRuleApplies(date.toISOString().slice(0, 10))) {
-    const pendingOthers = await prisma.slotRequest.findMany({ where: { date, channelId, status: "PENDING" }, select: { startTime: true, endTime: true } });
     const existing = [...booked, ...pendingOthers].map((x) => toRange(x.startTime, x.endTime)).filter((r): r is NonNullable<typeof r> => !!r);
     const violation = findGapViolation(range, existing);
     if (violation) return NextResponse.json({ error: violation.message, code: "GAP" }, { status: 409 });
   }
   // ชนกับบล็อก unavailable -> ไม่รับ
-  const blocked = await prisma.scheduleBlock.findMany({ where: { date, OR: [{ channelId }, { channelId: null }] }, select: { startTime: true, endTime: true } });
   for (const b of blocked) {
     const r = toRange(b.startTime, b.endTime);
     if (r && rangesOverlap(r, range)) return NextResponse.json({ error: `ช่วง ${b.startTime}–${b.endTime} ไม่เปิดให้จอง (unavailable)` }, { status: 409 });
   }
   // เบอร์เดิมขอช่วงเดิมซ้ำ -> ไม่รับ
-  const dup = await prisma.slotRequest.findFirst({ where: { date, channelId, requesterPhone, status: "PENDING" } });
   if (dup) {
     const r = toRange(dup.startTime, dup.endTime);
     if (r && rangesOverlap(r, range)) return NextResponse.json({ error: "คุณส่งคำขอช่วงนี้ไว้แล้ว รอทีมงานอนุมัติ" }, { status: 409 });
   }
   // กันสแปม: เบอร์เดียวส่งได้ไม่เกิน 10 คำขอที่ยังค้าง
-  const pendingCount = await prisma.slotRequest.count({ where: { requesterPhone, status: "PENDING" } });
   if (pendingCount >= 10) return NextResponse.json({ error: "มีคำขอค้างอยู่มากเกินไป กรุณารอทีมงานตอบก่อน" }, { status: 429 });
 
   const request = await prisma.slotRequest.create({
@@ -83,5 +83,7 @@ export async function POST(req: NextRequest) {
     },
     select: { id: true, date: true, startTime: true, endTime: true, status: true },
   });
+  // จำเบอร์ไว้ 30 วัน เพื่อไฮไลต์/จัดการช่วงของตัวเอง (เหมือน POST /api/public/me)
+  cookies().set(ME_COOKIE, requesterPhone, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
   return NextResponse.json({ ok: true, request });
 }

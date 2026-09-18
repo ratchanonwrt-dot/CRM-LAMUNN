@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { X } from "lucide-react";
 import TimeSelect from "@/components/TimeSelect";
 import ManageMyRequest, { type ManageTarget } from "@/components/ManageMyRequest";
-import MyPanel, { type MyRow } from "@/components/MyPanel";
+import MyPanel from "@/components/MyPanel";
+import type { MyRow } from "@/lib/myRequests";
 import { DAY_START_MIN, GRID_END_MIN, DAY_END_MIN, minutesToLabel, toRange } from "@/lib/schedule";
 import { timeToMinutes } from "@/lib/format";
 import type { PublicDay, PublicBlock } from "@/lib/publicWeek";
@@ -49,13 +50,18 @@ interface FormState {
   website: string; // honeypot
 }
 
-export default function PublicGrid({ days, channelId, channelName, phoneMasked }: { days: PublicDay[]; channelId: string | null; channelName: string | null; phoneMasked: string | null }) {
+export default function PublicGrid({ days, channelId, channelName, phoneMasked, myRows }: { days: PublicDay[]; channelId: string | null; channelName: string | null; phoneMasked: string | null; myRows: MyRow[] | null }) {
   const router = useRouter();
   const [form, setForm] = useState<FormState | null>(null);
   const [manage, setManage] = useState<ManageTarget | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ date: string; startTime: string; endTime: string } | null>(null);
+  // ช่วงที่เพิ่งส่งสำเร็จ — วาดบนตารางทันทีระหว่างรอเซิร์ฟเวอร์ส่งตารางใหม่มา
+  const [optimistic, setOptimistic] = useState<{ date: string; block: PublicBlock }[]>([]);
+  const [refreshing, startRefresh] = useTransition();
+
+  useEffect(() => setOptimistic([]), [days]);
 
   const dayLabel = (iso: string) => days.find((d) => d.date === iso)?.dayLabel ?? iso;
 
@@ -111,11 +117,11 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
       const body = await res.json().catch(() => ({}));
       return setError(body.error ?? "ส่งคำขอไม่สำเร็จ");
     }
-    // จำเบอร์ที่เพิ่งใช้ขอ เพื่อให้เห็นช่วงของตัวเองทันที
-    await fetch("/api/public/me", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: form.requesterPhone }) }).catch(() => null);
+    // เซิร์ฟเวอร์จำเบอร์ไว้ในคุกกี้ให้แล้วตอนรับคำขอ — ปิดฟอร์มและวาดช่วงของเราลงตารางทันที แล้วค่อยโหลดตารางจริงตามหลัง
+    if (range) setOptimistic((o) => [...o, { date: form.date, block: { startTime: form.startTime, endTime, s: range.s, e: range.e, status: "requested", mine: { requestId: "", status: "PENDING", editable: false } } }]);
     setDone({ date: form.date, startTime: form.startTime, endTime });
     setForm(null);
-    router.refresh();
+    startRefresh(() => router.refresh());
   }
 
   const derived = form ? endFromStart(form.startTime, Number(form.hours)) : null;
@@ -126,6 +132,7 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           <span>
             ส่งคำขอแล้ว: {dayLabel(done.date)} {done.startTime}–{done.endTime} · ทีมงานจะติดต่อกลับทางเบอร์/LINE ที่ให้ไว้เพื่อยืนยัน
+            {refreshing && <span className="text-emerald-600"> · กำลังอัปเดตตาราง…</span>}
           </span>
           <button onClick={() => setDone(null)} className="text-xs text-emerald-700 underline">
             ปิด
@@ -181,7 +188,7 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
                       </button>
                     );
                   })}
-                {d.blocks.map((b, i) => {
+                {[...d.blocks, ...optimistic.filter((o) => o.date === d.date).map((o) => o.block)].map((b, i) => {
                   const top = ((Math.max(b.s, DAY_START_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
                   const bottom = ((Math.min(b.e, GRID_END_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
                   const editable = !!b.mine?.editable;
@@ -209,7 +216,7 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked }
       </div>
 
       <div className="mt-4 md:mt-6">
-        <MyPanel phoneMasked={phoneMasked} onManage={manageRow} />
+        <MyPanel phoneMasked={phoneMasked} rows={myRows} onManage={manageRow} />
       </div>
 
       {manage && <ManageMyRequest target={manage} onClose={() => setManage(null)} />}
