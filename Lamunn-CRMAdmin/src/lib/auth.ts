@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@lamunn/db";
+import { verifyWithIms } from "@/lib/imsAuth";
 
 /**
  * Staff/admin-only auth for the back office. Customer auth (LINE / phone+OTP) lives
@@ -28,10 +29,15 @@ export const authOptions: NextAuthOptions = {
         const staff = await prisma.staffUser.findFirst({ where: { email: { equals: credentials.email.trim(), mode: "insensitive" } } });
         if (!staff || !staff.isActive) return null;
 
-        // Branch passwords are hashed from their lowercase form, so typing them in
-        // any letter case works; older hashes of mixed-case passwords still match as typed.
+        // 1) The IMS password (Supabase Auth) — same login the branch uses every day.
+        // 2) Otherwise the CRM's own hash: HQ accounts and branches the IMS doesn't have yet.
+        //    Branch passwords are hashed from their lowercase form, so typing them in
+        //    any letter case works; older hashes of mixed-case passwords still match as typed.
         const typed = credentials.password.trim();
-        const valid = (await bcrypt.compare(typed, staff.passwordHash)) || (await bcrypt.compare(typed.toLowerCase(), staff.passwordHash));
+        const valid =
+          (await verifyWithIms(staff.email, typed)) ||
+          (await bcrypt.compare(typed, staff.passwordHash)) ||
+          (await bcrypt.compare(typed.toLowerCase(), staff.passwordHash));
         if (!valid) return null;
 
         return {
