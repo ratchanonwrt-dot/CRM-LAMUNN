@@ -28,7 +28,10 @@ export const authOptions: NextAuthOptions = {
         const staff = await prisma.staffUser.findFirst({ where: { email: { equals: credentials.email.trim(), mode: "insensitive" } } });
         if (!staff || !staff.isActive) return null;
 
-        const valid = await bcrypt.compare(credentials.password, staff.passwordHash);
+        // Branch passwords are hashed from their lowercase form, so typing them in
+        // any letter case works; older hashes of mixed-case passwords still match as typed.
+        const typed = credentials.password.trim();
+        const valid = (await bcrypt.compare(typed, staff.passwordHash)) || (await bcrypt.compare(typed.toLowerCase(), staff.passwordHash));
         if (!valid) return null;
 
         return {
