@@ -26,7 +26,14 @@ export async function verifyWithIms(email: string, password: string): Promise<bo
     });
     if (!res.ok) return false;
     const data = (await res.json().catch(() => null)) as { access_token?: string } | null;
-    return !!data?.access_token;
+    if (!data?.access_token) return false;
+    // We only needed the yes/no — close the IMS session again so nothing lingers there.
+    fetch(`${url.replace(/\/$/, "")}/auth/v1/logout`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${data.access_token}` },
+      cache: "no-store",
+    }).catch(() => {});
+    return true;
   } catch {
     return false;
   } finally {
