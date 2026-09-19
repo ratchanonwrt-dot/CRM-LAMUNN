@@ -24,7 +24,8 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-        const staff = await prisma.staffUser.findUnique({ where: { email: credentials.email } });
+        // IMS lists the same addresses as "Lamunn.saimai…" — match however staff type it.
+        const staff = await prisma.staffUser.findFirst({ where: { email: { equals: credentials.email.trim(), mode: "insensitive" } } });
         if (!staff || !staff.isActive) return null;
 
         const valid = await bcrypt.compare(credentials.password, staff.passwordHash);
