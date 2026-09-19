@@ -1,8 +1,11 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@lamunn/db";
+import { prisma, syncBranchesFromPosThrottled } from "@lamunn/db";
 
 export default async function AdminDashboardPage() {
+  // First page everyone lands on — cheapest place to pick up a shop the POS
+  // added since yesterday (throttled, never blocks the page).
+  await syncBranchesFromPosThrottled();
   const session = await getServerSession(authOptions);
   const role = session!.user.role!;
   const branchId = session!.user.branchId;

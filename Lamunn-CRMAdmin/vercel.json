@@ -1,0 +1,9 @@
+{
+  "regions": ["sin1"],
+  "crons": [
+    {
+      "path": "/api/cron/sync-pos-branches",
+      "schedule": "20 22 * * *"
+    }
+  ]
+}
