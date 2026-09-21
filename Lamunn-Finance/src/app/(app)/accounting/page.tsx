@@ -67,6 +67,10 @@ export default async function AccountingHomePage({ searchParams }: { searchParam
         {canEdit && <PeriodCloseButton year={year} month={month} closed={closed} />}
       </div>
 
+      <p className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+        เลือกเดือนด้านล่างเพื่อดูสถานะงวดและงานค้างก่อนปิดงบ
+      </p>
+
       <MonthFilterBar basePath="/accounting" year={year} month={month} />
 
       <div
