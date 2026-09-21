@@ -6,7 +6,7 @@
  * อ่านอย่างเดียว ไม่เขียนอะไรลงฐานข้อมูล
  * รัน: npx tsx scripts/verify-refactor.ts   (จากโฟลเดอร์ Lamunn-Finance)
  */
-import { PrismaClient } from ".prisma/client-finance";
+import { PrismaClient } from "@lamunn/db-finance";
 import { computeOutstandingPeriods, type OutstandingInputs } from "../src/lib/creditTermCalc";
 
 const prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL } } });
