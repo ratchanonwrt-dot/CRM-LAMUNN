@@ -64,6 +64,20 @@ git push -u origin HEAD
 2. **ถ้าเครื่องหมายแดง** บอกว่าแตะไฟล์นอกโฟลเดอร์บัญชี → ไม่ต้องพยายามแก้ให้ผ่าน ส่งลิงก์ PR ให้เจ้าของระบบดู
 3. **ข้อมูลทดสอบใช้วันที่ปี ค.ศ. 2090 ขึ้นไป** และสคริปต์ต้องลบเฉพาะที่ตัวเองสร้าง — ห้ามลบด้วยเงื่อนไขกว้างๆ
 
+## ฐานข้อมูล dev (สำหรับเจ้าของระบบ)
+
+ฐานข้อมูล dev คือ Supabase project `lamunn-finance-dev` (องค์กร "Lamunn Dev") — ข้อมูลเริ่มต้นถูกใส่ด้วย
+`packages/db-finance/prisma/seed.ts` (สาขา + ผู้ใช้ admin) และ `Lamunn-Finance/scripts/seed-dev-accounting.ts`
+(ผังบัญชีมาตรฐาน + ชื่อบริษัทสมมติ) ถ้าต้องสร้างฐานข้อมูล dev ใหม่:
+
+```bash
+cd packages/db-finance && npx prisma migrate deploy
+```
+> หมายเหตุ: บน DB ว่างเปล่า migration `20260827160000_accounting_tax_documents` จะล้มเพราะอ้างตาราง `acc_partners`
+> ที่ถูกสร้างใน migration หลังจากนั้น (ลำดับใน production ไม่เป็นปัญหาเพราะตารางมีอยู่ก่อนแล้ว) — แก้โดย
+> `npx prisma migrate resolve --rolled-back 20260827160000_accounting_tax_documents` → `npx prisma db push --skip-generate`
+> → `npx prisma migrate resolve --applied <ชื่อ migration>` สำหรับตัวนั้นและทุกตัวที่เหลือ แล้วค่อยรัน seed สองตัวข้างบน
+
 ## ถ้าเจอปัญหา
 
 | อาการ | ทำอย่างไร |
