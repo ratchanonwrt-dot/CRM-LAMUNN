@@ -1,8 +1,20 @@
+import { Suspense } from "react";
+import Link from "next/link";
 import { prisma } from "@lamunn/db-finance";
+import { requireSectionPage } from "@/lib/permissions";
 import MonthFilterBar from "@/components/MonthFilterBar";
+import { computeSssg } from "@/lib/sssgCalc";
 import { monthRange } from "@/lib/dates";
 import { formatBaht, formatPercent, thaiMonthLabel } from "@/lib/format";
-import { getDailyTotals, seriesForRange, sumMap } from "@/lib/reportsCalc";
+import {
+  loadAllSalesData,
+  dailyTotalsFrom,
+  sliceMap,
+  aggregateByBranch,
+  seriesForRange,
+  sumMap,
+  type ChannelSums,
+} from "@/lib/reportsCalc";
 import DonutChart, { CHART_COLORS } from "@/components/charts/DonutChart";
 import LineChart from "@/components/charts/LineChart";
 
@@ -21,91 +33,224 @@ function ChangeBadge({ value }: { value: number | null }) {
   );
 }
 
-export default async function ReportsPage({ searchParams }: { searchParams: { year?: string; month?: string } }) {
+function ReportsSkeleton() {
+  return (
+    <div className="mt-6 animate-pulse">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-20 rounded-xl border border-gray-200 bg-white" />
+        ))}
+      </div>
+      <div className="mt-6 h-40 rounded-xl border border-gray-200 bg-white" />
+      <div className="mt-6 h-64 rounded-xl border border-gray-200 bg-white" />
+    </div>
+  );
+}
+
+// หัวหน้า + ตัวกรองเดือนไม่ต้องรอ query ยอดขายย้อนหลังหลายช่วง (หนักสุดของหน้านี้) เลย ให้ shell ขึ้นก่อนได้
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: { year?: string; month?: string };
+}) {
+  await requireSectionPage("REPORTS");
   const now = new Date();
   const year = Number(searchParams.year) || now.getUTCFullYear();
   const month = Number(searchParams.month) || now.getUTCMonth() + 1;
+  return (
+    <div>
+      <h1 className="mb-6 text-xl font-bold text-gray-800">ภาพรวมและวิเคราะห์ยอดขาย</h1>
+      <MonthFilterBar basePath="/reports" year={year} month={month} />
+      <Suspense fallback={<ReportsSkeleton />}>
+        <ReportsData year={year} month={month} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function ReportsData({ year, month }: { year: number; month: number }) {
+  const now = new Date();
   const { start, end } = monthRange(year, month - 1);
   const clampedEnd = end > now ? now : end;
 
   const lastMonthDate = new Date(Date.UTC(year, month - 2, 1));
   const { start: lastStart, end: lastEnd } = monthRange(lastMonthDate.getUTCFullYear(), lastMonthDate.getUTCMonth());
 
+  // ═══ โหลดข้อมูลทั้งหมดทีเดียว 3 คิวรีขนาน แล้วคำนวณทุกช่วงในหน่วยความจำ ═══
+  //
+  // เดิมหน้านี้ยิง ~20 คิวรีเรียงต่อกัน 9 ชั้น (เดือนนี้/เดือนก่อน/สัปดาห์/ปี/รายสาขา/แยกช่องทาง
+  // อย่างละชุด) ทั้งที่หนึ่งในนั้นดึงตาราง daily_sales มาทั้งตารางอยู่แล้ว — ตัวเลขที่เหลือ
+  // คำนวณจากก้อนเดียวกันได้หมด ตารางมีไม่กี่พันแถว การรวมยอดในหน่วยความจำเร็วกว่าการวิ่งไป-กลับ
+  // ฐานข้อมูลอีกสิบกว่ารอบมาก (ดูรายละเอียดฟังก์ชันใน lib/reportsCalc.ts)
+  const { branches, salesRows: allSalesRows, companyRows: allCompanyRows } = await loadAllSalesData();
+  const branchTypeMap = new Map(branches.map((b) => [b.id, b.type]));
+  const dailyAll = dailyTotalsFrom(allSalesRows, allCompanyRows, branchTypeMap);
+
   // --- ยอดขายรวมรายวัน (ทุกช่องทาง) เดือนนี้ + เดือนก่อน สำหรับกราฟเส้นเทียบ ---
-  const [thisMonthDaily, lastMonthDaily] = await Promise.all([
-    getDailyTotals(start, clampedEnd),
-    getDailyTotals(lastStart, lastEnd),
-  ]);
+  const thisMonthDaily = sliceMap(dailyAll, start, clampedEnd);
+  const lastMonthDaily = sliceMap(dailyAll, lastStart, lastEnd);
   const thisMonthTotal = sumMap(thisMonthDaily);
   const lastMonthTotal = sumMap(lastMonthDaily);
   const daysSoFar = Math.max(1, Math.round((clampedEnd.getTime() - start.getTime()) / 86400000) + 1);
   const dailyAverage = thisMonthTotal / daysSoFar;
+
+  // เทียบ "เดือนก่อน" แบบตัดให้เหลือจำนวนวันเท่ากับเดือนนี้ (daysSoFar วันแรกของเดือนก่อน) ไม่งั้นถ้าเดือนนี้
+  // ยังไม่จบเดือน (เช่น ผ่านมาแค่ 6 วัน) จะไปเทียบกับเดือนก่อนแบบเต็มเดือน ดูเหมือนยอดตกทั้งที่จริงๆ ยังไม่ครบเดือน
+  const lastMonthMatchedEnd = new Date(Math.min(lastStart.getTime() + (daysSoFar - 1) * 86400000, lastEnd.getTime()));
+  const lastMonthMatchedDaily = sliceMap(dailyAll, lastStart, lastMonthMatchedEnd);
+  const lastMonthMatchedTotal = sumMap(lastMonthMatchedDaily);
 
   // --- สัปดาห์นี้ vs สัปดาห์ที่แล้ว (rolling 7 วันจากวันนี้) ---
   const weekEnd = now;
   const weekStart = new Date(now.getTime() - 6 * 86400000);
   const prevWeekEnd = new Date(now.getTime() - 7 * 86400000);
   const prevWeekStart = new Date(now.getTime() - 13 * 86400000);
-  const [thisWeekDaily, prevWeekDaily] = await Promise.all([
-    getDailyTotals(weekStart, weekEnd),
-    getDailyTotals(prevWeekStart, prevWeekEnd),
-  ]);
+  const thisWeekDaily = sliceMap(dailyAll, weekStart, weekEnd);
+  const prevWeekDaily = sliceMap(dailyAll, prevWeekStart, prevWeekEnd);
   const thisWeekTotal = sumMap(thisWeekDaily);
   const prevWeekTotal = sumMap(prevWeekDaily);
 
+  // --- ยอดขายรวมทั้งปี (ถึงสิ้นเดือนที่กำลังดูอยู่) vs ปีก่อนช่วงเดียวกัน ---
+  const yearStart = new Date(Date.UTC(year, 0, 1));
+  const { end: yearToMonthEndRaw } = monthRange(year, month - 1);
+  const yearToMonthEnd = yearToMonthEndRaw > now ? now : yearToMonthEndRaw;
+  const lastYearStart = new Date(Date.UTC(year - 1, 0, 1));
+  const { end: lastYearToMonthEnd } = monthRange(year - 1, month - 1);
+  const yearDaily = sliceMap(dailyAll, yearStart, yearToMonthEnd);
+  const lastYearDaily = sliceMap(dailyAll, lastYearStart, lastYearToMonthEnd);
+  const yearTotal = sumMap(yearDaily);
+  const lastYearTotal = sumMap(lastYearDaily);
+
+  // แจกแจงยอดทั้งปีเป็นรายเดือน (ม.ค. ถึงเดือนที่กำลังดูอยู่) — เห็นภาพรวมทั้งปีในตารางเดียว
+  const monthlyBreakdown = new Map<number, number>();
+  for (const [dateKey, amount] of yearDaily) {
+    const m = new Date(`${dateKey}T00:00:00.000Z`).getUTCMonth();
+    monthlyBreakdown.set(m, (monthlyBreakdown.get(m) ?? 0) + amount);
+  }
+  const monthlyBreakdownRows = Array.from({ length: month }, (_, i) => ({
+    month: i,
+    total: monthlyBreakdown.get(i) ?? 0,
+  }));
+  const maxMonthlyTotal = Math.max(1, ...monthlyBreakdownRows.map((r) => r.total));
+
   // --- Ranking รายสาขา: เดือนนี้ vs เดือนก่อน ---
-  // ไม่กรอง isActive — สาขาที่ปิดไปแล้วต้องยังเห็นในอันดับของเดือนที่เคยเปิดอยู่
-  const branches = await prisma.branch.findMany({ select: { id: true, name: true, type: true, isActive: true } });
-  const [thisMonthBranchAgg, lastMonthBranchAgg] = await Promise.all([
-    prisma.dailySales.groupBy({
-      by: ["branchId"],
-      where: { date: { gte: start, lte: clampedEnd } },
-      _sum: { cashPos: true, transfer: true, cashTransferCombined: true, grab: true, lineman: true },
-    }),
-    prisma.dailySales.groupBy({
-      by: ["branchId"],
-      where: { date: { gte: lastStart, lte: lastEnd } },
-      _sum: { cashPos: true, transfer: true, cashTransferCombined: true, grab: true, lineman: true },
-    }),
-  ]);
-  const totalFor = (type: "CASH" | "CREDIT_TERM", s?: { cashPos: number | null; transfer: number | null; cashTransferCombined: number | null; grab: number | null; lineman: number | null }) => {
-    if (!s) return 0;
+  // ไม่กรอง isActive — สาขาที่ปิดไปแล้วต้องยังเห็นในอันดับของเดือนที่เคยเปิดอยู่ (branches โหลดมาแล้วด้านบน)
+  type ChannelBreakdown = { storefront: number; grab: number; lineman: number };
+  const channelFor = (type: "CASH" | "CREDIT_TERM", s?: ChannelSums): ChannelBreakdown => {
+    if (!s) return { storefront: 0, grab: 0, lineman: 0 };
     const storefront = type === "CASH" ? (s.cashPos ?? 0) + (s.transfer ?? 0) : s.cashTransferCombined ?? 0;
-    return storefront + (s.grab ?? 0) + (s.lineman ?? 0);
+    return { storefront, grab: s.grab ?? 0, lineman: s.lineman ?? 0 };
   };
-  const thisMap = new Map(thisMonthBranchAgg.map((r) => [r.branchId, r._sum]));
-  const lastMap = new Map(lastMonthBranchAgg.map((r) => [r.branchId, r._sum]));
-  const ranking = branches
+  const totalFor = (type: "CASH" | "CREDIT_TERM", s?: ChannelSums) => {
+    const c = channelFor(type, s);
+    return c.storefront + c.grab + c.lineman;
+  };
+
+  // วันที่มียอดขายจริงวันแรกสุดของแต่ละสาขา (ทุกช่วงเวลา) — ใช้เช็คว่าประวัติย้อนหลังของสาขานั้นครอบคลุมช่วง "เดือนก่อน"
+  // ที่เอามาเทียบหรือไม่ ถ้าสาขาเพิ่งเริ่มมียอดขายจริงกลางช่วงที่เอามาเทียบ (เช่น เปิดสาขาวันที่ 5 แต่เทียบตั้งแต่วันที่ 1)
+  // ผลรวม "เดือนก่อน" จะขาดไปบางวันแบบไม่รู้ตัว ทำให้ฐานเทียบเล็กเกินจริงและ % โตเกินจริง — ใช้ยอดขายจริง > 0 เป็นตัวชี้วัด
+  // ไม่ใช่แค่ "มีแถวข้อมูล" เพราะบางสาขามีแถวที่กรอกไว้ล่วงหน้าเป็น 0 ก่อนเปิดร้านจริง (แถวมีอยู่ แต่ไม่ใช่วันขายจริง)
+  const thisMap = aggregateByBranch(allSalesRows, start, clampedEnd);
+  const lastMap = aggregateByBranch(allSalesRows, lastStart, lastMonthMatchedEnd);
+  // นับ "จำนวนวันที่มียอดขายจริง" ของแต่ละสาขาในช่วงเดือนก่อนที่เอามาเทียบ (ไม่ใช่แค่ช่วงวันแรก-วันสุดท้ายที่มีแถว)
+  // เพราะบางสาขามีข้อมูลจริงต้นเดือน แต่ตรงกลางเดือนขาดหายเป็นยอด 0 ยาวหลายวัน (เช่น ระบบไม่ได้กรอกให้ช่วงหนึ่ง)
+  // ถ้าตัดแค่ "วันแรกที่มีข้อมูล" อย่างเดียวจะจับเคสนี้ไม่ได้ ต้องนับวันที่มียอดจริง ๆ แล้วเทียบด้วยจำนวนวันเท่ากันแทน
+  const realDaysLastMonthMap = new Map<string, number>();
+  for (const row of allSalesRows) {
+    const type = branchTypeMap.get(row.branchId);
+    if (!type || totalFor(type, row) <= 0) continue;
+    if (row.date >= lastStart && row.date <= lastMonthMatchedEnd) {
+      realDaysLastMonthMap.set(row.branchId, (realDaysLastMonthMap.get(row.branchId) ?? 0) + 1);
+    }
+  }
+  const rankingBase = branches
     .map((b) => {
-      const thisTotal = totalFor(b.type, thisMap.get(b.id));
-      const lastTotal = totalFor(b.type, lastMap.get(b.id));
-      return { branch: b, thisTotal, lastTotal, change: pct(thisTotal, lastTotal) };
+      const thisChannel = channelFor(b.type, thisMap.get(b.id));
+      const lastChannel = channelFor(b.type, lastMap.get(b.id));
+      const thisTotal = thisChannel.storefront + thisChannel.grab + thisChannel.lineman;
+      const lastTotal = lastChannel.storefront + lastChannel.grab + lastChannel.lineman;
+      // สาขาใหม่ = ไม่มียอดขายเลยในรอบก่อนหน้า (เดือนก่อน) — เทียบ % แล้วบิดเบือน เพราะจริงๆ ไม่เคยมีฐานให้เทียบ
+      const isNewBranch = lastTotal === 0 && thisTotal > 0;
+      // เปิดไม่เต็มช่วงที่เทียบ = จำนวนวันที่มียอดขายจริงในเดือนก่อน (ภายใน daysSoFar วันแรก) น้อยกว่าเดือนนี้
+      // ไม่ว่าจะเพราะเปิดสาขาทีหลัง หรือมียอด 0 แทรกอยู่กลางเดือน ก็ต้องตัดเดือนนี้ให้เหลือจำนวนวันเท่ากันถึงจะยุติธรรม
+      const realDaysLastMonth = realDaysLastMonthMap.get(b.id) ?? 0;
+      const isPartialLastMonth = lastTotal > 0 && realDaysLastMonth < daysSoFar;
+      const matchedDays = isPartialLastMonth ? Math.max(1, realDaysLastMonth) : daysSoFar;
+      return { branch: b, thisTotal, lastTotal, thisChannel, lastChannel, isNewBranch, isPartialLastMonth, matchedDays };
     })
     .sort((a, b) => b.thisTotal - a.thisTotal);
 
+  // สำหรับสาขาที่เปิดไม่เต็มช่วงเทียบ ต้องรู้ยอดขาย "N วันแรก" ของเดือนนี้ (ไม่ใช่ยอดเต็ม daysSoFar วัน) เพื่อเทียบจำนวนวันให้เท่ากัน
+  // ดึงเฉพาะแถวรายวันของสาขากลุ่มนี้มาตัดเอง เพราะแต่ละสาขามีจำนวนวันที่ต้องตัด (matchedDays) ไม่เท่ากัน
+  const partialBranches = rankingBase.filter((r) => r.isPartialLastMonth);
+  const matchedThisTotalMap = new Map<string, number>();
+  const matchedThisChannelMap = new Map<string, ChannelBreakdown>();
+  if (partialBranches.length > 0) {
+    // ตัดจากข้อมูลที่โหลดมาแล้ว ไม่ต้องยิงคิวรีเพิ่ม
+    const partialIds = new Set(partialBranches.map((r) => r.branch.id));
+    const partialRows = allSalesRows.filter((row) => partialIds.has(row.branchId) && row.date >= start && row.date <= clampedEnd);
+    const rowsByBranch = new Map<string, typeof partialRows>();
+    for (const row of partialRows) {
+      const arr = rowsByBranch.get(row.branchId) ?? [];
+      arr.push(row);
+      rowsByBranch.set(row.branchId, arr);
+    }
+    for (const r of partialBranches) {
+      const cutoff = new Date(start.getTime() + (r.matchedDays - 1) * 86400000);
+      const sums = (rowsByBranch.get(r.branch.id) ?? [])
+        .filter((row) => row.date <= cutoff)
+        .reduce(
+          (acc, row) => ({
+            cashPos: acc.cashPos + (row.cashPos ?? 0),
+            transfer: acc.transfer + (row.transfer ?? 0),
+            cashTransferCombined: acc.cashTransferCombined + (row.cashTransferCombined ?? 0),
+            grab: acc.grab + row.grab,
+            lineman: acc.lineman + row.lineman,
+          }),
+          { cashPos: 0, transfer: 0, cashTransferCombined: 0, grab: 0, lineman: 0 }
+        );
+      matchedThisTotalMap.set(r.branch.id, totalFor(r.branch.type, sums));
+      matchedThisChannelMap.set(r.branch.id, channelFor(r.branch.type, sums));
+    }
+  }
+
+  const ranking = rankingBase.map((r) => {
+    const compareThisTotal = r.isPartialLastMonth ? matchedThisTotalMap.get(r.branch.id) ?? r.thisTotal : r.thisTotal;
+    const compareThisChannel = r.isPartialLastMonth ? matchedThisChannelMap.get(r.branch.id) ?? r.thisChannel : r.thisChannel;
+    return { ...r, compareThisTotal, compareThisChannel, change: pct(compareThisTotal, r.lastTotal) };
+  });
+
+  // สาขาที่เทียบกันได้จริง (มียอดทั้งสองรอบ) แยกเป็นขึ้น/ตก เรียงจาก % เปลี่ยนแปลงมากไปน้อย
+  // สาขาที่เปิดไม่เต็มช่วงเทียบยังรวมอยู่ด้วย แต่ % คำนวณจากยอด "N วันแรก" ที่จำนวนวันเท่ากับเดือนก่อน (ดู matchedDays)
+  const comparableBranches = ranking.filter((r) => r.lastTotal > 0 && r.change !== null);
+  const branchesUp = comparableBranches.filter((r) => r.change! > 0).sort((a, b) => b.change! - a.change!);
+  const branchesDown = comparableBranches.filter((r) => r.change! < 0).sort((a, b) => a.change! - b.change!);
+
+  // --- SSSG สาขาเดิม เดือนนี้ vs เดือนก่อน แบบ "เฉลี่ยต่อวันที่เปิดจริง" (รายละเอียดใน lib/sssgCalc.ts และแท็บ /reports/sssg) ---
+  const sssg = computeSssg(branches, allSalesRows, { start, end: clampedEnd }, { start: lastStart, end: lastEnd });
+  const sssgPrevLabel = thaiMonthLabel(lastMonthDate.getUTCFullYear(), lastMonthDate.getUTCMonth());
+
   // --- แยกช่องทาง (เดือนนี้) ---
-  const [storefrontCashAgg, storefrontCtAgg, deliveryAgg, companyAgg] = await Promise.all([
-    prisma.dailySales.aggregate({
-      where: { date: { gte: start, lte: clampedEnd }, branch: { type: "CASH" } },
-      _sum: { cashPos: true, transfer: true },
-    }),
-    prisma.dailySales.aggregate({
-      where: { date: { gte: start, lte: clampedEnd }, branch: { type: "CREDIT_TERM" } },
-      _sum: { cashTransferCombined: true },
-    }),
-    prisma.dailySales.aggregate({
-      where: { date: { gte: start, lte: clampedEnd } },
-      _sum: { grab: true, lineman: true },
-    }),
-    prisma.companyChannelDaily.aggregate({
-      where: { date: { gte: start, lte: clampedEnd } },
-      _sum: { tiktok: true, fbLine: true, pickup: true, catering: true },
-    }),
-  ]);
-  const storefrontTotal = (storefrontCashAgg._sum.cashPos ?? 0) + (storefrontCashAgg._sum.transfer ?? 0) + (storefrontCtAgg._sum.cashTransferCombined ?? 0);
-  const grabTotal = deliveryAgg._sum.grab ?? 0;
-  const linemanTotal = deliveryAgg._sum.lineman ?? 0;
-  const ecomTotal = (companyAgg._sum.tiktok ?? 0) + (companyAgg._sum.fbLine ?? 0) + (companyAgg._sum.pickup ?? 0) + (companyAgg._sum.catering ?? 0);
+  let storefrontTotal = 0;
+  let grabTotal = 0;
+  let linemanTotal = 0;
+  for (const row of allSalesRows) {
+    if (row.date < start || row.date > clampedEnd) continue;
+    const type = branchTypeMap.get(row.branchId);
+    if (!type) continue;
+    storefrontTotal += type === "CASH" ? (row.cashPos ?? 0) + (row.transfer ?? 0) : row.cashTransferCombined ?? 0;
+    grabTotal += row.grab;
+    linemanTotal += row.lineman;
+  }
+  const ecom = { tiktok: 0, fbLine: 0, pickup: 0, catering: 0 };
+  for (const c of allCompanyRows) {
+    if (c.date < start || c.date > clampedEnd) continue;
+    ecom.tiktok += c.tiktok;
+    ecom.fbLine += c.fbLine;
+    ecom.pickup += c.pickup;
+    ecom.catering += c.catering;
+  }
+  const ecomTotal = ecom.tiktok + ecom.fbLine + ecom.pickup + ecom.catering;
 
   const channelSlices = [
     { label: "หน้าร้าน (Storefront)", value: storefrontTotal, color: CHART_COLORS.blue },
@@ -114,10 +259,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: { ye
     { label: "E-Commerce", value: ecomTotal, color: CHART_COLORS.yellow },
   ];
   const ecomSlices = [
-    { label: "TikTok", value: companyAgg._sum.tiktok ?? 0, color: CHART_COLORS.aqua },
-    { label: "FB / Line", value: companyAgg._sum.fbLine ?? 0, color: CHART_COLORS.orange },
-    { label: "รับหน้าร้าน", value: companyAgg._sum.pickup ?? 0, color: CHART_COLORS.violet },
-    { label: "Catering", value: companyAgg._sum.catering ?? 0, color: CHART_COLORS.red },
+    { label: "TikTok", value: ecom.tiktok, color: CHART_COLORS.aqua },
+    { label: "FB / Line", value: ecom.fbLine, color: CHART_COLORS.orange },
+    { label: "รับหน้าร้าน", value: ecom.pickup, color: CHART_COLORS.violet },
+    { label: "Catering", value: ecom.catering, color: CHART_COLORS.red },
   ];
 
   const trendSeries = [
@@ -126,17 +271,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: { ye
   ];
 
   return (
-    <div>
-      <h1 className="mb-6 text-xl font-bold text-gray-800">ภาพรวมและวิเคราะห์ยอดขาย</h1>
-
-      <MonthFilterBar basePath="/reports" year={year} month={month} />
-
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <>
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs text-gray-500">ยอดขายรวมเดือนนี้</p>
+          <p className="text-xs text-gray-500">ยอดขายรวมเดือนนี้ ({daysSoFar} วัน)</p>
           <p className="mt-1 text-lg font-bold text-brand-700">{formatBaht(thisMonthTotal)}</p>
-          <ChangeBadge value={pct(thisMonthTotal, lastMonthTotal)} />
-          <span className="ml-1 text-xs text-gray-400">เทียบเดือนก่อน</span>
+          <ChangeBadge value={pct(thisMonthTotal, lastMonthMatchedTotal)} />
+          <span className="ml-1 text-xs text-gray-400">เทียบ {daysSoFar} วันแรกเดือนก่อน</span>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
           <p className="text-xs text-gray-500">เฉลี่ยต่อวัน (เดือนนี้)</p>
@@ -149,12 +290,135 @@ export default async function ReportsPage({ searchParams }: { searchParams: { ye
           <span className="ml-1 text-xs text-gray-400">เทียบ 7 วันก่อนหน้า</span>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs text-gray-500">เดือนก่อน (เทียบ)</p>
+          <p className="text-xs text-gray-500">เดือนก่อน (เต็มเดือน)</p>
           <p className="mt-1 text-lg font-bold text-gray-800">{formatBaht(lastMonthTotal)}</p>
+          <p className="mt-0.5 text-[11px] text-gray-400">{daysSoFar} วันแรก: {formatBaht(lastMonthMatchedTotal)}</p>
+        </div>
+        <div className="rounded-xl border border-brand-200 bg-brand-50 p-4">
+          <p className="text-xs text-brand-700">ยอดขายรวมทั้งปี {year + 543} (ถึง {thaiMonthLabel(year, month - 1)})</p>
+          <p className="mt-1 text-lg font-bold text-brand-700">{formatBaht(yearTotal)}</p>
+          <ChangeBadge value={pct(yearTotal, lastYearTotal)} />
+          <span className="ml-1 text-xs text-brand-600">เทียบปีก่อนช่วงเดียวกัน ({formatBaht(lastYearTotal)})</span>
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-amber-800">SSSG — สาขาเดิม {thaiMonthLabel(year, month - 1)} vs {sssgPrevLabel} (เฉลี่ยต่อวันที่เปิดจริง)</h2>
+          <Link href={`/reports/sssg?year=${year}&month=${month}`} className="text-xs font-medium text-brand-600 hover:underline">
+            ดูรายสาขา + เรียงลำดับ →
+          </Link>
+        </div>
+        <p className="mb-4 text-xs text-amber-700">
+          นับเฉพาะสาขาที่มีวันเปิดขายทั้งสองเดือน ({sssg.comparable.length} สาขา) วันที่ยอดเป็น 0 ไม่นับ — เทียบยอดเฉลี่ยต่อวันที่เปิดจริง จึงไม่ต้องเลือกวัน เดือนที่ยังไม่จบก็เทียบได้เลย
+        </p>
+        {sssg.comparable.length === 0 ? (
+          <p className="text-sm text-gray-500">ไม่มีสาขาที่มีวันเปิดขายทั้งสองเดือน</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-amber-200 bg-white p-4">
+              <p className="text-xs text-gray-500">รวมเฉลี่ย/วัน สาขาเดิม — {thaiMonthLabel(year, month - 1)}</p>
+              <p className="mt-1 text-lg font-bold text-gray-800">{formatBaht(sssg.current.avgPerDay)}</p>
+              <ChangeBadge value={sssg.change} />
+              <span className="ml-1 text-xs text-gray-400">เทียบ {formatBaht(sssg.previous.avgPerDay)}/วัน ({sssgPrevLabel})</span>
+              <p className="mt-2 border-t border-amber-100 pt-2 text-[11px] text-gray-400">
+                วันเปิดจริงรวม {sssg.current.openDays} สาขา-วัน เทียบ {sssg.previous.openDays} สาขา-วัน
+              </p>
+            </div>
+            <div className="rounded-xl border border-amber-200 bg-white p-4">
+              <p className="text-xs text-gray-500">แยกช่องทาง (เฉลี่ย/วันที่เปิดจริง)</p>
+              <div className="mt-2 flex flex-col gap-1 text-xs">
+                {(
+                  [
+                    ["หน้าร้าน", sssg.current.avgChannel.storefront, sssg.previous.avgChannel.storefront, sssg.channelChange.storefront],
+                    ["Grab", sssg.current.avgChannel.grab, sssg.previous.avgChannel.grab, sssg.channelChange.grab],
+                    ["Lineman", sssg.current.avgChannel.lineman, sssg.previous.avgChannel.lineman, sssg.channelChange.lineman],
+                  ] as const
+                ).map(([label, cur, prev, change]) => (
+                  <div key={label} className="flex items-center justify-between">
+                    <span className="text-gray-500">{label}</span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-gray-400">{formatBaht(prev)} →</span>
+                      <span className="font-medium text-gray-700">{formatBaht(cur)}</span>
+                      <ChangeBadge value={change} />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        {(sssg.newBranches.length > 0 || sssg.closedBranches.length > 0) && (
+          <p className="mt-2 text-[11px] text-amber-600">
+            {sssg.newBranches.length > 0 && `ไม่รวมสาขาที่เดือนก่อนยังไม่มีวันเปิด ${sssg.newBranches.length} สาขา: ${sssg.newBranches.map((r) => r.branch.name).join(", ")}`}
+            {sssg.newBranches.length > 0 && sssg.closedBranches.length > 0 && " · "}
+            {sssg.closedBranches.length > 0 && `ไม่รวมสาขาที่เดือนนี้ไม่มีวันเปิด ${sssg.closedBranches.length} สาขา: ${sssg.closedBranches.map((r) => r.branch.name).join(", ")}`}
+          </p>
+        )}
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+          <h2 className="mb-1 text-sm font-semibold text-emerald-800">สาขาที่ยอดขึ้น ({branchesUp.length})</h2>
+          <p className="mb-3 text-xs text-emerald-700">เทียบ {daysSoFar} วันแรกของเดือนนี้กับเดือนก่อน (ไม่รวมสาขาใหม่)</p>
+          <div className="flex flex-col gap-1.5">
+            {branchesUp.map((r) => (
+              <div key={r.branch.id} className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm">
+                <span className="text-gray-800">
+                  {r.branch.name}
+                  {r.isPartialLastMonth && <span className="ml-1 text-xs font-normal text-amber-600">({r.matchedDays} วัน)</span>}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">{formatBaht(r.lastTotal)} → {formatBaht(r.compareThisTotal)}</span>
+                  <ChangeBadge value={r.change} />
+                </div>
+              </div>
+            ))}
+            {branchesUp.length === 0 && <p className="text-sm text-emerald-700">ไม่มีสาขาที่ยอดขึ้นในรอบนี้</p>}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+          <h2 className="mb-1 text-sm font-semibold text-red-800">สาขาที่ยอดตก ({branchesDown.length})</h2>
+          <p className="mb-3 text-xs text-red-700">เทียบ {daysSoFar} วันแรกของเดือนนี้กับเดือนก่อน (ไม่รวมสาขาใหม่)</p>
+          <div className="flex flex-col gap-1.5">
+            {branchesDown.map((r) => (
+              <div key={r.branch.id} className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm">
+                <span className="text-gray-800">
+                  {r.branch.name}
+                  {r.isPartialLastMonth && <span className="ml-1 text-xs font-normal text-amber-600">({r.matchedDays} วัน)</span>}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">{formatBaht(r.lastTotal)} → {formatBaht(r.compareThisTotal)}</span>
+                  <ChangeBadge value={r.change} />
+                </div>
+              </div>
+            ))}
+            {branchesDown.length === 0 && <p className="text-sm text-red-700">ไม่มีสาขาที่ยอดตกในรอบนี้</p>}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5">
+        <h2 className="mb-1 text-sm font-semibold text-gray-700">ยอดขายรายเดือน — ปี {year + 543}</h2>
+        <p className="mb-4 text-xs text-gray-400">ดูภาพรวมทั้งปีทีละเดือน เทียบเห็นเดือนไหนขายดี/ขายน้อยกว่ากัน</p>
+        <div className="flex flex-col gap-2">
+          {monthlyBreakdownRows.map((r) => (
+            <div key={r.month} className="flex items-center gap-3">
+              <span className="w-20 shrink-0 text-xs text-gray-500">{thaiMonthLabel(year, r.month).split(" ")[0]}</span>
+              <div className="h-5 flex-1 overflow-hidden rounded-full bg-gray-100">
+                <div
+                  className="h-full rounded-full bg-brand-500"
+                  style={{ width: `${Math.max(2, (r.total / maxMonthlyTotal) * 100)}%` }}
+                />
+              </div>
+              <span className="w-28 shrink-0 text-right text-xs font-medium text-gray-700">{formatBaht(r.total)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <h2 className="mb-4 text-sm font-semibold text-gray-700">สัดส่วนช่องทางการขาย (เดือนนี้)</h2>
           <DonutChart data={channelSlices} />
@@ -170,15 +434,45 @@ export default async function ReportsPage({ searchParams }: { searchParams: { ye
         <LineChart series={trendSeries} />
       </div>
 
-      <h2 className="mb-3 text-sm font-semibold text-gray-700">อันดับสาขา — เดือนนี้ vs เดือนก่อน</h2>
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-gray-700">อันดับสาขา — {daysSoFar} วันแรกเดือนนี้ vs เดือนก่อน</h2>
+        <Link href="/reports/ranking" className="text-xs font-medium text-brand-600 hover:underline">
+          🏆 ดูอันดับแบบเลือกช่วงวันที่เอง + แยกหน้าร้าน/Delivery →
+        </Link>
+      </div>
+      <p className="mb-3 text-xs text-gray-400">เทียบจำนวนวันเท่ากันทั้งสองเดือน ({daysSoFar} วันแรก) ให้ยุติธรรม</p>
+
+      {/* มือถือ: การ์ดรายการ ไม่ต้องเลื่อนแนวนอน */}
+      <div className="flex flex-col gap-2 sm:hidden">
+        {ranking.map((r, i) => (
+          <div key={r.branch.id} className="rounded-xl border border-gray-200 bg-white p-3">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2 font-medium text-gray-800">
+                <span className="text-xs text-gray-400">#{i + 1}</span>
+                {r.branch.name}
+                {!r.branch.isActive && <span className="text-xs font-normal text-gray-400">(ปิด)</span>}
+                {r.isNewBranch && <span className="text-xs font-normal text-amber-600">(สาขาใหม่)</span>}
+                {r.isPartialLastMonth && <span className="text-xs font-normal text-amber-600">(เทียบ {r.matchedDays} วัน)</span>}
+              </span>
+              <ChangeBadge value={r.change} />
+            </div>
+            <div className="mt-1 flex items-baseline justify-between text-sm">
+              <span className="font-semibold text-gray-800">{formatBaht(r.thisTotal)}</span>
+              <span className="text-xs text-gray-400">เดือนก่อน ({daysSoFar} วันแรก) {formatBaht(r.lastTotal)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* จอใหญ่: ตาราง */}
+      <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white sm:block">
         <table className="w-full min-w-[600px] text-sm">
           <thead className="bg-gray-50 text-left text-gray-500">
             <tr>
               <th className="px-3 py-2">อันดับ</th>
               <th className="px-3 py-2">สาขา</th>
-              <th className="px-3 py-2 text-right">เดือนนี้</th>
-              <th className="px-3 py-2 text-right">เดือนก่อน</th>
+              <th className="px-3 py-2 text-right">เดือนนี้ ({daysSoFar} วัน)</th>
+              <th className="px-3 py-2 text-right">เดือนก่อน ({daysSoFar} วันแรก)</th>
               <th className="px-3 py-2 text-right">เปลี่ยนแปลง</th>
             </tr>
           </thead>
@@ -189,6 +483,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: { ye
                 <td className="px-3 py-2 font-medium text-gray-800">
                   {r.branch.name}
                   {!r.branch.isActive && <span className="ml-1.5 text-xs font-normal text-gray-400">(ปิดสาขาแล้ว)</span>}
+                  {r.isNewBranch && <span className="ml-1.5 text-xs font-normal text-amber-600">(สาขาใหม่)</span>}
+                  {r.isPartialLastMonth && <span className="ml-1.5 text-xs font-normal text-amber-600">(เทียบ {r.matchedDays} วัน)</span>}
                 </td>
                 <td className="px-3 py-2 text-right font-medium">{formatBaht(r.thisTotal)}</td>
                 <td className="px-3 py-2 text-right text-gray-500">{formatBaht(r.lastTotal)}</td>
@@ -200,6 +496,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: { ye
           </tbody>
         </table>
       </div>
-    </div>
+    </>
   );
 }

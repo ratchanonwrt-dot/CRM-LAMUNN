@@ -1,0 +1,227 @@
+// Prisma schema — Lamunn Catering (catering/event booking records + walk-in pickup orders)
+// Lives in its own Postgres schema ("lamunn_catering") inside the same Supabase project used
+// by Lamunn-CRM / Lamunn-Finance — kept separate on purpose so this app's tables never mix
+// with the CRM/loyalty or finance tables.
+// Run `npx prisma migrate dev --name init` (with DATABASE_URL set) after editing.
+
+generator client {
+  provider = "prisma-client-js"
+  // Own output path — keeps this schema's generated client separate from @lamunn/db's and
+  // @lamunn/db-finance's (all three would otherwise fight over the same hoisted
+  // node_modules/@prisma/client and silently clobber each other). Using a node_modules/.prisma/*
+  // convention path (rather than a src/ folder) so Next.js's serverless file tracing discovers
+  // the query engine binary automatically.
+  output   = "../node_modules/.prisma/client-catering"
+  // "native" covers local dev (Windows); "rhel-openssl-3.0.x" is Vercel's serverless function
+  // runtime — without it the deployed app can't find the query engine binary (only surfaces at
+  // runtime, not at build time).
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum StaffRole {
+  SUPER_ADMIN // ทำได้ทุกอย่าง รวมถึงเพิ่ม/ลบ/แก้ไขสิทธิ์ผู้ใช้งาน
+  MANAGER     // แก้ไขได้ทุกอย่าง (จอง, บันทึกยอด, จัดคน ฯลฯ) ยกเว้นจัดการผู้ใช้งาน
+  STAFF       // ดูข้อมูลได้อย่างเดียว แก้ไขไม่ได้
+}
+
+model StaffUser {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         StaffRole @default(STAFF)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  bookingsCreated     CateringBooking[]      @relation("BookingCreatedBy")
+  bookingAssignments  CateringBookingStaff[]
+  pickupOrdersCreated PickupOrder[]
+
+  @@map("staff_users")
+}
+
+// สาขา/จุดรับของสำหรับนัดรับหน้าร้าน (Function เสริม)
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pickupOrders PickupOrder[]
+
+  @@map("branches")
+}
+
+// แพคเกจจัดเลี้ยง — ราคา/รายละเอียดมาตรฐาน (ราคาที่ตกลงจริงต่อการจองจะถูก snapshot ไว้ใน CateringBooking)
+model CateringPackage {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bookings CateringBooking[]
+
+  @@map("catering_packages")
+}
+
+enum CustomerSource {
+  FACEBOOK
+  INSTAGRAM
+  LINE
+  REFERRAL   // คนแนะนำ/บอกต่อ
+  WALK_IN
+  GOOGLE
+  OTHER
+}
+
+// ลูกค้า — ค้นหา/สร้างใหม่ด้วยเบอร์โทรตอนกรอกการจอง ทำให้ลูกค้าประจำสะสมประวัติการจองไว้ในที่เดียว
+model Customer {
+  id        String          @id @default(cuid())
+  name      String
+  phone     String          @unique
+  source    CustomerSource?
+  note      String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  bookings CateringBooking[]
+
+  @@map("customers")
+}
+
+enum PaymentStatus {
+  UNPAID        // ยังไม่โอน
+  DEPOSIT_PAID  // มัดจำแล้ว (ปกติ 50%)
+  FULLY_PAID    // โอนครบแล้ว
+}
+
+enum BookingStatus {
+  PENDING    // รอยืนยัน
+  CONFIRMED  // ยืนยันแล้ว
+  COMPLETED  // จบงานแล้ว
+  CANCELLED  // ยกเลิก
+}
+
+// รายการจองจัดเลี้ยง — แกนหลักของระบบ
+model CateringBooking {
+  id String @id @default(cuid())
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  eventDate      DateTime  @db.Date
+  eventStartTime String? // เก็บเป็นข้อความ เช่น "10:00" — ไม่ต้องผูกกับ timezone/date ซับซ้อน
+  eventEndTime   String?
+  location       String? // สถานที่จัดงาน
+  guestCount     Int? // จำนวนแขก/คน
+
+  packageId            String?
+  package              CateringPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  packageNameSnapshot  String? // ชื่อแพคเกจ ณ ตอนจอง — กันไม่ให้การแก้ไขแพคเกจภายหลังย้อนแก้ประวัติ
+  packagePriceSnapshot Float? // ราคาที่ตกลงจริง ณ ตอนจอง
+
+  totalAmount   Float
+  depositAmount Float?
+  depositPaidAt DateTime?
+  balancePaidAt DateTime?
+  paymentStatus PaymentStatus @default(UNPAID)
+
+  status BookingStatus @default(PENDING)
+  note   String?
+
+  createdByStaffId String?
+  createdByStaff    StaffUser? @relation("BookingCreatedBy", fields: [createdByStaffId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  staffAssignments CateringBookingStaff[]
+  checklistItems   CateringChecklistItem[]
+
+  @@map("catering_bookings")
+}
+
+// พนักงานที่จัดไปดูแลงาน — "ใครไปใครดูแล"
+model CateringBookingStaff {
+  id String @id @default(cuid())
+
+  bookingId String
+  booking   CateringBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  staffId String
+  staff   StaffUser @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  roleLabel String // เช่น "หัวหน้างาน", "ทีมงาน", "คนขับ"
+  createdAt DateTime @default(now())
+
+  @@unique([bookingId, staffId])
+  @@map("catering_booking_staff")
+}
+
+// เช็คลิสต์ของ/อุปกรณ์ที่ต้องเตรียมต่องาน
+model CateringChecklistItem {
+  id String @id @default(cuid())
+
+  bookingId String
+  booking   CateringBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  itemName  String
+  quantity  Int?
+  isPacked  Boolean @default(false)
+  note      String?
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("catering_checklist_items")
+}
+
+enum PickupOrderStatus {
+  PENDING    // รับออเดอร์แล้ว รอเตรียมของ
+  READY      // เตรียมของเสร็จ พร้อมให้ลูกค้ามารับ
+  COMPLETED  // ลูกค้ารับของแล้ว
+  CANCELLED  // ยกเลิก
+}
+
+// ยอดนัดรับหน้าร้าน (Function เสริม) — ลูกค้าติดต่อสั่งของ ไม่ผ่านระบบจองจัดเลี้ยง
+model PickupOrder {
+  id String @id @default(cuid())
+
+  customerName  String
+  customerPhone String?
+
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  itemsDescription String // ลูกค้าสั่งอะไรบ้าง
+  amount           Float
+  paymentStatus    PaymentStatus @default(UNPAID)
+
+  orderDate  DateTime @db.Date // สั่งวันไหน
+  pickupDate DateTime @db.Date // นัดรับวันไหน
+
+  status PickupOrderStatus @default(PENDING)
+  note   String?
+
+  createdByStaffId String?
+  createdByStaff    StaffUser? @relation(fields: [createdByStaffId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("pickup_orders")
+}

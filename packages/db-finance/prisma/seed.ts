@@ -4,12 +4,12 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 // Standard Credit Term cycle used by most malls: 1-15 due on day 30 of the same
-// month, 16-end due on day 1 of the following month, both GP% deducted.
+// month, 16-30 due on day 15 of the following month, both GP% deducted.
 const STANDARD_CT_CYCLE = {
   splitMonth: true,
   period1PayDay: 30,
   period1PayMonthOffset: 0,
-  period2PayDay: 1,
+  period2PayDay: 15,
   period2PayMonthOffset: 1,
   fullMonthPayDay: null as number | null,
   fullMonthPayMonthOffset: 1,
@@ -21,6 +21,9 @@ interface BranchSeed {
   name: string;
   type: BranchType;
   sortOrder: number;
+  // matches public.branches.code in the friend's POS Supabase project (same DB, different schema)
+  // — omit for branches not yet added on the POS side.
+  posCode?: string;
   rent: {
     rentType: RentType;
     gpPercentStorefront?: number;
@@ -34,15 +37,16 @@ interface BranchSeed {
 
 // Extracted from "2.0 Revenue Record 2026" — สรุปยอดขาย / ค่าเช่า / Credit Term sheets.
 const branches: BranchSeed[] = [
-  { code: "01", name: "Factory", type: "CASH", sortOrder: 1, rent: { rentType: "FIX_RATE", fixRateAmount: 80000 } },
-  { code: "02", name: "Taopoon", type: "CASH", sortOrder: 2, rent: { rentType: "FIX_RATE", fixRateAmount: 0 } },
-  { code: "03", name: "Banthatthong", type: "CASH", sortOrder: 3, rent: { rentType: "FIX_RATE", fixRateAmount: 0 } },
-  { code: "04", name: "Asoke", type: "CASH", sortOrder: 4, rent: { rentType: "GP", gpPercentStorefront: 0, gpPercentDelivery: 0, note: "ยังไม่ตั้งค่า GP% — แก้ไขได้ที่หน้าตั้งค่าสาขา" } },
+  { code: "01", name: "Factory", type: "CASH", sortOrder: 1, posCode: "FACTORY", rent: { rentType: "FIX_RATE", fixRateAmount: 80000 } },
+  { code: "02", name: "Taopoon", type: "CASH", sortOrder: 2, posCode: "TAOPOON", rent: { rentType: "FIX_RATE", fixRateAmount: 0 } },
+  { code: "03", name: "Banthatthong", type: "CASH", sortOrder: 3, posCode: "BANTHATTHONG", rent: { rentType: "FIX_RATE", fixRateAmount: 0 } },
+  { code: "04", name: "Asoke", type: "CASH", sortOrder: 4, posCode: "ASOKE", rent: { rentType: "GP", gpPercentStorefront: 0, gpPercentDelivery: 0, note: "ยังไม่ตั้งค่า GP% — แก้ไขได้ที่หน้าตั้งค่าสาขา" } },
   {
     code: "05",
     name: "Central Embassy",
     type: "CREDIT_TERM",
     sortOrder: 5,
+    posCode: "EMBASSY",
     rent: { rentType: "GP", gpPercentStorefront: 0.25, gpPercentDelivery: 0, vendorFeeMonthly: 3000 },
     creditTerm: { splitMonth: false, fullMonthPayDay: 25, fullMonthPayMonthOffset: 1, deductDeliveryGp: false },
   },
@@ -51,6 +55,7 @@ const branches: BranchSeed[] = [
     name: "EmQuartier",
     type: "CREDIT_TERM",
     sortOrder: 6,
+    posCode: "EMQUARTIER",
     rent: { rentType: "GP", gpPercentStorefront: 0.25, gpPercentDelivery: 0.1 },
     creditTerm: STANDARD_CT_CYCLE,
   },
@@ -59,6 +64,7 @@ const branches: BranchSeed[] = [
     name: "Emporium",
     type: "CREDIT_TERM",
     sortOrder: 7,
+    posCode: "EMPORIUM",
     rent: { rentType: "GP", gpPercentStorefront: 0.25, gpPercentDelivery: 0.1 },
     creditTerm: STANDARD_CT_CYCLE,
   },
@@ -67,6 +73,7 @@ const branches: BranchSeed[] = [
     name: "The Mall Thrapa",
     type: "CREDIT_TERM",
     sortOrder: 8,
+    posCode: "THAPHRA",
     rent: { rentType: "GP", gpPercentStorefront: 0.25, gpPercentDelivery: 0.1 },
     creditTerm: STANDARD_CT_CYCLE,
   },
@@ -75,7 +82,8 @@ const branches: BranchSeed[] = [
     name: "The Mall Bangkapi",
     type: "CREDIT_TERM",
     sortOrder: 9,
-    rent: { rentType: "GP", gpPercentStorefront: 0.23, gpPercentDelivery: 0.1 },
+    posCode: "BANGKAPI",
+    rent: { rentType: "GP", gpPercentStorefront: 0.25, gpPercentDelivery: 0.1 },
     creditTerm: STANDARD_CT_CYCLE,
   },
   {
@@ -83,18 +91,20 @@ const branches: BranchSeed[] = [
     name: "The Mall Bangkae",
     type: "CREDIT_TERM",
     sortOrder: 10,
+    posCode: "BANGKAE",
     rent: { rentType: "GP", gpPercentStorefront: 0.25, gpPercentDelivery: 0.1 },
     creditTerm: STANDARD_CT_CYCLE,
   },
-  { code: "11", name: "The Mall Ram", type: "CASH", sortOrder: 11, rent: { rentType: "FIX_RATE", fixRateAmount: 15000, note: "ปรับจากสูตร GP เดิมเป็นค่าเช่าคงที่" } },
-  { code: "12", name: "Central Ladprao", type: "CASH", sortOrder: 12, rent: { rentType: "GP", gpPercentStorefront: 0.18, gpPercentDelivery: 0.1 } },
-  { code: "13", name: "Central Pinklao", type: "CASH", sortOrder: 13, rent: { rentType: "GP", gpPercentStorefront: 0.18, gpPercentDelivery: 0.1 } },
-  { code: "14", name: "Central Westgate", type: "CASH", sortOrder: 14, rent: { rentType: "GP", gpPercentStorefront: 0.18, gpPercentDelivery: 0.1 } },
+  { code: "11", name: "The Mall Ram", type: "CASH", sortOrder: 11, posCode: "RAMKAMHAENG", rent: { rentType: "FIX_RATE", fixRateAmount: 15000, note: "ปรับจากสูตร GP เดิมเป็นค่าเช่าคงที่" } },
+  { code: "12", name: "Central Ladprao", type: "CASH", sortOrder: 12, posCode: "LADPRAO", rent: { rentType: "GP", gpPercentStorefront: 0.18, gpPercentDelivery: 0.1 } },
+  { code: "13", name: "Central Pinklao", type: "CASH", sortOrder: 13, posCode: "PINKLAO", rent: { rentType: "GP", gpPercentStorefront: 0.18, gpPercentDelivery: 0.1 } },
+  { code: "14", name: "Central Westgate", type: "CASH", sortOrder: 14, posCode: "WESTGATE", rent: { rentType: "GP", gpPercentStorefront: 0.18, gpPercentDelivery: 0.1 } },
   {
     code: "15",
     name: "Central NorthVille",
     type: "CREDIT_TERM",
     sortOrder: 15,
+    posCode: "NORTHVILLE",
     rent: { rentType: "GP", gpPercentStorefront: 0.25, gpPercentDelivery: 0.1 },
     creditTerm: {
       splitMonth: true,
@@ -105,26 +115,28 @@ const branches: BranchSeed[] = [
       deductDeliveryGp: true,
     },
   },
-  { code: "16", name: "Central Rama 3", type: "CASH", sortOrder: 16, rent: { rentType: "GP", gpPercentStorefront: 0.25, gpPercentDelivery: 0.1 } },
-  { code: "17", name: "Siam Paragon", type: "CASH", sortOrder: 17, rent: { rentType: "GP", gpPercentStorefront: 0.18, gpPercentDelivery: 0.1 } },
-  { code: "18", name: "Iconsiam", type: "CASH", sortOrder: 18, rent: { rentType: "GP", gpPercentStorefront: 0.18, gpPercentDelivery: 0.1 } },
-  { code: "19", name: "Robinson Ratchapruek", type: "CASH", sortOrder: 19, rent: { rentType: "FIX_RATE", fixRateAmount: 30000, note: "ปรับจากสูตร GP เดิมเป็นค่าเช่าคงที่" } },
+  { code: "16", name: "Central Rama 3", type: "CASH", sortOrder: 16, posCode: "RAMA3", rent: { rentType: "GP", gpPercentStorefront: 0.25, gpPercentDelivery: 0.1 } },
+  { code: "17", name: "Siam Paragon", type: "CASH", sortOrder: 17, posCode: "PARAGON", rent: { rentType: "GP", gpPercentStorefront: 0.18, gpPercentDelivery: 0.1 } },
+  { code: "18", name: "Iconsiam", type: "CASH", sortOrder: 18, posCode: "ICONSIAM", rent: { rentType: "GP", gpPercentStorefront: 0.18, gpPercentDelivery: 0.1 } },
+  { code: "19", name: "Robinson Ratchapruek", type: "CASH", sortOrder: 19, posCode: "RATCHAPRUEK", rent: { rentType: "FIX_RATE", fixRateAmount: 30000, note: "ปรับจากสูตร GP เดิมเป็นค่าเช่าคงที่" } },
   {
     code: "20",
     name: "Design Village Bangna",
     type: "CREDIT_TERM",
     sortOrder: 20,
+    posCode: "BANGNA",
     rent: { rentType: "GP", gpPercentStorefront: 0.25, gpPercentDelivery: 0.1 },
     creditTerm: STANDARD_CT_CYCLE,
   },
-  { code: "21", name: "One Bangkok", type: "CASH", sortOrder: 21, rent: { rentType: "GP", gpPercentStorefront: 0.25, gpPercentDelivery: 0.1 } },
-  { code: "22", name: "Seacon Bangkae", type: "CASH", sortOrder: 22, rent: { rentType: "GP", gpPercentStorefront: 0, gpPercentDelivery: 0, note: "ยังไม่ตั้งค่า GP% — แก้ไขได้ที่หน้าตั้งค่าสาขา" } },
+  { code: "21", name: "One Bangkok", type: "CASH", sortOrder: 21, posCode: "ONEBANGKOK", rent: { rentType: "GP", gpPercentStorefront: 0.25, gpPercentDelivery: 0.1 } },
+  { code: "22", name: "Seacon Square", type: "CASH", sortOrder: 22, rent: { rentType: "GP", gpPercentStorefront: 0, gpPercentDelivery: 0, note: "ยังไม่ตั้งค่า GP% — แก้ไขได้ที่หน้าตั้งค่าสาขา" } },
   {
     code: "23",
     name: "The Mall Ngamwongwarn",
     type: "CREDIT_TERM",
     sortOrder: 23,
-    rent: { rentType: "GP", gpPercentStorefront: 0, gpPercentDelivery: 0, note: "ยังไม่ตั้งค่า GP% — แก้ไขได้ที่หน้าตั้งค่าสาขา" },
+    posCode: "NGAMWONGWAN",
+    rent: { rentType: "GP", gpPercentStorefront: 0.25, gpPercentDelivery: 0.1 },
     creditTerm: STANDARD_CT_CYCLE,
   },
 ];
@@ -133,8 +145,8 @@ async function main() {
   for (const b of branches) {
     const branch = await prisma.branch.upsert({
       where: { code: b.code },
-      update: { name: b.name, type: b.type, sortOrder: b.sortOrder },
-      create: { code: b.code, name: b.name, type: b.type, sortOrder: b.sortOrder },
+      update: { name: b.name, type: b.type, sortOrder: b.sortOrder, posCode: b.posCode ?? null },
+      create: { code: b.code, name: b.name, type: b.type, sortOrder: b.sortOrder, posCode: b.posCode ?? null },
     });
 
     await prisma.rentConfig.upsert({
@@ -186,7 +198,7 @@ async function main() {
   await prisma.staffUser.upsert({
     where: { email },
     update: {},
-    create: { name: "Finance Admin", email, passwordHash, role: "ADMIN" },
+    create: { name: "Finance Admin", email, passwordHash, role: "SUPER_ADMIN" },
   });
 
   console.log(`Seeded ${branches.length} branches + admin user (${email}).`);

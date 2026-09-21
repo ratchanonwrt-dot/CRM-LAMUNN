@@ -7,18 +7,21 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       staffId?: string;
-      role?: "ADMIN" | "STAFF";
+      role?: "SUPER_ADMIN" | "MANAGER" | "STAFF" | "CATERING_STAFF";
+      isOwner?: boolean;
     };
   }
 
   interface User {
-    role?: "ADMIN" | "STAFF";
+    role?: "SUPER_ADMIN" | "MANAGER" | "STAFF" | "CATERING_STAFF";
+    isOwner?: boolean;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     staffId?: string;
-    role?: "ADMIN" | "STAFF";
+    role?: "SUPER_ADMIN" | "MANAGER" | "STAFF" | "CATERING_STAFF";
+    isOwner?: boolean;
   }
 }

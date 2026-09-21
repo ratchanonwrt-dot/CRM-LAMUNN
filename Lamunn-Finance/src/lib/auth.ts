@@ -40,6 +40,7 @@ export const authOptions: NextAuthOptions = {
           name: staff.name,
           email: staff.email,
           role: staff.role,
+          isOwner: staff.isOwner,
         };
       },
     }),
@@ -49,6 +50,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.staffId = user.id;
         token.role = user.role;
+        token.isOwner = user.isOwner;
       }
       return token;
     },
@@ -57,6 +59,7 @@ export const authOptions: NextAuthOptions = {
         ...session.user,
         staffId: token.staffId,
         role: token.role,
+        isOwner: token.isOwner,
       };
       return session;
     },

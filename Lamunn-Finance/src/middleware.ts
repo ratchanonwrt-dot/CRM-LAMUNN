@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (pathname !== "/login" && !pathname.startsWith("/api/auth")) {
+  if (pathname !== "/login" && !pathname.startsWith("/api/auth") && !pathname.startsWith("/api/cron")) {
     const token = await getToken({
       req,
       secret: process.env.NEXTAUTH_SECRET,
@@ -26,5 +26,8 @@ export default async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // ต้องยกเว้นไฟล์ static ทุกตัวในโฟลเดอร์ public/ ด้วย (manifest.json, ไอคอนต่างๆ, favicon) ไม่งั้น
+  // เบราว์เซอร์/OS ที่ดึงไฟล์พวกนี้ตรงๆ (ไม่มี cookie login) จะโดน redirect ไป /login แทนที่จะได้ไฟล์จริง
+  // ทำให้ "Add to Home Screen" ดึงไอคอน/manifest ไม่ได้ — ยกเว้นด้วยนามสกุลไฟล์แทนชื่อไฟล์เจาะจง กันลืมเวลาเพิ่มไฟล์ใหม่
+  matcher: ["/((?!_next/static|_next/image|.*\\.(?:ico|png|jpg|jpeg|svg|webp|json|webmanifest|xml|txt)$).*)"],
 };

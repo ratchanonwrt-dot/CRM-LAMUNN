@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@lamunn/db-finance";
-import { requireStaff } from "@/lib/requireStaff";
+import { requireSectionApi } from "@/lib/permissions";
+import { logActivity } from "@/lib/activityLog";
+import { revalidateBranches } from "@/lib/branchCache";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const staff = await requireStaff();
+  const staff = await requireSectionApi("BRANCHES", "view");
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const branch = await prisma.branch.findUnique({
@@ -15,11 +17,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const staff = await requireStaff(["ADMIN"]);
+  const staff = await requireSectionApi("BRANCHES", "edit");
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { name, type, isActive, sortOrder, rent, creditTerm } = body;
+  const { name, type, isActive, sortOrder, posCode, address, rent, creditTerm } = body;
 
   const branch = await prisma.branch.update({
     where: { id: params.id },
@@ -28,6 +30,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(type !== undefined ? { type } : {}),
       ...(isActive !== undefined ? { isActive } : {}),
       ...(sortOrder !== undefined ? { sortOrder: Number(sortOrder) } : {}),
+      ...(posCode !== undefined ? { posCode: posCode || null } : {}),
+      ...(address !== undefined ? { address: address || null } : {}),
     },
   });
 
@@ -40,6 +44,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         gpPercentDelivery: Number(rent.gpPercentDelivery) || 0,
         fixRateAmount: rent.fixRateAmount === "" || rent.fixRateAmount === undefined ? null : Number(rent.fixRateAmount),
         minAmount: rent.minAmount === "" || rent.minAmount === undefined ? null : Number(rent.minAmount),
+        minimumExcludesDelivery: Boolean(rent.minimumExcludesDelivery),
         vendorFeeMonthly: Number(rent.vendorFeeMonthly) || 0,
         note: rent.note || null,
       },
@@ -50,6 +55,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         gpPercentDelivery: Number(rent.gpPercentDelivery) || 0,
         fixRateAmount: rent.fixRateAmount === "" || rent.fixRateAmount === undefined ? null : Number(rent.fixRateAmount),
         minAmount: rent.minAmount === "" || rent.minAmount === undefined ? null : Number(rent.minAmount),
+        minimumExcludesDelivery: Boolean(rent.minimumExcludesDelivery),
         vendorFeeMonthly: Number(rent.vendorFeeMonthly) || 0,
         note: rent.note || null,
       },
@@ -87,13 +93,25 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     where: { id: branch.id },
     include: { rentConfig: true, creditTermConfig: true },
   });
+  revalidateBranches(); // ล้างแคชรายชื่อสาขา/ค่าตั้งค่าสาขา ให้ทุกหน้าเห็นค่าใหม่ทันที
   return NextResponse.json({ branch: updated });
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const staff = await requireStaff(["ADMIN"]);
+  const staff = await requireSectionApi("BRANCHES", "edit");
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
+  const existing = await prisma.branch.findUnique({ where: { id: params.id } });
   await prisma.branch.delete({ where: { id: params.id } });
+  if (existing) {
+    await logActivity({
+      staffId: staff.staffId,
+      staffName: staff.staffName,
+      action: "DELETE",
+      entity: "Branch",
+      summary: `ลบสาขา — ${existing.name}`,
+    });
+  }
+  revalidateBranches(); // ล้างแคชรายชื่อสาขา/ค่าตั้งค่าสาขา ให้ทุกหน้าเห็นค่าใหม่ทันที
   return NextResponse.json({ ok: true });
 }

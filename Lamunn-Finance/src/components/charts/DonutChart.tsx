@@ -55,9 +55,10 @@ export default function DonutChart({ data, size = 160 }: { data: Slice[]; size?:
             strokeLinecap="round"
             transform={`rotate(-90 ${cx} ${cy})`}
           >
-            <title>
-              {s.label}: {formatBaht(s.value)} บาท ({(s.fraction * 100).toFixed(1)}%)
-            </title>
+            {/* A single interpolated string, not multiple JSX children — React DOM only
+                supports one text-node child for <title>; with several children it renders
+                empty server-side but joins them client-side, causing a hydration mismatch. */}
+            <title>{`${s.label}: ${formatBaht(s.value)} บาท (${(s.fraction * 100).toFixed(1)}%)`}</title>
           </circle>
         ))}
         <text x={cx} y={cy - 4} textAnchor="middle" className="fill-gray-800" style={{ fontSize: 15, fontWeight: 700 }}>

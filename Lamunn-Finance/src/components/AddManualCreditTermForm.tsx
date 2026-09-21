@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useCanEdit } from "@/lib/RoleContext";
 
 interface BranchOption {
   id: string;
@@ -10,6 +11,7 @@ interface BranchOption {
 
 export default function AddManualCreditTermForm({ branches }: { branches: BranchOption[] }) {
   const router = useRouter();
+  const canEdit = useCanEdit("CREDIT_TERM");
   const [open, setOpen] = useState(false);
   const [branchId, setBranchId] = useState("");
   const [label, setLabel] = useState("");
@@ -34,6 +36,8 @@ export default function AddManualCreditTermForm({ branches }: { branches: Branch
     setOpen(false);
     router.refresh();
   }
+
+  if (!canEdit) return null;
 
   if (!open) {
     return (

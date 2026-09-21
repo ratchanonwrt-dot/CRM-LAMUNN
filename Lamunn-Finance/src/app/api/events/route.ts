@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@lamunn/db-finance";
-import { requireStaff } from "@/lib/requireStaff";
+import { requireSectionApi } from "@/lib/permissions";
 import { parseDateOnly } from "@/lib/dates";
 
 export async function GET() {
-  const staff = await requireStaff();
+  const staff = await requireSectionApi("EVENTS", "view");
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const events = await prisma.eventSale.findMany({ orderBy: { startDate: "desc" } });
@@ -12,7 +12,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const staff = await requireStaff();
+  const staff = await requireSectionApi("EVENTS", "edit");
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await req.json();

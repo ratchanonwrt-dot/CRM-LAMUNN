@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@lamunn/db-finance";
-import { requirePageRole } from "@/lib/requirePageRole";
+import { requireSectionPage } from "@/lib/permissions";
 import AddBranchForm from "@/components/AddBranchForm";
 import { formatBaht, formatPercent } from "@/lib/format";
 
 export default async function BranchesPage() {
-  await requirePageRole(["ADMIN"]);
+  await requireSectionPage("BRANCHES", "edit");
   const branches = await prisma.branch.findMany({ orderBy: { sortOrder: "asc" }, include: { rentConfig: true } });
 
   return (

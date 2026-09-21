@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3003",
+    "prebuild": "node scripts/copy-prisma-engine.js",
     "build": "next build",
     "start": "next start -p 3003",
     "lint": "next lint"
@@ -11,9 +12,11 @@
   "dependencies": {
     "@lamunn/db-finance": "*",
     "@prisma/client": "^5.22.0",
+    "@react-pdf/renderer": "^4.5.1",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.25.0",
     "next": "14.2.18",
     "next-auth": "^4.24.8",

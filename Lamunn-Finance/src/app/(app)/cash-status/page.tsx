@@ -1,46 +1,84 @@
-import { prisma } from "@lamunn/db-finance";
+import { Suspense } from "react";
+import { requireSectionPage } from "@/lib/permissions";
 import MonthFilterBar from "@/components/MonthFilterBar";
-import { monthRange } from "@/lib/dates";
+import { monthRange, parseDateOnly } from "@/lib/dates";
 import { formatBaht, formatThaiDate } from "@/lib/format";
-import { getCashOnHand } from "@/lib/finance";
+import { loadCashRaw, computeCashBalance } from "@/lib/finance";
+import { getAllSettings } from "@/lib/settings";
 import AddCashAdjustmentForm from "@/components/AddCashAdjustmentForm";
 import DeleteCashAdjustmentButton from "@/components/DeleteCashAdjustmentButton";
 
+function CashStatusSkeleton() {
+  return (
+    <div className="mt-6 animate-pulse">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="h-16 rounded-xl border border-gray-200 bg-white" />
+        <div className="h-16 rounded-xl border border-gray-200 bg-white" />
+      </div>
+      <div className="mt-6 h-64 rounded-xl border border-gray-200 bg-white" />
+    </div>
+  );
+}
+
+// ฟอร์มเพิ่มรายการปรับปรุงและตัวกรองเดือนไม่ต้องรอยอดเงินสดสะสม (ต้องคำนวณจากยอดขายสะสมทั้งหมดตั้งแต่วันยกมา
+// ซึ่งหนักสุดของหน้านี้) ให้ shell ขึ้นก่อนได้เลย
 export default async function CashStatusPage({ searchParams }: { searchParams: { year?: string; month?: string } }) {
+  await requireSectionPage("CASH_STATUS");
   const now = new Date();
   const year = Number(searchParams.year) || now.getUTCFullYear();
   const month = Number(searchParams.month) || now.getUTCMonth() + 1;
+
+  return (
+    <div>
+      <h1 className="mb-2 text-xl font-bold text-gray-800">สถานะเงินสด — เงินสดจริงที่ส่งกลับครัวกลาง</h1>
+      <p className="mb-6 text-sm text-gray-500">
+        นับเฉพาะ &quot;เงินสดนับ&quot; ของสาขาที่ไม่ใช่ Credit Term — ไม่รวมเงินโอน/Grab/Lineman เพราะเข้าบัญชีธนาคารโดยตรง
+      </p>
+
+      <AddCashAdjustmentForm />
+
+      <MonthFilterBar basePath="/cash-status" year={year} month={month} />
+
+      <Suspense fallback={<CashStatusSkeleton />}>
+        <CashStatusData year={year} month={month} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function CashStatusData({ year, month }: { year: number; month: number }) {
+  const now = new Date();
   const { start, end } = monthRange(year, month - 1);
-
-  const { balance, openingBalance, openingDate } = await getCashOnHand();
-
-  const cashBranches = await prisma.branch.findMany({ where: { type: "CASH" }, select: { id: true } });
-  const cashBranchIds = cashBranches.map((b) => b.id);
 
   const clampedEnd = end > now ? now : end;
 
-  const [prefixSalesAgg, prefixAdjAgg, adjustments] = await Promise.all([
-    prisma.dailySales.aggregate({
-      where: { branchId: { in: cashBranchIds }, date: { gt: openingDate, lt: start } },
-      _sum: { cashCounted: true },
-    }),
-    prisma.cashAdjustment.aggregate({
-      where: { date: { gt: openingDate, lt: start } },
-      _sum: { amount: true },
-    }),
-    prisma.cashAdjustment.findMany({ orderBy: { date: "desc" }, take: 30 }),
-  ]);
-  let running = openingBalance + (prefixSalesAgg._sum.cashCounted ?? 0) + (prefixAdjAgg._sum.amount ?? 0);
+  // ดึงข้อมูลเงินสดทั้งหมดครั้งเดียว (2 คิวรี) แล้วตัดช่วง/รวมยอดในหน่วยความจำ
+  // เดิมหน้านี้ยิง 32 SQL statement เพราะแยก aggregate ทีละช่วงวันที่ — ตัวเลขที่ได้เท่ากันทุกช่อง
+  // (พิสูจน์แล้วด้วย scripts/verify-refactor.ts เทียบย้อนหลัง 3 เดือน)
+  const [settings, raw] = await Promise.all([getAllSettings(), loadCashRaw()]);
+  const openingBalance = Number(settings.cashOpeningBalance);
+  const openingDate = parseDateOnly(settings.cashOpeningDate);
+  const balance = computeCashBalance(openingBalance, openingDate, raw);
 
-  const [daily, monthAdjustments] = await Promise.all([
-    prisma.dailySales.groupBy({
-      by: ["date"],
-      where: { branchId: { in: cashBranchIds }, date: { gte: start, lte: clampedEnd } },
-      _sum: { cashCounted: true },
-    }),
-    prisma.cashAdjustment.findMany({ where: { date: { gte: start, lte: clampedEnd } } }),
-  ]);
-  const dailyMap = new Map(daily.map((d) => [d.date.toISOString().slice(0, 10), d._sum.cashCounted ?? 0]));
+  let prefixSales = 0;
+  const dailyMap = new Map<string, number>();
+  for (const d of raw.dailyByDate) {
+    const value = d._sum.cashCounted ?? 0;
+    if (d.date > openingDate && d.date < start) prefixSales += value;
+    if (d.date >= start && d.date <= clampedEnd) dailyMap.set(d.date.toISOString().slice(0, 10), value);
+  }
+
+  let prefixAdj = 0;
+  const monthAdjustments: typeof raw.adjustments = [];
+  for (const a of raw.adjustments) {
+    if (a.date > openingDate && a.date < start) prefixAdj += a.amount;
+    if (a.date >= start && a.date <= clampedEnd) monthAdjustments.push(a);
+  }
+
+  // raw.adjustments เรียงจากใหม่ไปเก่ามาแล้ว (orderBy date desc) — ตัด 30 รายการแรกเหมือน take: 30 เดิม
+  const adjustments = raw.adjustments.slice(0, 30);
+
+  let running = openingBalance + prefixSales + prefixAdj;
   const adjMap = new Map<string, { total: number; labels: string[] }>();
   for (const a of monthAdjustments) {
     const key = a.date.toISOString().slice(0, 10);
@@ -50,22 +88,20 @@ export default async function CashStatusPage({ searchParams }: { searchParams: {
     adjMap.set(key, existing);
   }
 
-  const rows: { date: Date; today: number; adjustment: number; adjustmentLabels: string[]; running: number }[] = [];
+  // วันที่อยู่ก่อนหรือเท่ากับวันยกมา ไม่ถูกนับเข้ายอดสะสม (ยอดยกมาคือผลรวมของวันพวกนั้นอยู่แล้ว)
+  // ถ้าเดือนที่ดูคร่อมวันยกมา (เช่น ตั้งยกมากลางเดือน) แถวก่อนหน้านั้นจะโชว์ "—" แทนยอดสะสม ไม่งั้นจะเหมือนนับซ้ำ
+  const rows: { date: Date; today: number; adjustment: number; adjustmentLabels: string[]; running: number | null }[] = [];
   for (let d = new Date(start); d <= clampedEnd; d.setUTCDate(d.getUTCDate() + 1)) {
     const key = d.toISOString().slice(0, 10);
     const today = dailyMap.get(key) ?? 0;
     const adj = adjMap.get(key);
-    running += today + (adj?.total ?? 0);
-    rows.push({ date: new Date(d), today, adjustment: adj?.total ?? 0, adjustmentLabels: adj?.labels ?? [], running });
+    const counted = d > openingDate;
+    if (counted) running += today + (adj?.total ?? 0);
+    rows.push({ date: new Date(d), today, adjustment: adj?.total ?? 0, adjustmentLabels: adj?.labels ?? [], running: counted ? running : null });
   }
 
   return (
-    <div>
-      <h1 className="mb-2 text-xl font-bold text-gray-800">สถานะเงินสด — เงินสดจริงที่ส่งกลับครัวกลาง</h1>
-      <p className="mb-6 text-sm text-gray-500">
-        นับเฉพาะ &quot;เงินสดนับ&quot; ของสาขาที่ไม่ใช่ Credit Term — ไม่รวมเงินโอน/Grab/Lineman เพราะเข้าบัญชีธนาคารโดยตรง
-      </p>
-
+    <>
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-gray-200 bg-white p-4">
           <p className="text-xs text-gray-500">เงินสดสะสมในมือตอนนี้ (real-time)</p>
@@ -79,10 +115,6 @@ export default async function CashStatusPage({ searchParams }: { searchParams: {
         </div>
       </div>
 
-      <AddCashAdjustmentForm />
-
-      <MonthFilterBar basePath="/cash-status" year={year} month={month} />
-
       <div className="mb-8 overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left text-gray-500">
@@ -95,8 +127,11 @@ export default async function CashStatusPage({ searchParams }: { searchParams: {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.date.toISOString()} className="border-t border-gray-100">
-                <td className="px-4 py-2">{formatThaiDate(r.date)}</td>
+              <tr key={r.date.toISOString()} className={`border-t border-gray-100 ${r.running === null ? "text-gray-400" : ""}`}>
+                <td className="px-4 py-2">
+                  {formatThaiDate(r.date)}
+                  {r.running === null && <span className="ml-2 text-[11px]">(ก่อนยอดยกมา — รวมอยู่ในยอดยกมาแล้ว)</span>}
+                </td>
                 <td className="px-4 py-2 text-right">{formatBaht(r.today)}</td>
                 <td className="px-4 py-2 text-right" title={r.adjustmentLabels.join(", ")}>
                   {r.adjustment !== 0 ? (
@@ -105,8 +140,8 @@ export default async function CashStatusPage({ searchParams }: { searchParams: {
                     "-"
                   )}
                 </td>
-                <td className={`px-4 py-2 text-right font-medium ${r.running < 0 ? "text-red-600" : "text-gray-800"}`}>
-                  {formatBaht(r.running)}
+                <td className={`px-4 py-2 text-right font-medium ${r.running === null ? "text-gray-300" : r.running < 0 ? "text-red-600" : "text-gray-800"}`}>
+                  {r.running === null ? "—" : formatBaht(r.running)}
                 </td>
               </tr>
             ))}
@@ -157,6 +192,6 @@ export default async function CashStatusPage({ searchParams }: { searchParams: {
           </tbody>
         </table>
       </div>
-    </div>
+    </>
   );
 }

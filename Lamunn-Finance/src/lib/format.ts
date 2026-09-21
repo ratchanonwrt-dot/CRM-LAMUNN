@@ -24,3 +24,34 @@ export function thaiMonthLabel(year: number, monthIndex0: number): string {
 export function formatThaiDate(d: Date): string {
   return `${d.getUTCDate()} ${thaiMonths[d.getUTCMonth()]} ${d.getUTCFullYear() + 543}`;
 }
+
+// ป้ายกำกับสถานะสำหรับ Function เสริม Catering
+export const paymentStatusLabel: Record<string, string> = {
+  UNPAID: "ยังไม่ชำระ",
+  DEPOSIT_PAID: "มัดจำแล้ว",
+  FULLY_PAID: "ชำระครบแล้ว",
+};
+
+export const bookingStatusLabel: Record<string, string> = {
+  PENDING: "รอยืนยัน",
+  CONFIRMED: "ยืนยันแล้ว",
+  COMPLETED: "จบงานแล้ว",
+  CANCELLED: "ยกเลิก",
+};
+
+export const pickupStatusLabel: Record<string, string> = {
+  PENDING: "รอเตรียมของ",
+  READY: "พร้อมให้รับ",
+  COMPLETED: "รับของแล้ว",
+  CANCELLED: "ยกเลิก",
+};
+
+export const customerSourceLabel: Record<string, string> = {
+  FACEBOOK: "Facebook",
+  INSTAGRAM: "Instagram",
+  LINE: "Line",
+  REFERRAL: "คนแนะนำ/บอกต่อ",
+  WALK_IN: "เดินเข้ามาเอง",
+  GOOGLE: "Google",
+  OTHER: "อื่นๆ",
+};

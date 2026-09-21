@@ -1,0 +1,49 @@
+// Prisma schema — Lamunn Tax Invoice Request
+// Standalone from the Lamunn-CRM / Lamunn-CRMAdmin projects: own DB, own deploy.
+// Run `npm run db:migrate -- --name init` after setting DATABASE_URL in .env
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// One request per POS receipt. (branchCode, receiptNo) is unique so the same
+// receipt can't be used to request a tax invoice twice.
+model TaxInvoiceRequest {
+  id String @id @default(cuid())
+
+  // --- from the scanned POS QR (see src/lib/qr.ts for the spec) ---
+  qrRawPayload  String
+  branchCode    String
+  receiptNo     String
+  amount        Decimal
+  saleTimestamp DateTime
+  signed        Boolean // whether the QR carried a valid HMAC signature from the POS
+
+  // --- customer-entered tax invoice info ---
+  customerType String // "INDIVIDUAL" | "COMPANY" — sqlite has no enum support, enforced in zod (src/app/api/requests/route.ts)
+  fullName     String // ชื่อ-นามสกุล (บุคคลธรรมดา) หรือ ชื่อนิติบุคคล
+  taxId        String // เลขประจำตัวผู้เสียภาษี 13 หลัก
+  branchTag    String? // "สำนักงานใหญ่" หรือเลขที่สาขา ถ้าเป็นนิติบุคคล
+  address      String
+  email        String
+  phone        String?
+
+  // --- processing status: PENDING | AWAITING_FLOWACCOUNT_SETUP | ISSUED | EMAIL_SENT | FAILED ---
+  status             String @default("PENDING")
+  flowAccountDocId   String?
+  flowAccountPdfUrl  String?
+  emailSentAt        DateTime?
+  errorMessage        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([branchCode, receiptNo])
+  @@index([status])
+  @@map("tax_invoice_requests")
+}

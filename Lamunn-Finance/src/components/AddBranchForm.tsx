@@ -10,6 +10,7 @@ export default function AddBranchForm() {
   const [name, setName] = useState("");
   const [type, setType] = useState<"CASH" | "CREDIT_TERM">("CASH");
   const [sortOrder, setSortOrder] = useState("");
+  const [posCode, setPosCode] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +21,7 @@ export default function AddBranchForm() {
     const res = await fetch("/api/branches", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, name, type, sortOrder: sortOrder ? Number(sortOrder) : undefined }),
+      body: JSON.stringify({ code, name, type, sortOrder: sortOrder ? Number(sortOrder) : undefined, posCode: posCode || undefined }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -31,6 +32,7 @@ export default function AddBranchForm() {
     setCode("");
     setName("");
     setSortOrder("");
+    setPosCode("");
     setOpen(false);
     router.refresh();
   }
@@ -66,6 +68,10 @@ export default function AddBranchForm() {
       <div>
         <label className="mb-1 block text-xs font-medium text-gray-500">ลำดับ</label>
         <input type="number" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="w-20 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white" />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs font-medium text-gray-500">รหัส POS (ถ้ามี — ดึงยอดจาก IMS อัตโนมัติ)</label>
+        <input value={posCode} onChange={(e) => setPosCode(e.target.value)} placeholder="เช่น FASHION" className="w-40 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white" />
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button type="submit" disabled={saving} className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-medium text-white shadow-md shadow-brand-600/20 hover:bg-brand-700 disabled:opacity-50">

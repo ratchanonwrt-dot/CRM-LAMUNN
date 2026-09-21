@@ -1,9 +1,11 @@
 import { prisma } from "@lamunn/db-finance";
+import { requireSectionPage } from "@/lib/permissions";
 import AddEventForm from "@/components/AddEventForm";
 import DeleteEventButton from "@/components/DeleteEventButton";
 import { formatBaht, formatThaiDate } from "@/lib/format";
 
 export default async function EventsPage() {
+  await requireSectionPage("EVENTS");
   const events = await prisma.eventSale.findMany({ orderBy: { startDate: "desc" } });
 
   return (

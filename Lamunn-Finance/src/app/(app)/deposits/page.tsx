@@ -1,10 +1,12 @@
 import { prisma } from "@lamunn/db-finance";
+import { requireSectionPage } from "@/lib/permissions";
 import MonthFilterBar from "@/components/MonthFilterBar";
 import { monthRange } from "@/lib/dates";
 import { formatBaht, formatThaiDate } from "@/lib/format";
 import { getAllSettings, calcGrabNet, calcLinemanNet } from "@/lib/settings";
 
 export default async function DepositsPage({ searchParams }: { searchParams: { year?: string; month?: string } }) {
+  await requireSectionPage("DEPOSITS");
   const now = new Date();
   const year = Number(searchParams.year) || now.getUTCFullYear();
   const month = Number(searchParams.month) || now.getUTCMonth() + 1;
@@ -150,7 +152,7 @@ export default async function DepositsPage({ searchParams }: { searchParams: { y
         </table>
       </div>
       <p className="mt-2 text-xs text-gray-400">
-        คอลัมน์ &quot;จริง&quot; มาจากช่อง &quot;ยอดเข้าบัญชี&quot; ที่กรอกในหน้า &quot;กรอกยอด E-Commerce กลาง&quot; — ถ้าไม่ได้กรอกจะขึ้น &quot;-&quot;
+        คอลัมน์ &quot;จริง&quot; มาจากช่อง &quot;ยอดเข้าบัญชี&quot; ที่กรอกในตาราง &quot;สรุปรายวัน&quot; ของหน้า &quot;ยอดขายรายวัน (รายเดือน)&quot; — ถ้าไม่ได้กรอกจะขึ้น &quot;-&quot;
       </p>
     </div>
   );

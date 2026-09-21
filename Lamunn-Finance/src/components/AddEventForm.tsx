@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useCanEdit } from "@/lib/RoleContext";
 
 export default function AddEventForm() {
   const router = useRouter();
+  const canEdit = useCanEdit("EVENTS");
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -36,6 +38,8 @@ export default function AddEventForm() {
     setOpen(false);
     router.refresh();
   }
+
+  if (!canEdit) return null;
 
   if (!open) {
     return (

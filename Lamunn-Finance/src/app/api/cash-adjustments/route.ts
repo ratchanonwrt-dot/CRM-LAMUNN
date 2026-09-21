@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@lamunn/db-finance";
-import { requireStaff } from "@/lib/requireStaff";
+import { requireSectionApi } from "@/lib/permissions";
 import { parseDateOnly } from "@/lib/dates";
+import { CASH_ON_HAND_CACHE_TAG } from "@/lib/finance";
 
 export async function GET() {
-  const staff = await requireStaff();
+  const staff = await requireSectionApi("CASH_STATUS", "view");
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const adjustments = await prisma.cashAdjustment.findMany({ orderBy: { date: "desc" } });
@@ -12,7 +14,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const staff = await requireStaff();
+  const staff = await requireSectionApi("CASH_STATUS", "edit");
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await req.json();
@@ -25,5 +27,6 @@ export async function POST(req: NextRequest) {
     data: { date: parseDateOnly(date), amount: Number(amount), label, note: note || null },
   });
 
+  revalidateTag(CASH_ON_HAND_CACHE_TAG); // ยอดปรับปรุงกระทบเงินสดสะสมที่ cache ไว้
   return NextResponse.json({ adjustment });
 }

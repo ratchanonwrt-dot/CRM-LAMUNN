@@ -5,7 +5,7 @@
 // Run `npx prisma migrate dev --name init` (with DATABASE_URL set) after editing.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   // Own output path — keeps this schema's generated client separate from
   // @lamunn/db's (both packages would otherwise fight over the same hoisted
   // node_modules/@prisma/client and silently clobber each other). Using a
@@ -13,7 +13,7 @@ generator client {
   // Next.js's serverless file tracing discovers the query engine binary
   // automatically — a src/ location required brittle manual tracing config
   // that didn't reliably survive Vercel's build.
-  output   = "../node_modules/.prisma/client-finance"
+  output        = "../node_modules/.prisma/client-finance"
   // "native" covers local dev (Windows); "rhel-openssl-3.0.x" is Vercel's
   // serverless function runtime — without it the deployed app can't find the
   // query engine binary (only surfaces at runtime, not at build time).
@@ -42,8 +42,44 @@ enum PaymentStatus {
 }
 
 enum StaffRole {
-  ADMIN // เห็น/แก้ไขได้ทุกอย่าง ทุกสาขา
-  STAFF // กรอกยอดขายรายวันเท่านั้น
+  SUPER_ADMIN // ทำได้ทุกอย่าง รวมถึงเพิ่ม/ลบ/แก้ไขสิทธิ์ผู้ใช้งาน — bypass ตาราง RolePermission เสมอ กันล็อกตัวเองออกจากระบบ
+  MANAGER // แก้ไขได้ทุกอย่าง (กรอกยอด, ปิดรอบ, ตั้งค่าสาขา/ค่าเช่า ฯลฯ) ยกเว้นจัดการผู้ใช้งาน — สิทธิ์จริงกำหนดได้ที่หน้า "จัดการสิทธิ์ตำแหน่ง"
+  STAFF // ดูข้อมูลได้อย่างเดียว แก้ไข/กรอกยอดไม่ได้ (ค่าเริ่มต้น) — สิทธิ์จริงกำหนดได้ที่หน้า "จัดการสิทธิ์ตำแหน่ง"
+  CATERING_STAFF // ดู/แก้ไขได้เฉพาะส่วน Catering เท่านั้น — สิทธิ์จริงกำหนดได้ที่หน้า "จัดการสิทธิ์ตำแหน่ง"
+}
+
+// ส่วนต่างๆ ของระบบที่กำหนดสิทธิ์ดู/แก้ไขแยกตามตำแหน่งได้ — ไม่รวมหน้า "สถานะการเงินบริษัท" (ผูกกับ isOwner
+// เฉพาะบัญชี ไม่ใช่ตำแหน่ง) และไม่รวม "จัดการผู้ใช้งาน"/"จัดการสิทธิ์ตำแหน่ง" เอง (ล็อก SUPER_ADMIN เท่านั้นเสมอ)
+enum PermissionSection {
+  DASHBOARD // ภาพรวม
+  REPORTS // รายงาน/วิเคราะห์
+  MONTHLY // ยอดขายรายวัน (รายเดือน) — รวมกรอกยอด E-Commerce/หน้าร้าน/Grab/Lineman ในตาราง
+  CREDIT_TERM // Credit Term + วางบิล + ตั้งค่ารอบ
+  RENT // ค่าเช่า
+  CASH_STATUS // สถานะเงินสด
+  DEPOSITS // เงินเข้าบัญชี
+  HELD_DEPOSITS // เงินมัดจำ
+  EVENTS // Event ชั่วคราว
+  BRANCHES // ตั้งค่าสาขา/ค่าเช่า
+  RECONCILIATION // เช็คยอด POS
+  SETTINGS // ตั้งค่าระบบ
+  CATERING // Catering ทั้งหมด (จอง/ลูกค้า/แพคเกจ/นัดรับ/รายงาน)
+  ACCOUNTING // ระบบบัญชี (ผังบัญชี/สมุดรายวัน/งบทดลอง/งบการเงิน/ใบกำกับภาษี)
+  INVESTMENT_COST // ค่าใช้จ่ายลงทุนก้อนใหญ่ (จดสะสม)
+}
+
+// สิทธิ์ดู/แก้ไขต่อ (ตำแหน่ง, ส่วนของระบบ) — กำหนดได้จากหน้า "จัดการสิทธิ์ตำแหน่ง" แทนที่ค่า hardcode เดิม
+model RolePermission {
+  id      String            @id @default(cuid())
+  role    StaffRole
+  section PermissionSection
+  canView Boolean           @default(false)
+  canEdit Boolean           @default(false)
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([role, section])
+  @@map("role_permissions")
 }
 
 model StaffUser {
@@ -53,10 +89,70 @@ model StaffUser {
   passwordHash String
   role         StaffRole @default(STAFF)
   isActive     Boolean   @default(true)
+  isOwner      Boolean   @default(false) // เห็นหน้า "สถานะการเงินบริษัท" ได้คนเดียว (ไม่ผูกกับสิทธิ์ปกติ)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  cateringBookingsCreated    CateringBooking[]      @relation("CateringBookingCreatedBy")
+  cateringBookingAssignments CateringBookingStaff[]
+  pickupOrdersCreated        PickupOrder[]
+
   @@map("staff_users")
+}
+
+// เงินมัดจำที่วางไว้กับที่ต่างๆ (ก๊าซ, ห้าง ฯลฯ) — กรอกเองทั้งหมด ทุกคนที่มีสิทธิ์แก้ไขดูได้
+model HeldDeposit {
+  id          String              @id @default(cuid())
+  location    String // สถานที่/ผู้ถือมัดจำ เช่น "มัดจำก๊าซ", "มัดจำร้าน EmQuartier"
+  amount      Float
+  note        String?
+  depositedAt DateTime?           @db.Date
+  status      HeldDepositStatus   @default(CONTRACT_ONGOING)
+  // ตัวเลข amount ที่กรอกนี้รวม VAT / ไม่รวม VAT / หรือรายการนี้ไม่มี VAT เลย — null = ของเก่าที่ยังไม่ได้ระบุ
+  vatType     HeldDepositVatType?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@map("held_deposits")
+}
+
+enum HeldDepositVatType {
+  INCLUDES_VAT // ยอดที่กรอกรวม VAT แล้ว
+  EXCLUDES_VAT // ยอดที่กรอกยังไม่รวม VAT
+  NO_VAT // รายการนี้ไม่มี VAT
+}
+
+enum HeldDepositStatus {
+  CONTRACT_ONGOING // ยังไม่หมดสัญญา
+  NOT_RETURNED // ยังไม่ได้คืน
+  DEDUCTED // หักเงินประกัน
+}
+
+// เงินปันผลที่จ่ายไปแล้ว — กรอกเอง เก็บเป็นประวัติทุกรายการ (ไม่ใช่แค่ยอดเดียว)
+model DividendPayment {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  amount    Float
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@map("dividend_payments")
+}
+
+// รายการค่าใช้จ่ายก้อนใหญ่ที่จ่ายไปครั้งเดียว (ลงทุน/ซื้อของชิ้นใหญ่) — จดไว้ดูยอดสะสม
+// ไม่ผูกกับระบบบัญชีคู่ ใช้บันทึกเร็วๆ ดูรวมได้ ต่างจาก AccJournalEntry ที่ต้องเดบิต=เครดิต
+model InvestmentCost {
+  id          String   @id @default(cuid())
+  date        DateTime @db.Date
+  description String
+  amount      Float
+  resaleValue Float? // ราคาที่น่าจะขายทิ้งได้ (มูลค่าซากโดยประมาณ) — ไม่บังคับ
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+  @@map("investment_costs")
 }
 
 model Branch {
@@ -66,57 +162,159 @@ model Branch {
   type      BranchType
   isActive  Boolean    @default(true)
   sortOrder Int        @default(0)
+  posCode   String?    @unique // matches public.branches.code in the friend's POS Supabase project — null if this branch isn't on the POS yet
+  address   String? // ที่อยู่ของสาขานี้ — ใช้กรอกในเอกสารวางบิล PDF (บางห้างต้องการที่อยู่ตามสาขา ไม่ใช่ที่อยู่บริษัท)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  rentConfig       RentConfig?
-  creditTermConfig CreditTermCycleConfig?
-  dailySales       DailySales[]
+  rentConfig         RentConfig?
+  creditTermConfig   CreditTermCycleConfig?
+  dailySales         DailySales[]
   creditTermPayments CreditTermPayment[]
+  rentPayments       RentPayment[]
+  branchBillings     BranchBilling[]
+  gpRateHistory      GpRateHistory[]
+  pickupOrders       PickupOrder[]
+  accJournalLines    AccJournalLine[]
+  accTaxInvoices     AccTaxInvoice[]
 
   @@map("branches")
 }
 
+enum RentPaymentStatus {
+  PENDING // ยังไม่จ่าย
+  TRANSFER_SCHEDULED // ตั้งโอนแล้ว
+  PAID_AWAITING_BILL // จ่ายแล้วรอบิล/ใบเสร็จ
+  RECEIPT_RECEIVED // ได้รับใบเสร็จแล้ว (ปิดรายการ)
+}
+
+// สถานะการจ่ายค่าเช่าจริง แยกตามสาขา + เดือน — ยอดค่าเช่าคำนวณสดจาก RentConfig อยู่แล้ว (rentCalc.ts)
+// ตารางนี้เก็บแค่ "จ่ายไปหรือยัง" ไม่เก็บยอดซ้ำ
+model RentPayment {
+  id            String            @id @default(cuid())
+  branchId      String
+  branch        Branch            @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  year          Int
+  month         Int // 1-12
+  status        RentPaymentStatus @default(PENDING)
+  transferredAt DateTime?
+  paidAt        DateTime?
+  receiptAt     DateTime?
+  minimumPaid   Boolean           @default(false) // จ่าย Minimum Guarantee ให้ห้างไปแล้ว (บางห้างเก็บ Minimum ก่อน ส่วนเกินค่อยจ่ายเดือนถัดไป)
+  minimumPaidAt DateTime?
+  note          String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([branchId, year, month])
+  @@map("rent_payments")
+}
+
 // ตารางค่าเช่า — GP% and/or fixed monthly rent per branch.
 model RentConfig {
-  id                   String   @id @default(cuid())
-  branchId             String   @unique
-  branch               Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  rentType             RentType @default(GP)
-  gpPercentStorefront  Float    @default(0) // e.g. 0.25 = 25%
-  gpPercentDelivery    Float    @default(0) // GP% applied to Grab+Lineman sales
-  fixRateAmount        Float? // baht/month, used when rentType = FIX_RATE
-  minAmount            Float? // ยอดค่าเช่าขั้นต่ำ/เดือน (Minimum Guarantee) — rent = max(minAmount, GP calc) when rentType = GP
-  vendorFeeMonthly     Float    @default(0) // e.g. Central Embassy's 3,000 THB vendor-opening fee per period
-  note                 String?
-  updatedAt            DateTime @updatedAt
+  id                      String   @id @default(cuid())
+  branchId                String   @unique
+  branch                  Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  rentType                RentType @default(GP)
+  gpPercentStorefront     Float    @default(0) // e.g. 0.25 = 25%
+  gpPercentDelivery       Float    @default(0) // GP% applied to Grab+Lineman sales
+  fixRateAmount           Float? // baht/month, used when rentType = FIX_RATE
+  minAmount               Float? // ยอดค่าเช่าขั้นต่ำ/เดือน (Minimum Guarantee) — rent = max(minAmount, GP calc) when rentType = GP
+  // true = Minimum เทียบกับ GP หน้าร้านอย่างเดียว แล้วบวก GP Delivery เพิ่มทีหลังเสมอ (เช่น Central ทุกสาขา
+  // ยกเว้น Central Embassy) — false (ค่าเริ่มต้น) = Minimum เทียบกับ GP หน้าร้าน+Delivery รวมกันแบบเดิม
+  minimumExcludesDelivery Boolean  @default(false)
+  vendorFeeMonthly        Float    @default(0) // e.g. Central Embassy's 3,000 THB vendor-opening fee per period
+  note                    String?
+  updatedAt               DateTime @updatedAt
 
   @@map("rent_configs")
 }
 
+// ประวัติการปรับ GP% รายเดือน — ใช้แทนค่า GP เริ่มต้นใน RentConfig ตั้งแต่ effectiveYear/effectiveMonth เป็นต้นไป
+// เดือนก่อนหน้าที่มีการปรับ ยังคงคำนวณด้วยอัตราเดิม (หรืออัตราที่มีผลอยู่ ณ เดือนนั้น) เพื่อให้ค่าเช่าย้อนหลังถูกต้อง
+model GpRateHistory {
+  id                  String   @id @default(cuid())
+  branchId            String
+  branch              Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  effectiveYear       Int
+  effectiveMonth      Int // 1-12
+  gpPercentStorefront Float
+  gpPercentDelivery   Float
+  note                String?
+  createdAt           DateTime @default(now())
+
+  @@unique([branchId, effectiveYear, effectiveMonth])
+  @@map("gp_rate_history")
+}
+
 // กติการอบจ่ายเงินของสาขา Credit Term (ห้างหักแล้วโอนทีหลัง)
 model CreditTermCycleConfig {
-  id                     String   @id @default(cuid())
-  branchId               String   @unique
-  branch                 Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  splitMonth             Boolean  @default(true) // true = แบ่ง 2 รอบ (1-15 / 16-สิ้นเดือน), false = เต็มเดือน
-  period1PayDay          Int? // วันที่จ่ายของรอบ 1-15 (day-of-month)
-  period1PayMonthOffset  Int      @default(0) // 0 = เดือนเดียวกัน, 1 = เดือนถัดไป
-  period2PayDay          Int? // วันที่จ่ายของรอบ 16-สิ้นเดือน
-  period2PayMonthOffset  Int      @default(1)
-  fullMonthPayDay        Int? // ใช้เมื่อ splitMonth = false
+  id                      String  @id @default(cuid())
+  branchId                String  @unique
+  branch                  Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  splitMonth              Boolean @default(true) // true = แบ่ง 2 รอบ (1-15 / 16-สิ้นเดือน), false = เต็มเดือน
+  period1PayDay           Int? // วันที่จ่ายของรอบ 1-15 (day-of-month)
+  period1PayMonthOffset   Int     @default(0) // 0 = เดือนเดียวกัน, 1 = เดือนถัดไป
+  period2PayDay           Int? // วันที่จ่ายของรอบ 16-สิ้นเดือน
+  period2PayMonthOffset   Int     @default(1)
+  fullMonthPayDay         Int? // ใช้เมื่อ splitMonth = false
   fullMonthPayMonthOffset Int     @default(1)
-  deductDeliveryGp       Boolean  @default(true) // บางห้าง (เช่น Central Embassy) ไม่หัก GP Delivery
-  updatedAt              DateTime @updatedAt
+  deductDeliveryGp        Boolean @default(true) // บางห้าง (เช่น Central Embassy) ไม่หัก GP Delivery
+
+  // ประเภทวางบิล (The Mall Group / Central / Tops ฯลฯ) — กำหนดว่าสาขานี้ใช้เอกสารชุดไหน
+  // และต้องกรอกยอดขายรวม VAT เองหรือไม่ (ไม่ระบุ = ไม่ต้องวางบิลแบบนี้)
+  billingGroupId   String?
+  billingGroup     BillingGroup? @relation(fields: [billingGroupId], references: [id], onDelete: SetNull)
+  billingDueDays   Int? // ต้องวางบิลภายในกี่วันหลังจบรอบขาย (เช่น 5 = ภายใน 5 วันหลังปิดรอบ)
+  paymentDelayDays Int? // ห้างโอนเงินเข้ากี่วันหลังจากวันที่วางบิลจริง (billingDate) — ไม่เกี่ยวกับ period1/2PayDay ซึ่งอิงจากวันปิดรอบขาย
+  mallLegalName    String? // ชื่อนิติบุคคลของห้าง "สาขานี้" (แต่ละสาขาอาจเป็นคนละนิติบุคคลแม้อยู่ในประเภทวางบิลเดียวกัน) — ใช้กรอกช่อง "จากบริษัท..." ในใบรับเงิน
+
+  updatedAt DateTime @updatedAt
 
   @@map("credit_term_cycle_configs")
 }
 
+// ประเภทวางบิล (เช่น The Mall Group, Central, Tops) — แต่ละประเภทใช้เอกสารไม่เหมือนกัน (รูปแบบเอกสารเป็นระดับกลุ่ม
+// แต่ชื่อนิติบุคคลของห้างเป็นระดับสาขา ดู CreditTermCycleConfig.mallLegalName)
+model BillingGroup {
+  id                  String   @id @default(cuid())
+  name                String   @unique
+  sortOrder           Int      @default(0)
+  usesSummarySheet    Boolean  @default(false) // ใบสรุปยอด
+  usesPaymentReceipt  Boolean  @default(false) // ใบรับเงิน
+  usesTaxInvoice      Boolean  @default(false) // ใบเสร็จ/ใบกำกับภาษี
+  usesWithholdingCert Boolean  @default(false) // ใบหัก ณ ที่จ่าย
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  branches CreditTermCycleConfig[]
+
+  @@map("billing_groups")
+}
+
+// ยอดวางบิลของสาขาที่อยู่ในประเภทวางบิลใดๆ — กรอกยอดขายรวม VAT เอง (ไม่ใช้ยอดจาก POS) แล้วคำนวณ VAT/GP/หัก ณ ที่จ่ายแยกต่างหาก
+model BranchBilling {
+  id                    String    @id @default(cuid())
+  branchId              String
+  branch                Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  periodStart           DateTime  @db.Date
+  periodEnd             DateTime  @db.Date
+  storefrontSalesIncVat Float     @default(0)
+  deliverySalesIncVat   Float     @default(0)
+  billingDate           DateTime? @db.Date // วางบิลวันที่เท่าไหร่
+  note                  String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([branchId, periodStart, periodEnd])
+  @@map("branch_billings")
+}
+
 // ยอดขายรายวันต่อสาขา — กรอกโดยพนักงานหน้างาน
 model DailySales {
-  id     String   @id @default(cuid())
+  id       String   @id @default(cuid())
   branchId String
-  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
   date     DateTime @db.Date
 
   // CASH branches only
@@ -131,6 +329,13 @@ model DailySales {
   grab    Float @default(0)
   lineman Float @default(0)
 
+  // เมื่อ true = พนักงานแก้ตัวเลขนี้เอง (ทับค่าที่ดึงจาก POS/IMS อัตโนมัติ) — ตัวไหน override
+  // แล้ว การ sync อัตโนมัติ (posSync.ts) จะข้ามฟิลด์นั้นไป ไม่ทับค่าที่กรอกไว้
+  storefrontOverride  Boolean @default(false)
+  grabOverride        Boolean @default(false)
+  linemanOverride     Boolean @default(false)
+  cashCountedOverride Boolean @default(false)
+
   posCheckTotal Float? // ยอดรวม POS ไว้เช็คยอด (optional)
   note          String?
 
@@ -138,6 +343,7 @@ model DailySales {
   updatedAt DateTime @updatedAt
 
   @@unique([branchId, date])
+  @@index([date])
   @@map("daily_sales")
 }
 
@@ -150,6 +356,13 @@ model CompanyChannelDaily {
   fbLine   Float @default(0)
   pickup   Float @default(0) // รับหน้าร้าน (สั่งออนไลน์มารับเอง)
   catering Float @default(0)
+
+  // เมื่อ true = พนักงานแก้ตัวเลขนี้เอง (ทับค่าที่ดึงจาก Lamunn IMS อัตโนมัติ) — ตัวไหน override
+  // แล้ว การ sync อัตโนมัติ (imsSync.ts) จะข้ามฟิลด์นั้นไป ไม่ทับค่าที่กรอกไว้
+  tiktokOverride   Boolean @default(false)
+  fbLineOverride   Boolean @default(false)
+  pickupOverride   Boolean @default(false)
+  cateringOverride Boolean @default(false)
 
   depositGrab       Float? // ยอดเข้าบัญชี Grab
   depositLineman    Float? // ยอดเข้าบัญชี Lineman
@@ -180,6 +393,13 @@ model CreditTermPayment {
   vendorFeeDeduct    Float @default(0)
   netAmount          Float
 
+  // เงินที่ได้รับจริงเมื่อปิดรอบ — ถ้าน้อยกว่า netAmount จะเกิดยอดค้าง (shortfallAmount) ที่ต้องทบไปงวดถัดไป
+  receivedAmount    Float?
+  shortfallAmount   Float   @default(0)
+  shortfallResolved Boolean @default(false) // true เมื่อยอดค้างนี้ถูกทบเข้า netAmount ของงวดถัดไปแล้ว (กันทบซ้ำ)
+  carriedInAmount   Float   @default(0) // ส่วนของ netAmount งวดนี้ที่มาจากยอดค้างของงวดก่อน (ไว้แสดงผลว่าทำไมยอดสูงกว่าที่คำนวณ GP ตรงๆ)
+  carriedFromId     String? // id ของ CreditTermPayment งวดก่อนที่ทบยอดค้างมา (ถ้ามี)
+
   dueDate DateTime      @db.Date
   status  PaymentStatus @default(PENDING)
   paidAt  DateTime?
@@ -188,6 +408,8 @@ model CreditTermPayment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([branchId])
+  @@index([dueDate])
   @@map("credit_term_payments")
 }
 
@@ -199,9 +421,9 @@ model EventSale {
   endDate   DateTime @db.Date
   location  String?
 
-  storefront Float @default(0)
-  grab       Float @default(0)
-  lineman    Float @default(0)
+  storefront Float   @default(0)
+  grab       Float   @default(0)
+  lineman    Float   @default(0)
   note       String?
 
   createdAt DateTime @default(now())
@@ -222,6 +444,7 @@ model CashAdjustment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([date])
   @@map("cash_adjustments")
 }
 
@@ -233,4 +456,592 @@ model Setting {
   updatedAt DateTime @updatedAt
 
   @@map("settings")
+}
+
+// ================================================================
+// Function เสริม: Catering (จัดเลี้ยง/นัดรับหน้าร้าน) — ย้ายมารวมจากแอป Lamunn-Catering เดิม
+// ใช้ StaffUser/Branch ชุดเดียวกับ Finance เลย ไม่แยกรายชื่อพนักงาน/สาขาอีกชุด
+// ================================================================
+
+// แพคเกจจัดเลี้ยง — ราคา/รายละเอียดมาตรฐาน (ราคาที่ตกลงจริงต่อการจองจะถูก snapshot ไว้ใน CateringBooking)
+model CateringPackage {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bookings CateringBooking[]
+
+  @@map("catering_packages")
+}
+
+enum CustomerSource {
+  FACEBOOK
+  INSTAGRAM
+  LINE
+  REFERRAL // คนแนะนำ/บอกต่อ
+  WALK_IN
+  GOOGLE
+  OTHER
+}
+
+// ลูกค้า — ค้นหา/สร้างใหม่ด้วยเบอร์โทรตอนกรอกการจอง ทำให้ลูกค้าประจำสะสมประวัติการจองไว้ในที่เดียว
+model Customer {
+  id        String          @id @default(cuid())
+  name      String
+  phone     String          @unique
+  source    CustomerSource?
+  note      String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  bookings CateringBooking[]
+
+  @@map("customers")
+}
+
+// แยกจาก PaymentStatus เดิมของ Finance (PENDING/PAID เป็นเรื่อง Credit Term) — งานจัดเลี้ยงมีขั้นมัดจำเพิ่ม
+enum CateringPaymentStatus {
+  UNPAID // ยังไม่โอน
+  DEPOSIT_PAID // มัดจำแล้ว (ปกติ 50%)
+  FULLY_PAID // โอนครบแล้ว
+}
+
+enum BookingStatus {
+  PENDING // รอยืนยัน
+  CONFIRMED // ยืนยันแล้ว
+  COMPLETED // จบงานแล้ว
+  CANCELLED // ยกเลิก
+}
+
+// รายการจองจัดเลี้ยง — แกนหลักของระบบ
+model CateringBooking {
+  id String @id @default(cuid())
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  eventDate      DateTime  @db.Date
+  eventEndDate   DateTime? @db.Date // งานที่จัดมากกว่า 1 วัน — ว่าง/เท่ากับ eventDate = งานวันเดียว
+  eventStartTime String? // เก็บเป็นข้อความ เช่น "10:00" — ไม่ต้องผูกกับ timezone/date ซับซ้อน
+  eventEndTime   String?
+  location       String? // สถานที่จัดงาน
+  guestCount     Int? // จำนวนแขก/คน
+
+  packageId            String?
+  package              CateringPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  packageNameSnapshot  String? // ชื่อแพคเกจ ณ ตอนจอง — กันไม่ให้การแก้ไขแพคเกจภายหลังย้อนแก้ประวัติ
+  packagePriceSnapshot Float? // ราคาที่ตกลงจริง ณ ตอนจอง
+
+  totalAmount   Float
+  depositAmount Float?
+  depositPaidAt DateTime?
+  balancePaidAt DateTime?
+  paymentStatus CateringPaymentStatus @default(UNPAID)
+
+  status         BookingStatus @default(PENDING)
+  note           String?
+  needsBooth     Boolean       @default(false) // นำบูธไปด้วยหรือไม่
+  specialRequest String? // ความต้องการพิเศษเพิ่มเติมนอกเหนือจากบูธ
+
+  createdByStaffId String?
+  createdByStaff   StaffUser? @relation("CateringBookingCreatedBy", fields: [createdByStaffId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  staffAssignments CateringBookingStaff[]
+  checklistItems   CateringChecklistItem[]
+  items            CateringBookingItem[]
+  days             CateringBookingDay[]
+
+  @@index([eventDate])
+  @@map("catering_bookings")
+}
+
+// รายละเอียดต่อวัน สำหรับงานที่จัดมากกว่า 1 วัน (eventDate..eventEndDate) — จำนวนเสิร์ฟและโน้ตแยกแต่ละวัน
+// เช่น มีการเพิ่มรสชาติใหม่เฉพาะวันนั้น — สร้าง/ลบแถวอัตโนมัติให้ตรงกับช่วงวันที่ของงานเสมอ (ดู syncCateringBookingDays)
+model CateringBookingDay {
+  id String @id @default(cuid())
+
+  bookingId String
+  booking   CateringBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  date     DateTime @db.Date
+  servings Int? // จำนวนเสิร์ฟวันนี้
+  note     String? // โน้ตเฉพาะวันนี้ เช่น เพิ่มรสชาติใหม่
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([bookingId, date])
+  @@map("catering_booking_days")
+}
+
+// รายการย่อยของงาน — ให้ custom ได้อิสระต่อการจองแต่ละครั้ง เช่น "ชุด 3 ชิ้น/เสิร์ฟ" x20 @55,
+// "ค่าเดินทาง กรุงเทพ" x1 @1500 — totalAmount ของ booking รวมยอดจากตรงนี้เมื่อมีรายการอยู่
+model CateringBookingItem {
+  id String @id @default(cuid())
+
+  bookingId String
+  booking   CateringBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  description String
+  quantity    Float  @default(1)
+  unitPrice   Float
+  sortOrder   Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("catering_booking_items")
+}
+
+// พนักงานที่จัดไปดูแลงาน — "ใครไปใครดูแล" กรอกแค่ชื่อพอ ไม่ผูกกับบัญชีผู้ใช้งานจริง (งานหนึ่งอาจมี 1-2 คนขึ้นไป)
+model CateringBookingStaff {
+  id String @id @default(cuid())
+
+  bookingId String
+  booking   CateringBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  staffId String?
+  staff   StaffUser? @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  staffName String? // ชื่อพนักงานแบบข้อความอิสระ — ใช้แทน staffId ในการกรอกแบบง่าย
+  roleLabel String? // เช่น "หัวหน้างาน", "ทีมงาน", "คนขับ" — ไม่บังคับ
+  createdAt DateTime @default(now())
+
+  @@map("catering_booking_staff")
+}
+
+// เช็คลิสต์ของ/อุปกรณ์ที่ต้องเตรียมต่องาน
+model CateringChecklistItem {
+  id String @id @default(cuid())
+
+  bookingId String
+  booking   CateringBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  itemName  String
+  quantity  Int?
+  isPacked  Boolean @default(false)
+  note      String?
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("catering_checklist_items")
+}
+
+enum CateringMenuCategory {
+  MENU // รายการเมนู เช่น "3 ชิ้นต่อ 1 เสิร์ฟ"
+  SERVICE // ค่าบริการ เช่น ค่าพนักงาน ค่าขนย้ายบูธ ค่าเดินทาง
+  SNACK_BOX // กล่องขนม — ปกติ custom เขียนเองหน้างานผ่านช่องรายการอิสระ ไม่ตั้งราคาตายตัว
+}
+
+// รายการเมนู/ราคามาตรฐาน — แก้ไขได้เต็มที่จากหน้า /catering/menu แทนการ hardcode ในโค้ด
+// ใช้เป็นตัวเลือกติ๊กตอนเพิ่มรายการในงานจัดเลี้ยงแต่ละงาน (ดู BookingItemsPanel)
+model CateringMenuItem {
+  id String @id @default(cuid())
+
+  category  CateringMenuCategory
+  name      String
+  unitLabel String? // เช่น "ต่อ 1 เสิร์ฟ", "ต่อ 150 เสิร์ฟ" — ข้อความอธิบายหน่วยเฉยๆ ไม่ใช้คำนวณ
+  unitPrice Float? // ว่างได้ถ้าราคาไม่ตายตัว (ให้กรอกเองตอนใช้งานจริง)
+  minPrice  Float? // ราคาต่ำสุดที่แก้เองได้ตอนใช้งานจริง (เช่น ค่าพนักงานปรับขึ้นได้แต่ห้ามต่ำกว่านี้) — ว่าง = ไม่บังคับขั้นต่ำ
+
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("catering_menu_items")
+}
+
+enum PickupOrderStatus {
+  PENDING // รับออเดอร์แล้ว รอเตรียมของ
+  READY // เตรียมของเสร็จ พร้อมให้ลูกค้ามารับ
+  COMPLETED // ลูกค้ารับของแล้ว
+  CANCELLED // ยกเลิก
+}
+
+// ยอดนัดรับหน้าร้าน (Function เสริม) — ลูกค้าติดต่อสั่งของ ไม่ผ่านระบบจองจัดเลี้ยง
+model PickupOrder {
+  id String @id @default(cuid())
+
+  customerName  String
+  customerPhone String?
+
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  itemsDescription String? // ข้อความอิสระเก่า — ออเดอร์ใหม่ใช้ items (ด้านล่าง) แทน เก็บไว้แสดงของเก่าเฉยๆ
+  amount           Float
+  paymentStatus    CateringPaymentStatus @default(UNPAID)
+
+  orderDate  DateTime @db.Date // สั่งวันไหน
+  pickupDate DateTime @db.Date // นัดรับวันไหน
+  pickupTime String? // เวลานัดรับ เก็บเป็นข้อความ เช่น "14:30"
+
+  status PickupOrderStatus @default(PENDING)
+  note   String?
+
+  createdByStaffId String?
+  createdByStaff   StaffUser? @relation(fields: [createdByStaffId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items PickupOrderItem[]
+
+  @@index([pickupDate])
+  @@index([orderDate])
+  @@map("pickup_orders")
+}
+
+// รายการสินค้าต่อออเดอร์ — ติ๊กจากเมนูกลาง (CateringMenuItem) เดียวกับที่ใช้ในงานจัดเลี้ยง แทนช่อง
+// itemsDescription เดิมที่เป็นข้อความอิสระ — amount ของออเดอร์รวมจากตรงนี้เมื่อมีรายการอยู่ (เหมือน CateringBookingItem)
+model PickupOrderItem {
+  id String @id @default(cuid())
+
+  pickupOrderId String
+  pickupOrder   PickupOrder @relation(fields: [pickupOrderId], references: [id], onDelete: Cascade)
+
+  description String
+  quantity    Float  @default(1)
+  unitPrice   Float
+  sortOrder   Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("pickup_order_items")
+}
+
+// ประวัติการทำงานในระบบ — "ใครทำอะไรบ้าง" เน้นบันทึกการกระทำที่สำคัญ/ย้อนกลับไม่ได้ (ลบข้อมูล,
+// จัดการผู้ใช้/สิทธิ์, แก้ค่าตั้งค่าระบบ) ไม่ได้ log ทุก request เพื่อไม่ให้ตารางบวมจนดูยาก
+model ActivityLog {
+  id String @id @default(cuid())
+
+  staffId   String?
+  staffName String // เก็บ snapshot ชื่อไว้ตรงๆ กันประวัติเพี้ยนถ้าพนักงานถูกลบ/เปลี่ยนชื่อทีหลัง
+
+  action  String // "CREATE" | "UPDATE" | "DELETE"
+  entity  String // ชื่อประเภทข้อมูล เช่น "CateringBooking", "Staff", "Setting"
+  summary String // คำอธิบายที่อ่านง่าย เช่น "ลบการจอง — คุณสมชาย (12 ส.ค. 2569)"
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// ================================================================
+// ระบบบัญชี (Accounting) — บัญชีคู่เต็มรูปแบบ สำหรับใช้แทน FlowAccount
+// ทุกตารางขึ้นต้นด้วย acc_ เพื่อไม่ให้ปนกับตารางงานปฏิบัติการรายวันด้านบน
+// กฎเหล็กของทั้งระบบ: ทุกใบสำคัญ (AccJournalEntry) ต้องมี sum(debit) = sum(credit)
+// ตรวจตอนผ่านรายการใน src/lib/accounting/post.ts — ถ้าไม่เท่าจะบันทึกไม่ได้
+// ================================================================
+
+enum AccountType {
+  ASSET // 1 สินทรัพย์ — ยอดคงเหลือปกติอยู่ด้านเดบิต
+  LIABILITY // 2 หนี้สิน — เครดิต
+  EQUITY // 3 ส่วนของผู้ถือหุ้น — เครดิต
+  REVENUE // 4 รายได้ — เครดิต
+  EXPENSE // 5 ต้นทุนและค่าใช้จ่าย — เดบิต
+}
+
+// บทบาททางภาษีของบัญชี — ใช้ดึงยอดไปทำรายงานภาษีซื้อ/ภาษีขาย และ ภ.พ.30
+enum VatRole {
+  OUTPUT // ภาษีขาย
+  INPUT // ภาษีซื้อ
+  WHT // ภาษีหัก ณ ที่จ่าย
+}
+
+// ผังบัญชี — แก้ไข/เพิ่มเองได้ทั้งหมด (นี่คือสิ่งที่ทำให้ปิดงบเองได้)
+model AccAccount {
+  id         String      @id @default(cuid())
+  code       String      @unique // "1140" — เรียงตามรหัส
+  nameTh     String
+  type       AccountType
+  parentCode String? // รหัสบัญชีแม่ ไว้จัดกลุ่มตอนออกงบ (ไม่ใช่ relation เพื่อให้ย้ายกลุ่มได้ง่าย)
+  isPostable Boolean     @default(true) // false = บัญชีหัวข้อรวม ลงรายการตรงๆ ไม่ได้
+  vatRole    VatRole?
+  isActive   Boolean     @default(true)
+  sortOrder  Int         @default(0)
+
+  lines AccJournalLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@map("acc_accounts")
+}
+
+enum AccPartnerType {
+  DEBTOR // ลูกหนี้ — ใครค้างเรา
+  CREDITOR // เจ้าหนี้/ซัพพลายเออร์ — เราค้างใคร จ่ายเงินให้ใคร
+}
+
+// คู่ค้า — ใช้เป็นทั้งฐานข้อมูลลูกหนี้/เจ้าหนี้ และตัวเลือก "จ่ายให้ใคร" ตอนคีย์ใบสำคัญ (ดู AccJournalLine.partnerId)
+model AccPartner {
+  id       String         @id @default(cuid())
+  name     String
+  type     AccPartnerType
+  phone    String?
+  taxId    String?
+  address  String?
+  note     String?
+  isActive Boolean        @default(true)
+
+  lines               AccJournalLine[]
+  purchaseTaxInvoices AccPurchaseTaxInvoice[]
+  whtCertificates     AccWhtCertificate[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@map("acc_partners")
+}
+
+enum AccPeriodStatus {
+  OPEN // ยังบันทึก/แก้ไขได้
+  CLOSED // ปิดงวดแล้ว — ห้ามบันทึกย้อนหลัง ต้องออกใบสำคัญปรับปรุงในงวดถัดไปแทน
+}
+
+model AccPeriod {
+  id       String          @id @default(cuid())
+  year     Int
+  month    Int
+  status   AccPeriodStatus @default(OPEN)
+  closedAt DateTime?
+  closedBy String?
+
+  @@unique([year, month])
+  @@map("acc_periods")
+}
+
+enum AccEntryStatus {
+  DRAFT // ร่าง — ยังไม่เข้างบ (ใบที่ระบบสร้างอัตโนมัติเริ่มที่สถานะนี้เสมอ)
+  POSTED // ผ่านรายการแล้ว — เข้างบทดลอง/งบการเงิน
+  VOID // ยกเลิก
+}
+
+enum AccJournalType {
+  GENERAL // สมุดรายวันทั่วไป
+  SALES // สมุดรายวันขาย
+  PURCHASE // สมุดรายวันซื้อ
+  RECEIPT // สมุดรายวันรับเงิน
+  PAYMENT // สมุดรายวันจ่ายเงิน
+  ADJUST // ใบสำคัญปรับปรุง
+  CLOSING // ปิดบัญชีสิ้นปี
+}
+
+model AccJournalEntry {
+  id          String         @id @default(cuid())
+  entryNo     String         @unique // "JV-6808-0031" รันต่อเนื่องต่อประเภทต่อเดือน
+  date        DateTime       @db.Date
+  journalType AccJournalType @default(GENERAL)
+  status      AccEntryStatus @default(DRAFT)
+  description String
+
+  // ต้นทางของรายการ — ใช้กันลงซ้ำเวลาดึงยอดจากระบบเดิมมาลงบัญชีอัตโนมัติ
+  // sourceType: "DAILY_SALES" | "TAX_INVOICE" | "CREDIT_TERM" | "RENT" | null (คีย์เอง)
+  // sourceKey:  คีย์ของต้นทาง เช่น "2026-08-27" หรือ id ของ CreditTermPayment
+  sourceType String?
+  sourceKey  String?
+
+  lines AccJournalLine[]
+
+  createdBy String?
+  postedAt  DateTime?
+  postedBy  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([sourceType, sourceKey])
+  @@index([date])
+  @@index([status])
+  @@map("acc_journal_entries")
+}
+
+model AccJournalLine {
+  id        String          @id @default(cuid())
+  entryId   String
+  entry     AccJournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  accountId String
+  account   AccAccount      @relation(fields: [accountId], references: [id])
+
+  debit  Decimal @default(0) @db.Decimal(15, 2)
+  credit Decimal @default(0) @db.Decimal(15, 2)
+
+  // วันที่และสถานะของใบสำคัญ ถูกคัดลอกมาเก็บซ้ำไว้ที่บรรทัดด้วยโดยตั้งใจ
+  //
+  // ทุกคิวรีที่ออกงบ/แยกประเภทต้องกรอง "บรรทัดที่ผ่านรายการแล้ว ในช่วงวันที่นี้" ถ้าเก็บวันที่ไว้
+  // แต่ในตารางใบสำคัญ Postgres ต้อง join ทุกครั้งและใช้ index ได้ไม่เต็มที่ — วัดจริงที่ 50,000 บรรทัด
+  // คิวรีแยกประเภท 1 บัญชีใช้เวลา 6 วินาที ซึ่งใช้งานไม่ได้
+  //
+  // สองคอลัมน์นี้ + index ข้างล่าง ทำให้คิวรีเดียวกันเหลือระดับมิลลิวินาที
+  // ค่าถูกเขียนพร้อมบรรทัดตอนสร้าง และอัปเดตยกชุดเมื่อใบสำคัญเปลี่ยนสถานะ (ดู post.ts)
+  date   DateTime       @db.Date
+  status AccEntryStatus @default(DRAFT)
+
+  // มิติสำหรับรายงานแยกสาขา/ช่องทาง — ไม่ต้องสร้างบัญชีซ้ำทุกสาขา
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  channel  String? // STOREFRONT | GRAB | LINEMAN | TIKTOK | FB_LINE | PICKUP | CATERING | EVENT
+
+  // คู่ค้าที่บรรทัดนี้จ่ายให้/ค้างรับจาก — ไม่บังคับ (ส่วนใหญ่ใช้กับรายการเจ้าหนี้/ซัพพลายเออร์)
+  partnerId String?
+  partner   AccPartner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+
+  memo      String?
+  // เลขที่ใบกำกับภาษี/เอกสารอ้างอิงของบรรทัดนี้ — รายงานภาษีซื้อใช้เลขนี้ ไม่ใช่เลขที่ใบสำคัญ
+  // (ใบสำคัญใบเดียวมีใบกำกับหลายใบได้ จึงเก็บที่บรรทัด ไม่ใช่ที่หัวใบ)
+  docNo     String?
+  sortOrder Int     @default(0)
+
+  @@index([entryId])
+  @@index([branchId])
+  @@index([partnerId])
+  // index หลักของงานออกงบ: กรองสถานะ + ช่วงวันที่ + บัญชี ได้ในทีเดียวโดยไม่ต้อง join
+  @@index([status, date, accountId])
+  // index ของหน้าบัญชีแยกประเภท: ไล่รายการของบัญชีเดียวเรียงตามวันที่
+  @@index([accountId, status, date])
+  @@map("acc_journal_lines")
+}
+
+// ใบกำกับภาษีเต็มรูปที่ออกให้ลูกค้ารายบุคคล
+//
+// ปัญหาที่ตารางนี้แก้: ยอดขายรายวัน/ยอดวางบิลห้างถูกบันทึกเป็นยอดรวมอยู่แล้ว
+// พอมีลูกค้าขอใบกำกับเต็มรูปทีหลัง แล้วออกใบให้ ยอดนั้นจะถูกนับสองรอบ
+// (รอบแรกอยู่ในยอดรวม รอบสองอยู่ในใบกำกับ) — ใน FlowAccount ต้องมานั่งดึงออกเอง
+//
+// วิธีแก้: เก็บ saleDate + branchId ของบิลต้นทางไว้ แล้วตอนลงบัญชียอดขายรายวัน
+// ระบบจะหักยอดใบกำกับเต็มรูปของวันนั้นออกจากยอดรวมให้อัตโนมัติ
+// (ดู src/lib/accounting/dailySales.ts) — ยอดรวมรายได้จึงไม่มีทางซ้ำ
+model AccTaxInvoice {
+  id        String   @id @default(cuid())
+  docNo     String   @unique // เลขที่ใบกำกับภาษี รันต่อเนื่อง ห้ามข้าม
+  issueDate DateTime @db.Date // วันที่ออกใบกำกับ
+  saleDate  DateTime @db.Date // วันที่ขายจริง — ใช้จับคู่หักออกจากยอดขายรายวัน
+  branchId  String?
+  branch    Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  channel   String   @default("STOREFRONT") // ช่องทางที่ยอดนี้ถูกนับรวมอยู่
+  receiptNo String? // เลขที่บิล POS ต้นทาง
+
+  customerName String
+  taxId        String?
+  branchTag    String? // "สำนักงานใหญ่" หรือเลขที่สาขา 5 หลัก
+  address      String?
+  description  String  @default("อาหารและเครื่องดื่ม")
+
+  baseAmount  Decimal @db.Decimal(15, 2) // มูลค่าก่อน VAT
+  vatAmount   Decimal @db.Decimal(15, 2)
+  totalAmount Decimal @db.Decimal(15, 2) // รวม VAT — ยอดที่ต้องหักออกจากยอดขายรวม
+
+  // true = ยอดนี้ถูกนับอยู่ในยอดขายรวมของวันนั้นแล้ว ต้องหักออกกันนับซ้ำ
+  // false = ขายนอกระบบ POS (เช่น ขายส่ง/จัดเลี้ยงที่ยังไม่ได้อยู่ในยอดรวม) ให้ลงบัญชีเต็มจำนวน
+  deductFromBulk Boolean @default(true)
+
+  voided    Boolean  @default(false)
+  note      String?
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([saleDate])
+  @@index([issueDate])
+  @@map("acc_tax_invoices")
+}
+
+// ================================================================
+// ระบบบัญชี — เอกสารฝั่งภาษี (ใช้ออกรายงานภาษีซื้อ/ภาษีขาย, ภ.พ.30, ภ.ง.ด.3, ภ.ง.ด.53)
+// ================================================================
+
+// ใบกำกับภาษีซื้อ — ใบที่ "ผู้ขายออกให้เรา" ตอนเราซื้อของ/จ่ายค่าบริการ
+//
+// ระบบเดิมมีแต่ฝั่งขาย (AccTaxInvoice) ทำให้ทำรายงานภาษีซื้อและ ภ.พ.30 ไม่ได้
+// ตารางนี้เก็บรายละเอียดตามที่รายงานภาษีซื้อของสรรพากรต้องแสดง: วันที่ เลขที่ใบกำกับ
+// ชื่อและเลขประจำตัวผู้เสียภาษีของผู้ขาย มูลค่า และภาษีซื้อ
+model AccPurchaseTaxInvoice {
+  id          String   @id @default(cuid())
+  invoiceNo   String // เลขที่ใบกำกับภาษีที่ผู้ขายออกให้ (ไม่ใช่เลขที่เราออกเอง)
+  invoiceDate DateTime @db.Date // วันที่บนใบกำกับ — ใช้จัดงวดในรายงานภาษีซื้อ
+
+  partnerId       String?
+  partner         AccPartner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  // เก็บชื่อ/เลขผู้เสียภาษีซ้ำไว้ในเอกสารด้วย (snapshot) — ถ้าคู่ค้าถูกแก้ชื่อทีหลัง
+  // รายงานภาษีย้อนหลังต้องยังแสดงตามที่ปรากฏบนใบกำกับใบนั้นจริงๆ
+  vendorName      String
+  vendorTaxId     String?
+  vendorBranchTag String? // "สำนักงานใหญ่" หรือเลขที่สาขา 5 หลัก
+
+  description String  @default("ค่าสินค้า/บริการ")
+  baseAmount  Decimal @db.Decimal(15, 2) // มูลค่าสินค้า/บริการ (ก่อน VAT)
+  vatAmount   Decimal @db.Decimal(15, 2) // ภาษีซื้อ
+  totalAmount Decimal @db.Decimal(15, 2)
+
+  // ภาษีซื้อต้องห้าม (เครดิตไม่ได้ เช่น ค่ารับรอง) — ยังต้องบันทึกไว้ แต่ไม่นับเข้า ภ.พ.30
+  isClaimable Boolean @default(true)
+
+  entryId String? // ใบสำคัญที่บันทึกรายการซื้อนี้ (ถ้ามี)
+  voided  Boolean @default(false)
+  note    String?
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([invoiceDate])
+  @@index([partnerId])
+  @@map("acc_purchase_tax_invoices")
+}
+
+// แบบยื่นภาษีหัก ณ ที่จ่าย — ภ.ง.ด.3 ใช้กับผู้รับเงินที่เป็นบุคคลธรรมดา, ภ.ง.ด.53 ใช้กับนิติบุคคล
+enum AccWhtFormType {
+  PND3 // ภ.ง.ด.3 — จ่ายให้บุคคลธรรมดา
+  PND53 // ภ.ง.ด.53 — จ่ายให้นิติบุคคล
+}
+
+// หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ) — หนึ่งแถวต่อการหักหนึ่งครั้ง
+// รวมทั้งเดือนแล้วได้เป็นแบบ ภ.ง.ด.3 / ภ.ง.ด.53 ที่ต้องยื่นภายในวันที่ 7 ของเดือนถัดไป
+model AccWhtCertificate {
+  id       String         @id @default(cuid())
+  docNo    String         @unique // เลขที่หนังสือรับรอง รันต่อเนื่อง
+  payDate  DateTime       @db.Date // วันที่จ่ายเงิน — ตัวกำหนดว่าเข้างวดไหน
+  formType AccWhtFormType
+
+  partnerId      String?
+  partner        AccPartner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  // snapshot เหมือน AccPurchaseTaxInvoice — หนังสือรับรองที่ออกไปแล้วต้องไม่เปลี่ยนตามการแก้ข้อมูลคู่ค้า
+  payeeName      String
+  payeeTaxId     String?
+  payeeAddress   String?
+  payeeBranchTag String?
+
+  incomeType String // ประเภทเงินได้ เช่น "ค่าบริการ/รับจ้างทำของ ม.40(2)"
+  baseAmount Decimal @db.Decimal(15, 2) // จำนวนเงินที่จ่าย (ฐานคำนวณ)
+  whtRate    Float // อัตราที่หัก เช่น 0.03 = 3%
+  whtAmount  Decimal @db.Decimal(15, 2) // ภาษีที่หักไว้
+
+  entryId String? // ใบสำคัญจ่ายที่เกี่ยวข้อง (ถ้ามี)
+  voided  Boolean @default(false)
+  note    String?
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([payDate])
+  @@index([formType, payDate])
+  @@index([partnerId])
+  @@map("acc_wht_certificates")
 }

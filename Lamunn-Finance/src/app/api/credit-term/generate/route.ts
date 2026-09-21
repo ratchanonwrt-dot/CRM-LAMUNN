@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@lamunn/db-finance";
-import { requireStaff } from "@/lib/requireStaff";
+import { requireSectionApi } from "@/lib/permissions";
 import { parseDateOnly } from "@/lib/dates";
-import { computePeriodReceivable } from "@/lib/creditTermCalc";
+import { computePeriodReceivable, CREDIT_TERM_CACHE_TAG } from "@/lib/creditTermCalc";
 
 export async function POST(req: NextRequest) {
-  const staff = await requireStaff();
+  const staff = await requireSectionApi("CREDIT_TERM", "edit");
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await req.json();
@@ -22,13 +23,21 @@ export async function POST(req: NextRequest) {
     where: { branchId, periodStart: start, periodEnd: end },
   });
 
+  // ถ้าเคยปิดรอบนี้แล้วและทบยอดค้างจากงวดก่อนไว้แล้ว ให้ใช้ยอดที่ทบไว้เดิม (กันทบซ้ำเวลากดปิดรอบซ้ำ)
+  // ไม่งั้นก็ใช้ยอดที่เพิ่งคำนวณสด (สำหรับรอบที่เพิ่งปิดรอบครั้งแรก)
+  const carriedInAmount = existing?.carriedFromId ? existing.carriedInAmount : computed.carriedInAmount;
+  const carriedFromId = existing?.carriedFromId ?? computed.carriedFromPaymentId;
+  const netAmount = computed.rawNetAmount + carriedInAmount;
+
   const financialFields = {
     grossStorefront: computed.grossStorefront,
     grossDelivery: computed.grossDelivery,
     gpDeductStorefront: computed.gpDeductStorefront,
     gpDeductDelivery: computed.gpDeductDelivery,
     vendorFeeDeduct: computed.vendorFeeDeduct,
-    netAmount: computed.netAmount,
+    netAmount,
+    carriedInAmount,
+    carriedFromId,
     dueDate: parseDateOnly(dueDate),
   };
 
@@ -38,5 +47,11 @@ export async function POST(req: NextRequest) {
         data: { branchId, periodStart: start, periodEnd: end, status: "PENDING", ...financialFields },
       });
 
+  // mark ยอดค้างของงวดก่อนว่าถูกทบมาแล้ว — ทำแค่ครั้งแรกที่ทบเข้ามา ป้องกันไม่ให้ถูกทบซ้ำในรอบถัดไปอีก
+  if (carriedFromId && !existing?.carriedFromId) {
+    await prisma.creditTermPayment.update({ where: { id: carriedFromId }, data: { shortfallResolved: true } });
+  }
+
+  revalidateTag(CREDIT_TERM_CACHE_TAG);
   return NextResponse.json({ payment });
 }

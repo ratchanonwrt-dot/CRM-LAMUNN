@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useCanEdit } from "@/lib/RoleContext";
 
 export default function GenerateCreditTermButton({
   branchId,
@@ -15,7 +16,10 @@ export default function GenerateCreditTermButton({
   dueDate: string;
 }) {
   const router = useRouter();
+  const canEdit = useCanEdit("CREDIT_TERM");
   const [loading, setLoading] = useState(false);
+
+  if (!canEdit) return null;
 
   async function generate() {
     setLoading(true);

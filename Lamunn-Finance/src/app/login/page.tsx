@@ -27,19 +27,17 @@ function LoginForm() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col justify-center bg-gradient-to-b from-brand-50 via-white to-white px-6 py-10">
+    <main className="flex min-h-screen flex-col justify-center bg-gray-50 px-6 py-10">
       <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-600 text-2xl font-bold text-white shadow-lg shadow-brand-900/20">
-            ฿
-          </div>
-          <div className="text-center">
-            <h1 className="text-lg font-bold text-brand-700">Lamunn Finance</h1>
-            <p className="text-sm text-gray-500">ระบบบันทึกยอดขายรายวัน — 23 สาขา</p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-xl font-bold text-white">฿</div>
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight text-gray-900">Lamunn Finance</h1>
+            <p className="text-sm text-gray-500">ระบบบันทึกยอดขายรายวัน</p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-3xl border border-brand-100/60 bg-white p-6 shadow-xl shadow-brand-900/5">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-6 shadow-card">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">อีเมล</label>
             <input
@@ -67,7 +65,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-1 w-full rounded-xl bg-brand-600 px-6 py-3 font-medium text-white shadow-md shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-50 disabled:shadow-none"
+            className="mt-1 w-full rounded-xl bg-brand-600 px-6 py-3 font-medium text-white transition hover:bg-brand-700 disabled:opacity-50"
           >
             {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
           </button>

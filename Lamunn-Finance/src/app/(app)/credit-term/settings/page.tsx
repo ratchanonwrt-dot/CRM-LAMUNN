@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@lamunn/db-finance";
-import { requirePageRole } from "@/lib/requirePageRole";
+import { requireSectionPage } from "@/lib/permissions";
 import CreditTermCycleForm from "@/components/CreditTermCycleForm";
 
 export default async function CreditTermSettingsPage() {
-  await requirePageRole(["ADMIN"]);
+  await requireSectionPage("CREDIT_TERM", "edit");
   const branches = await prisma.branch.findMany({
     where: { type: "CREDIT_TERM" },
     orderBy: { sortOrder: "asc" },

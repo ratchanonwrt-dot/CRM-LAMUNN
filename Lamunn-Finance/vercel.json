@@ -1,0 +1,13 @@
+{
+  "regions": ["sin1"],
+  "crons": [
+    {
+      "path": "/api/cron/sync-external-data",
+      "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/cron/warm",
+      "schedule": "25 1 * * *"
+    }
+  ]
+}

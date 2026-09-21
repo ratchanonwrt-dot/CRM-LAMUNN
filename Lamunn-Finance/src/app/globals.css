@@ -2,12 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ฟอนต์หลักถูก preload/self-host ผ่าน next/font (ดู app/layout.tsx) แล้วส่งมาเป็นตัวแปร --font-sans
+   ไม่มีการโหลดฟอนต์จากภายนอกตอน runtime — ไม่มีจังหวะตัวหนังสือกระโดดเปลี่ยนฟอนต์ */
 html {
-  font-family: "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 body {
   @apply bg-gray-50 text-gray-900;
+  /* แอปการเงิน: ตัวเลขทุกตัวกว้างเท่ากัน คอลัมน์ตัวเลขจึงเรียงตรงกันโดยไม่ต้องใส่ tabular-nums ทีละที่ */
+  font-variant-numeric: tabular-nums;
+}
+
+@layer base {
+  h1,
+  h2 {
+    @apply tracking-tight;
+  }
+  th {
+    @apply font-medium;
+  }
+  ::selection {
+    @apply bg-brand-100 text-brand-900;
+  }
+  /* ช่องกรอกทุกชนิด: focus ring สีแบรนด์บางๆ แทน outline ค่าเริ่มต้นของเบราว์เซอร์ */
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    @apply outline-none ring-2 ring-brand-200 border-brand-400;
+  }
+  button:focus-visible,
+  a:focus-visible {
+    @apply outline-none ring-2 ring-brand-300 ring-offset-1;
+  }
+  /* scrollbar บางและกลืนกับพื้น (Chromium/WebKit) */
+  ::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-gray-300;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
 /* Plain numeric key-in — no up/down spinner arrows */
@@ -18,4 +60,14 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 input[type="number"] {
   -moz-appearance: textfield;
+}
+
+/* แถบโหลดด้านบน (NavigationProgress) — วิ่งจากซ้ายไปขวาวนซ้ำ ระหว่างรอหน้าใหม่โหลด */
+@keyframes nav-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
 }

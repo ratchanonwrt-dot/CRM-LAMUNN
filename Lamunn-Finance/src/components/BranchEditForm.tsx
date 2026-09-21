@@ -10,12 +10,15 @@ interface BranchData {
   type: "CASH" | "CREDIT_TERM";
   isActive: boolean;
   sortOrder: number;
+  posCode: string | null;
+  address: string | null;
   rentConfig: {
     rentType: "FIX_RATE" | "GP";
     gpPercentStorefront: number;
     gpPercentDelivery: number;
     fixRateAmount: number | null;
     minAmount: number | null;
+    minimumExcludesDelivery: boolean;
     vendorFeeMonthly: number;
     note: string | null;
   } | null;
@@ -37,12 +40,15 @@ export default function BranchEditForm({ branch }: { branch: BranchData }) {
   const [type, setType] = useState(branch.type);
   const [isActive, setIsActive] = useState(branch.isActive);
   const [sortOrder, setSortOrder] = useState(branch.sortOrder.toString());
+  const [posCode, setPosCode] = useState(branch.posCode ?? "");
+  const [address, setAddress] = useState(branch.address ?? "");
 
   const [rentType, setRentType] = useState(branch.rentConfig?.rentType ?? "GP");
   const [gpStorefront, setGpStorefront] = useState((branch.rentConfig?.gpPercentStorefront ?? 0).toString());
   const [gpDelivery, setGpDelivery] = useState((branch.rentConfig?.gpPercentDelivery ?? 0).toString());
   const [fixRateAmount, setFixRateAmount] = useState(branch.rentConfig?.fixRateAmount?.toString() ?? "");
   const [minAmount, setMinAmount] = useState(branch.rentConfig?.minAmount?.toString() ?? "");
+  const [minimumExcludesDelivery, setMinimumExcludesDelivery] = useState(branch.rentConfig?.minimumExcludesDelivery ?? false);
   const [vendorFeeMonthly, setVendorFeeMonthly] = useState((branch.rentConfig?.vendorFeeMonthly ?? 0).toString());
   const [rentNote, setRentNote] = useState(branch.rentConfig?.note ?? "");
 
@@ -64,12 +70,15 @@ export default function BranchEditForm({ branch }: { branch: BranchData }) {
         type,
         isActive,
         sortOrder,
+        posCode,
+        address,
         rent: {
           rentType,
           gpPercentStorefront: gpStorefront,
           gpPercentDelivery: gpDelivery,
           fixRateAmount,
           minAmount,
+          minimumExcludesDelivery,
           vendorFeeMonthly,
           note: rentNote,
         },
@@ -105,6 +114,14 @@ export default function BranchEditForm({ branch }: { branch: BranchData }) {
             <label className="mb-1 block text-xs font-medium text-gray-500">ลำดับแสดงผล</label>
             <input type="number" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white" />
           </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-500">รหัส POS (ดึงยอดจาก IMS อัตโนมัติ)</label>
+            <input value={posCode} onChange={(e) => setPosCode(e.target.value)} placeholder="ไม่มี = ไม่ดึงอัตโนมัติ" className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white" />
+          </div>
+        </div>
+        <div className="mt-4">
+          <label className="mb-1 block text-xs font-medium text-gray-500">ที่อยู่สาขา (สำหรับเอกสารวางบิล PDF — บางห้างต้องการที่อยู่ตามสาขา ไม่ใช่ที่อยู่บริษัท)</label>
+          <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={2} className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white" />
         </div>
         <label className="mt-4 flex items-center gap-2 text-sm text-gray-600">
           <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
@@ -141,6 +158,12 @@ export default function BranchEditForm({ branch }: { branch: BranchData }) {
                 <label className="mb-1 block text-xs font-medium text-gray-500">ค่าเช่าขั้นต่ำ/เดือน (Minimum, ไม่บังคับ)</label>
                 <input type="number" step="0.01" value={minAmount} onChange={(e) => setMinAmount(e.target.value)} placeholder="ไม่มี = ไม่บังคับขั้นต่ำ" className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:bg-white" />
               </div>
+              <div className="sm:col-span-4">
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input type="checkbox" checked={minimumExcludesDelivery} onChange={(e) => setMinimumExcludesDelivery(e.target.checked)} />
+                  Minimum คิดจากยอดหน้าร้านอย่างเดียว (GP Delivery บวกเพิ่มทีหลังเสมอ ไม่รวม/ไม่ถูกหักเข้า Minimum) — เช่น Central ทุกสาขายกเว้น Central Embassy
+                </label>
+              </div>
             </>
           )}
           <div>
@@ -172,13 +195,18 @@ export default function BranchEditForm({ branch }: { branch: BranchData }) {
       {error && <p className="text-sm text-red-600">{error}</p>}
       {saved && !error && <p className="text-sm text-emerald-600">บันทึกแล้ว</p>}
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="w-fit rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-medium text-white shadow-md shadow-brand-600/20 hover:bg-brand-700 disabled:opacity-50"
-      >
-        {saving ? "กำลังบันทึก..." : "บันทึก"}
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={saving}
+          className="w-fit rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-medium text-white shadow-md shadow-brand-600/20 hover:bg-brand-700 disabled:opacity-50"
+        >
+          {saving ? "กำลังบันทึก..." : "บันทึก"}
+        </button>
+        <Link href="/branches" className="rounded-xl border border-gray-200 px-6 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50">
+          ← กลับไปหน้ารายชื่อสาขา
+        </Link>
+      </div>
     </form>
   );
 }

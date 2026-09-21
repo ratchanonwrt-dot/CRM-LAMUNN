@@ -1,9 +1,9 @@
-import { requirePageRole } from "@/lib/requirePageRole";
+import { requireSectionPage } from "@/lib/permissions";
 import { getAllSettings } from "@/lib/settings";
 import SettingsForm from "@/components/SettingsForm";
 
 export default async function SettingsPage() {
-  await requirePageRole(["ADMIN"]);
+  await requireSectionPage("SETTINGS", "edit");
   const settings = await getAllSettings();
 
   return (

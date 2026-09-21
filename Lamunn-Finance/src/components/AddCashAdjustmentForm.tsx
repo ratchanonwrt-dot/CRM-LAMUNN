@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useCanEdit } from "@/lib/RoleContext";
 
 export default function AddCashAdjustmentForm() {
   const router = useRouter();
+  const canEdit = useCanEdit("CASH_STATUS");
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [amount, setAmount] = useState("");
@@ -29,6 +31,8 @@ export default function AddCashAdjustmentForm() {
     setOpen(false);
     router.refresh();
   }
+
+  if (!canEdit) return null;
 
   if (!open) {
     return (

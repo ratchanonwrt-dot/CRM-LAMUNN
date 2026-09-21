@@ -1,9 +1,14 @@
+import { Suspense } from "react";
+import Link from "next/link";
 import { prisma } from "@lamunn/db-finance";
+import BackgroundSync from "@/components/BackgroundSync";
+import { requireSectionPage } from "@/lib/permissions";
 import MonthFilterBar from "@/components/MonthFilterBar";
 import { monthRange } from "@/lib/dates";
 import { formatBaht, formatPercent } from "@/lib/format";
 import { getCashOnHand, getCreditTermOutstanding } from "@/lib/finance";
 import { computeRent } from "@/lib/rentCalc";
+import { queryGpRateHistories, applyGpRateHistories } from "@/lib/gpRateHistory";
 
 function StatCard({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
@@ -14,31 +19,106 @@ function StatCard({ label, value, accent }: { label: string; value: string; acce
   );
 }
 
+function DashboardSkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <div key={i} className="h-20 rounded-xl border border-gray-200 bg-white p-4">
+            <div className="h-3 w-16 rounded bg-gray-100" />
+            <div className="mt-3 h-4 w-20 rounded bg-gray-100" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-8 h-4 w-32 rounded bg-gray-200" />
+      <div className="mt-3 h-64 rounded-xl border border-gray-200 bg-white" />
+    </div>
+  );
+}
+
+// ส่วนหัวหน้า (ชื่อหน้า + ปุ่มเช็คยอด POS + ตัวกรองเดือน) ไม่ต้องรอข้อมูลหนักเลย — นับจำนวนสาขาด้วย query
+// เล็กๆ แยกต่างหาก (นับแถวอย่างเดียว เร็วกว่า query ยอดขายทั้งหมดมาก) ให้ shell ขึ้นได้ทันทีก่อน sync
+// POS + คำนวณยอดขายทั้ง 23+ สาขา (ส่วนที่หนักสุด) ซึ่งแยกไปอยู่ใน Suspense ด้านล่างแทน
 export default async function DashboardPage({ searchParams }: { searchParams: { year?: string; month?: string } }) {
+  await requireSectionPage("DASHBOARD");
   const now = new Date();
   const year = Number(searchParams.year) || now.getUTCFullYear();
   const month = Number(searchParams.month) || now.getUTCMonth() + 1;
+
+  return (
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-gray-800">
+          ภาพรวมยอดขาย
+          {/* จำนวนสาขาอยู่ใน Suspense ของตัวเอง — เดิม await ตรงนี้ก่อน return ทำให้หัวหน้า+ตัวกรองเดือน
+              ต้องรอ DB หนึ่งรอบก่อนจะโชว์อะไรได้เลย ตอนนี้ shell ขึ้นทันที ตัวเลขตามมาเอง */}
+          <Suspense fallback={null}>
+            <ActiveBranchCount />
+          </Suspense>
+        </h1>
+        <Link href="/reconciliation" className="text-xs font-medium text-gray-400 underline-offset-2 hover:text-brand-600 hover:underline">
+          เช็คยอด POS →
+        </Link>
+      </div>
+
+      <MonthFilterBar basePath="/dashboard" year={year} month={month} />
+
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardData year={year} month={month} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function ActiveBranchCount() {
+  const activeBranchCount = await prisma.branch.count({ where: { isActive: true } });
+  return <> — {activeBranchCount} สาขา</>;
+}
+
+async function DashboardData({ year, month }: { year: number; month: number }) {
+  const now = new Date();
   const { start, end } = monthRange(year, month - 1);
+  const clampedEnd = end > now ? now : end;
+
+  // ดึงข้อมูลจากระบบ POS/IMS ของเพื่อนมาเติมอัตโนมัติ (เฉพาะสาขา/วันที่ที่เชื่อมไว้แล้ว)
+  // sync เฉพาะช่วง 4 วันล่าสุดของเดือนปัจจุบัน (ไม่ใช่ทั้งเดือน) เพื่อให้หน้าโหลดเร็ว — ข้อมูลเก่ากว่านั้น
+  // cron อัตโนมัติทุกตี 04:00 ดึงให้ครบอยู่แล้ว ไม่ต้อง sync ซ้ำทุกครั้งที่เข้าหน้า
+  // ไม่ sync ตรงนี้แล้ว — การยิง HTTP ไป Supabase ของระบบ POS อีกโปรเจกต์กลางการ render
+  // ทำให้หน้าค้างรอทุกครั้งที่เปิด ย้ายไปให้ <BackgroundSync /> เรียกหลังหน้าแสดงผลเสร็จแทน
+  // (ตัวเลขขึ้นทันทีจากฐานข้อมูล แล้วรีเฟรชเองถ้า POS มีของใหม่ ส่วน cron ตี 04:00 ยังดึงครบเหมือนเดิม)
+  const isCurrentMonthView = year === now.getUTCFullYear() && month === now.getUTCMonth() + 1;
 
   // ไม่กรอง isActive — สาขาที่ปิดไปแล้วต้องยังเห็นยอดขายย้อนหลังของเดือนที่เคยเปิดอยู่
-  const branches = await prisma.branch.findMany({
-    orderBy: { sortOrder: "asc" },
-    include: { rentConfig: true },
-  });
-
-  const salesAgg = await prisma.dailySales.groupBy({
-    by: ["branchId"],
-    where: { date: { gte: start, lte: end } },
-    _sum: { cashPos: true, transfer: true, cashTransferCombined: true, grab: true, lineman: true },
-  });
+  // ทุก query ด้านล่างนี้เป็นอิสระจากกันหมด (ไม่มีตัวไหนต้องรอผลลัพธ์ของอีกตัว) ยิงพร้อมกันทีเดียวแทนที่จะแยก
+  // เป็น 3 รอบ sequential (สาขา/ยอดขาย → gpRateHistory → cashOnHand/creditTerm) เพื่อลดจำนวนรอบไปกลับกับ DB
+  const [branches, salesAgg, companyAgg, eventAgg, gpHistories, cashOnHand, creditTermOutstanding] = await Promise.all([
+    prisma.branch.findMany({ orderBy: { sortOrder: "asc" }, include: { rentConfig: true } }),
+    prisma.dailySales.groupBy({
+      by: ["branchId"],
+      where: { date: { gte: start, lte: end } },
+      _sum: { cashPos: true, transfer: true, cashTransferCombined: true, grab: true, lineman: true },
+    }),
+    prisma.companyChannelDaily.aggregate({
+      where: { date: { gte: start, lte: end } },
+      _sum: { tiktok: true, fbLine: true, pickup: true, catering: true },
+    }),
+    prisma.eventSale.aggregate({
+      where: { startDate: { gte: start, lte: end } },
+      _sum: { storefront: true, grab: true, lineman: true },
+    }),
+    queryGpRateHistories(year, month),
+    getCashOnHand(),
+    getCreditTermOutstanding(),
+  ]);
   const salesByBranch = new Map(salesAgg.map((s) => [s.branchId, s._sum]));
-
-  const companyAgg = await prisma.companyChannelDaily.aggregate({
-    where: { date: { gte: start, lte: end } },
-    _sum: { tiktok: true, fbLine: true, pickup: true, catering: true },
-  });
   const ecomTotal =
     (companyAgg._sum.tiktok ?? 0) + (companyAgg._sum.fbLine ?? 0) + (companyAgg._sum.pickup ?? 0) + (companyAgg._sum.catering ?? 0);
+  const eventTotal = (eventAgg._sum.storefront ?? 0) + (eventAgg._sum.grab ?? 0) + (eventAgg._sum.lineman ?? 0);
+
+  const baseRates = new Map(
+    branches.filter((b) => b.rentConfig).map((b) => [b.id, { gpPercentStorefront: b.rentConfig!.gpPercentStorefront, gpPercentDelivery: b.rentConfig!.gpPercentDelivery }])
+  );
+  const effectiveRates = applyGpRateHistories(baseRates, gpHistories);
 
   const rows = branches.map((b) => {
     const s = salesByBranch.get(b.id);
@@ -46,7 +126,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
     const delivery = (s?.grab ?? 0) + (s?.lineman ?? 0);
     const total = storefront + delivery;
 
-    const rent = b.rentConfig ? computeRent(b.rentConfig, storefront, delivery).rentAmount : 0;
+    const rate = effectiveRates.get(b.id);
+    const rent = b.rentConfig ? computeRent({ ...b.rentConfig, ...rate }, storefront, delivery).rentAmount : 0;
 
     return { branch: b, storefront, delivery, total, rent };
   });
@@ -54,21 +135,21 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   const totalStorefront = rows.reduce((a, r) => a + r.storefront, 0);
   const totalDelivery = rows.reduce((a, r) => a + r.delivery, 0);
   const totalRent = rows.reduce((a, r) => a + r.rent, 0);
-  const grandTotal = totalStorefront + totalDelivery + ecomTotal;
-
-  const [cashOnHand, creditTermOutstanding] = await Promise.all([getCashOnHand(), getCreditTermOutstanding()]);
+  const grandTotal = totalStorefront + totalDelivery + ecomTotal + eventTotal;
 
   return (
-    <div>
-      <h1 className="mb-6 text-xl font-bold text-gray-800">ภาพรวมยอดขาย — 23 สาขา</h1>
-
-      <MonthFilterBar basePath="/dashboard" year={year} month={month} />
-
+    <>
+      {isCurrentMonthView && (
+        <div className="mb-3 flex justify-end">
+          <BackgroundSync />
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard label="ยอดขายรวมทั้งหมด" value={formatBaht(grandTotal)} accent="text-brand-700" />
         <StatCard label="หน้าร้าน (Storefront)" value={formatBaht(totalStorefront)} />
         <StatCard label="Delivery (Grab+Lineman)" value={formatBaht(totalDelivery)} />
         <StatCard label="E-Commerce" value={formatBaht(ecomTotal)} />
+        <StatCard label="Event ชั่วคราว" value={formatBaht(eventTotal)} />
         <StatCard label="ค่าเช่ารวม (ประมาณการ)" value={formatBaht(totalRent)} />
         <StatCard label="Credit Term ค้างห้าง" value={formatBaht(creditTermOutstanding)} accent="text-amber-600" />
       </div>
@@ -118,7 +199,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           <tfoot>
             <tr className="border-t-2 border-gray-200 bg-gray-50 font-semibold">
               <td className="px-3 py-2" colSpan={3}>
-                รวมทั้งหมด (+ E-Commerce {formatBaht(ecomTotal)})
+                รวมทั้งหมด (+ E-Commerce {formatBaht(ecomTotal)} + Event {formatBaht(eventTotal)})
               </td>
               <td className="px-3 py-2 text-right">{formatBaht(totalStorefront)}</td>
               <td className="px-3 py-2 text-right">{formatBaht(totalDelivery)}</td>
@@ -129,6 +210,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           </tfoot>
         </table>
       </div>
-    </div>
+    </>
   );
 }
