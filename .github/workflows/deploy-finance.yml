@@ -1,0 +1,63 @@
+# Deploy Lamunn-Finance ขึ้น production อัตโนมัติเมื่อมี commit เข้า master
+#
+# แทนการรัน `vercel --prod` จากเครื่องใครคนหนึ่ง — ทุกคน (รวม AI agent ของทีมบัญชี) แค่ merge PR
+# ก็ขึ้นเว็บจริงได้ โดยไม่ต้องมีสิทธิ์ใน Vercel เลย
+#
+# Secrets ที่ต้องตั้งใน GitHub → Settings → Secrets and variables → Actions:
+#   VERCEL_TOKEN   token ของเจ้าของ (vercel.com/account/tokens)
+#   DATABASE_URL   / DIRECT_URL   ค่าเดียวกับใน Lamunn-Finance/.env ของเครื่อง production (ใช้รัน migration)
+#
+# ORG/PROJECT id ไม่ใช่ความลับ — เป็นค่าใน .vercel/project.json ที่ถูก gitignore ไว้
+name: deploy-finance
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "Lamunn-Finance/**"
+      - "packages/db-finance/**"
+      - ".github/workflows/deploy-finance.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-finance
+  cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: team_Sh5GLzkkONrmAJCYkHApaXFH
+  VERCEL_PROJECT_ID: prj_y8ZSjhGjZvYgKtTZqQZZFvVkuKBy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: ติดตั้ง dependencies
+        run: npm ci
+
+      # รัน migration ก่อน deploy เสมอ — โค้ดใหม่อาจอ้างคอลัมน์ใหม่ ถ้า deploy ก่อนหน้าเว็บจะพังชั่วคราว
+      # prisma migrate deploy ทำเฉพาะ migration ที่ยังไม่เคยรัน (idempotent) รันซ้ำได้ปลอดภัย
+      - name: รัน database migration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: npx prisma migrate deploy --schema packages/db-finance/prisma/schema.prisma
+
+      # ต้อง deploy จาก root ของ monorepo (Root Directory ของโปรเจกต์ Vercel ตั้งเป็น Lamunn-Finance)
+      # และบังคับ region sin1 ให้อยู่ใกล้ Supabase — regions ใน vercel.json ถูก CLI มองข้าม
+      - name: Deploy to Vercel (production)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npx vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN" --scope lamunncrm --regions sin1 \
+            --meta gitCommit="${{ github.sha }}" --meta gitAuthor="${{ github.actor }}" | tee deploy.log
+          URL=$(grep -oE 'https://[a-z0-9.-]+\.vercel\.app' deploy.log | tail -1)
+          echo "deployed: $URL"
+          echo "### Deployed ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "$URL  (commit ${{ github.sha }} by ${{ github.actor }})" >> "$GITHUB_STEP_SUMMARY"

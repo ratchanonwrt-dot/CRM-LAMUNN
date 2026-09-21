@@ -1,0 +1,14 @@
+# ทุกไฟล์เป็นของเจ้าของ repo — ยกเว้นโฟลเดอร์ระบบบัญชีที่ทีมบัญชีดูแลเอง
+#
+# ใช้ร่วมกับ branch protection "Require review from Code Owners" ถ้าอยากให้ PR ที่แตะไฟล์
+# นอกบัญชีต้องมีเจ้าของกด approve — โฟลเดอร์บัญชีด้านล่างไม่กำหนดเจ้าของ จึง merge ได้เอง
+# เมื่อ CI (accounting-scope) ผ่าน
+*                                           @ratchanonwrt-dot
+
+Lamunn-Finance/src/app/(app)/accounting/
+Lamunn-Finance/src/app/api/accounting/
+Lamunn-Finance/src/app/print/
+Lamunn-Finance/src/components/accounting/
+Lamunn-Finance/src/lib/accounting/
+Lamunn-Finance/scripts/verify-*.ts
+Lamunn-Finance/docs/
