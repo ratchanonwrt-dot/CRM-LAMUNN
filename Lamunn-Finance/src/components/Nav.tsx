@@ -144,23 +144,26 @@ function isActiveLink(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
-function NavLinkRow({ link, pathname }: { link: NavLink; pathname: string }) {
+function NavLinkRow({ link, pathname, colorful = false }: { link: NavLink; pathname: string; colorful?: boolean }) {
   const Icon = link.icon;
-  const active = isActiveLink(pathname, link.href);
+  // ภาพรวมเป็นทางเข้าของทั้งหมวด จึงต้องเทียบตรง ๆ เพื่อไม่ให้เด่นพร้อมหน้างบที่เลือก
+  const active = colorful && link.href === "/accounting" ? pathname === link.href : isActiveLink(pathname, link.href);
   return (
     <Link
       href={link.href}
+      aria-current={active ? "page" : undefined}
       // ไม่ปิด prefetch — Next.js จะโหลด loading.tsx ของหน้าปลายทางไว้ล่วงหน้าตอนลิงก์อยู่ในจอ
       // พอกดจึงขึ้น skeleton ทันทีแทนที่จะค้างรอเซิร์ฟเวอร์ตอบก่อน (นี่คือความต่างจากเว็บ HRM ที่กดแล้ววิ่งเลย)
       // ใช้ได้คุ้มเพราะเมนูยุบเป็นหมวดอยู่แล้ว มีแค่ลิงก์ของหมวดที่กางอยู่เท่านั้นที่ถูก prefetch
-      // ไอคอนโทนเดียว (เทา → น้ำเงินเมื่อ active) แทนวงกลมสีรุ้งรายเมนู — สีในเมนูมีความหมายเดียวคือ "หมวด"
-      // (แถบสีที่หัวหมวด) กับ "หน้าที่เปิดอยู่" ตาไม่ต้องแยกสี 20 สีเพื่อหาเมนูเดียว
+      // สีประจำรายงานช่วยแยกเมนูงบการเงิน ส่วนกรอบและตัวหนาช่วยระบุหน้าที่เปิดอยู่
       className={clsx(
-        "group flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13.5px] transition-colors",
-        active ? "bg-brand-50 font-semibold text-brand-700" : "font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+        "group flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13.5px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
+        colorful
+          ? [link.color, active ? "font-semibold ring-1 ring-inset ring-current" : "font-medium hover:brightness-95"]
+          : active ? "bg-brand-50 font-semibold text-brand-700" : "font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
       )}
     >
-      <Icon size={16} strokeWidth={2} className={clsx("shrink-0", active ? "text-brand-600" : "text-gray-400 group-hover:text-gray-600")} />
+      <Icon size={16} strokeWidth={2} className={clsx("shrink-0", colorful ? "text-current" : active ? "text-brand-600" : "text-gray-400 group-hover:text-gray-600")} />
       <span className="truncate">{link.label}</span>
     </Link>
   );
@@ -169,7 +172,7 @@ function NavLinkRow({ link, pathname }: { link: NavLink; pathname: string }) {
 /** หมวดในเมนูซ้าย — ยุบไว้เป็นค่าเริ่มต้น เห็นแค่ชื่อหมวดใหญ่
  * หมวดที่มีหน้าที่กำลังเปิดอยู่จะกางให้เองอัตโนมัติ (จะได้รู้ว่าตัวเองอยู่ตรงไหน)
  * และกางค้างไว้ตามที่ผู้ใช้กด แม้เปลี่ยนหน้าไปหน้าอื่นในหมวดเดียวกัน */
-function NavGroup({ title, tone, links, pathname }: { title: string; tone: Tone; links: NavLink[]; pathname: string }) {
+function NavGroup({ title, tone, links, pathname, colorful = false }: { title: string; tone: Tone; links: NavLink[]; pathname: string; colorful?: boolean }) {
   const hasActive = links.some((l) => isActiveLink(pathname, l.href));
   const [open, setOpen] = useState(hasActive);
 
@@ -198,9 +201,9 @@ function NavGroup({ title, tone, links, pathname }: { title: string; tone: Tone;
         />
       </button>
       {open && (
-        <div className={clsx("ml-2.5 mt-0.5 flex flex-col gap-px border-l pl-2", t.rail)}>
+        <div className={clsx("ml-2.5 mt-0.5 flex flex-col border-l pl-2", colorful ? "gap-1" : "gap-px", t.rail)}>
           {links.map((link) => (
-            <NavLinkRow key={link.href} link={link} pathname={pathname} />
+            <NavLinkRow key={link.href} link={link} pathname={pathname} colorful={colorful} />
           ))}
         </div>
       )}
@@ -262,7 +265,7 @@ export default function Nav({
       <nav className="flex flex-1 flex-col">
         <NavGroup title="การเงิน" tone="blue" links={finance} pathname={pathname} />
         <NavGroup title="บัญชี" tone="amber" links={accounting} pathname={pathname} />
-        <NavGroup title="งบการเงิน" tone="green" links={ledger} pathname={pathname} />
+        <NavGroup title="งบการเงิน" tone="green" links={ledger} pathname={pathname} colorful />
         <NavGroup title="Catering" tone="violet" links={catering} pathname={pathname} />
         <NavGroup title="อื่นๆ" tone="slate" links={other} pathname={pathname} />
       </nav>
