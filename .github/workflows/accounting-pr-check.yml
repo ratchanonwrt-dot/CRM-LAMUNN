@@ -1,7 +1,12 @@
-# ด่านตรวจ PR: (1) แตะเฉพาะไฟล์ในขอบเขตระบบบัญชี (2) tsc ผ่าน
+# ด่านตรวจ PR ของทีมบัญชี: (1) ห้ามแตะส่วนที่เจ้าของสงวนไว้ (2) tsc ผ่าน
 #
 # ตั้งใจให้เป็น required status check ของ branch master — PR ที่ไม่ผ่านจะ merge ไม่ได้
-# เจ้าของ repo (OWNER ข้างล่าง) ข้ามข้อ (1) ได้ เพราะเป็นคนดูแลฝั่งการเงินเอง แต่ข้อ (2) ยังต้องผ่าน
+# เจ้าของ repo (OWNER ข้างล่าง) ข้ามข้อ (1) ได้ แต่ข้อ (2) ยังต้องผ่าน
+#
+# นโยบาย (ตั้งแต่ 2026-09-22): เป็น "รายการห้ามแตะ" ไม่ใช่ "รายการที่แก้ได้" — ทีมบัญชีแก้ได้ทุกอย่าง
+# ยกเว้นหน้าการเงินที่เจ้าของดูแลเอง: สถานะการเงินบริษัท / รายงานวิเคราะห์ (รวมอันดับสาขา, SSSG,
+# ยอดขายรายสาขา) / ยอดขายรายวัน-รายเดือน / credit term / สถานะเงินสด / ภาพรวม / ค่าใช้จ่ายลงทุน
+# รวมทั้ง API, lib คำนวณ และคอมโพเนนต์ที่หน้าพวกนั้นใช้ + ไฟล์ CI/สิทธิ์เอง
 name: accounting-scope
 
 on:
@@ -20,18 +25,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: ไฟล์ที่เปลี่ยนต้องอยู่ในโฟลเดอร์บัญชีเท่านั้น
+      - name: ห้ามแตะส่วนที่เจ้าของสงวนไว้ (ฝั่งการเงิน)
         if: github.event.pull_request.user.login != env.OWNER
         run: |
           set -euo pipefail
           git diff --name-only "origin/${{ github.base_ref }}...HEAD" > changed.txt
           echo "ไฟล์ที่เปลี่ยน:"; cat changed.txt
 
-          # รายการเดียวกับ AGENTS.md — แก้ที่นั่นแล้วมาแก้ตรงนี้ให้ตรงกันด้วย
-          ALLOWED='^(Lamunn-Finance/src/app/\(app\)/accounting/|Lamunn-Finance/src/app/api/accounting/|Lamunn-Finance/src/app/print/|Lamunn-Finance/src/components/accounting/|Lamunn-Finance/src/lib/accounting/|Lamunn-Finance/scripts/verify-[^/]+\.ts$|Lamunn-Finance/docs/|packages/db-finance/prisma/schema\.prisma$|packages/db-finance/prisma/migrations/)'
-          if grep -vE "$ALLOWED" changed.txt > outside.txt; then
-            echo "::error::PR นี้แตะไฟล์นอกขอบเขตระบบบัญชี — ต้องให้เจ้าของ repo ตรวจและอนุมัติเอง:"
-            cat outside.txt
+          # รายการเดียวกับ AGENTS.md (หัวข้อ "ส่วนที่ห้ามแตะ") — แก้ที่นั่นแล้วมาแก้ตรงนี้ให้ตรงกันด้วย
+          PROTECTED='^('\
+          'Lamunn-Finance/src/app/\(app\)/(company-status|reports|monthly|credit-term|cash-status|dashboard|investment-cost)/'\
+          '|Lamunn-Finance/src/app/api/(company-status|company-channel|daily-sales|credit-term|cash-adjustments|investment-costs|export|dividend-payments|gp-rate-history|billing-groups|branch-billing)/'\
+          '|Lamunn-Finance/src/lib/(finance|reportsCalc|sssgCalc|creditTermCalc|billingCalc|billingPdf|gpRateHistory|rentCalc|exportXlsx)\.tsx?$'\
+          '|Lamunn-Finance/src/components/(charts/|ExportPanel|BackgroundSync|RankingFilterBar|BranchSalesFilterBar|BranchDailyMatrix|EditableMonthlyChannelTable|CompanyStatusLive'\
+          '|CreditTermStatusButton|CreditTermCycleForm|CancelCreditTermButton|GenerateCreditTermButton|AddManualCreditTermForm'\
+          '|BranchBillingRow|BranchBillingGroupAssign|BillingGroupSettings'\
+          '|AddCashAdjustmentForm|DeleteCashAdjustmentButton|AddInvestmentCostForm|DeleteInvestmentCostButton|InvestmentResaleCell)'\
+          '|\.github/'\
+          ')'
+          if grep -E "$PROTECTED" changed.txt > protected.txt; then
+            echo "::error::PR นี้แตะส่วนที่เจ้าของสงวนไว้ (ฝั่งการเงิน/CI) — ต้องให้เจ้าของ repo ตรวจและ merge เอง:"
+            cat protected.txt
             exit 1
           fi
 
@@ -46,13 +60,12 @@ jobs:
           # schema.prisma: บรรทัดที่เปลี่ยนต้องอยู่ใน model/enum ที่ชื่อขึ้นต้นด้วย Acc เท่านั้น
           if grep -q '^packages/db-finance/prisma/schema.prisma$' changed.txt; then
             git diff "origin/${{ github.base_ref }}...HEAD" -- packages/db-finance/prisma/schema.prisma > schema.diff
-            # หา hunk header (@@ ... @@ model X {) ที่ไม่ใช่ Acc*
             if grep -E '^@@.*(model|enum) ' schema.diff | grep -vE '(model|enum) Acc'; then
               echo "::error::schema.prisma ถูกแก้นอก model/enum Acc* — ต้องให้เจ้าของ repo ตรวจเอง"
               exit 1
             fi
           fi
-          echo "ผ่าน: ทุกไฟล์อยู่ในขอบเขตระบบบัญชี"
+          echo "ผ่าน: ไม่แตะส่วนที่สงวนไว้"
 
       - uses: actions/setup-node@v4
         with:

@@ -1,33 +1,38 @@
 # AGENTS.md — กติกาสำหรับ AI agent (Codex) ที่พัฒนา "ระบบบัญชี" ใน repo นี้
 
 repo นี้เป็น monorepo ของธุรกิจร้านอาหาร/เบเกอรี่ Lamunn มีหลายแอป (CRM, Finance, Catering, Live ฯลฯ)
-**งานของคุณคือระบบบัญชีในแอป `Lamunn-Finance` เท่านั้น** ส่วนอื่นของ repo ดูแลโดยทีมอื่น
+**งานหลักของคุณคือระบบบัญชีในแอป `Lamunn-Finance`** แก้ส่วนอื่นของแอปนี้ได้ด้วย ยกเว้นหน้าการเงินที่สงวนไว้ (ดูตารางด้านล่าง) ส่วนแอปอื่นใน repo ดูแลโดยทีมอื่น
 
 ## ระบบคืออะไร
 
 `Lamunn-Finance` เป็นเว็บ Next.js 14 (App Router) + Prisma 5 + PostgreSQL (Supabase) ข้างในมี 2 ส่วนที่คนละทีมดูแล:
 
-- **การเงิน** — ยอดขายรายวัน, ค่าเช่า, credit term, เงินฝาก, catering ฯลฯ → **ไม่ใช่งานของคุณ ห้ามแก้**
+- **การเงิน** — ยอดขายรายวัน, ค่าเช่า, credit term, เงินฝาก, catering ฯลฯ → แก้ได้บางส่วน **ยกเว้นหน้าที่เจ้าของสงวนไว้ (ห้ามแตะ — ดูตารางด้านล่าง)**
 - **บัญชี** — ระบบบัญชีคู่แบบโปรแกรม Express: ผังบัญชี, สมุดรายวัน/ใบสำคัญ, งบทดลอง, งบกำไรขาดทุน,
   งบแสดงฐานะการเงิน, บัญชีแยกประเภท, ใบกำกับภาษีเต็มรูป, รายงานภาษีซื้อ/ขาย, ภ.พ.30, ภ.ง.ด.3/53, คู่ค้า → **นี่คืองานของคุณ**
 
-## ขอบเขตไฟล์ที่แก้ได้ (เท่านั้น)
+## ขอบเขตการแก้ไข — แก้ได้ทุกอย่าง ยกเว้น "ส่วนที่ห้ามแตะ" ด้านล่าง
 
-```
-Lamunn-Finance/src/app/(app)/accounting/**
-Lamunn-Finance/src/app/api/accounting/**
-Lamunn-Finance/src/app/print/**
-Lamunn-Finance/src/components/accounting/**
-Lamunn-Finance/src/lib/accounting/**
-Lamunn-Finance/scripts/verify-*.ts
-Lamunn-Finance/docs/**
-packages/db-finance/prisma/schema.prisma   — เฉพาะ model ที่ขึ้นต้นด้วย Acc* (และ enum Acc*)
-packages/db-finance/prisma/migrations/**   — เฉพาะตาราง acc_*
-```
+ทีมบัญชีแก้ได้ทั้งแอป Lamunn-Finance (รวมเมนูซ้าย, หน้าตั้งค่า, ค่าเช่า, เงินฝาก, catering, staff ฯลฯ)
+และ merge + deploy ได้เองเมื่อ CI ผ่าน **ยกเว้น** หน้าการเงินที่เจ้าของดูแลเอง ซึ่งห้ามแตะ:
 
-ไฟล์อื่นนอกรายการนี้ **ห้ามแก้** ถ้างานจำเป็นต้องแตะ (เช่นเมนูซ้ายใน `src/components/Nav.tsx`
-หรือ `src/lib/permissions.ts`) ให้หยุดแล้วบอกผู้สั่งงานก่อนว่าทำไม — PR ที่แตะไฟล์นอกขอบเขตจะถูก CI ปฏิเสธ
-และต้องให้เจ้าของ repo อนุมัติเอง
+| ส่วนที่ห้ามแตะ | ไฟล์ |
+|---|---|
+| สถานะการเงินบริษัท | `src/app/(app)/company-status/**`, `src/app/api/company-status/**`, `api/company-channel/**`, `api/dividend-payments/**`, `src/components/CompanyStatusLive.tsx` |
+| รายงานวิเคราะห์ (รวมอันดับสาขา, SSSG, ยอดขายรายสาขา) | `src/app/(app)/reports/**`, `src/app/api/export/**`, `src/lib/reportsCalc.ts`, `sssgCalc.ts`, `exportXlsx.ts`, `src/components/charts/**`, `ExportPanel`, `RankingFilterBar`, `BranchSalesFilterBar` |
+| ยอดขายรายวัน / รายเดือน | `src/app/(app)/monthly/**`, `src/app/api/daily-sales/**`, `src/components/BranchDailyMatrix`, `EditableMonthlyChannelTable`, `BackgroundSync` |
+| Credit term / วางบิล | `src/app/(app)/credit-term/**`, `src/app/api/credit-term/**`, `api/billing-groups/**`, `api/branch-billing/**`, `api/gp-rate-history/**`, `src/lib/creditTermCalc.ts`, `billingCalc.ts`, `billingPdf.tsx`, `gpRateHistory.ts`, `rentCalc.ts`, `src/components/CreditTerm*`, `*CreditTerm*`, `BranchBilling*`, `BillingGroupSettings` |
+| สถานะเงินสด | `src/app/(app)/cash-status/**`, `src/app/api/cash-adjustments/**`, `src/components/AddCashAdjustmentForm`, `DeleteCashAdjustmentButton` |
+| ภาพรวม (dashboard) | `src/app/(app)/dashboard/**`, `src/lib/finance.ts` |
+| ค่าใช้จ่ายลงทุน | `src/app/(app)/investment-cost/**`, `src/app/api/investment-costs/**`, `src/components/AddInvestmentCostForm`, `DeleteInvestmentCostButton`, `InvestmentResaleCell` |
+| CI / สิทธิ์ | `.github/**` |
+| ฐานข้อมูล | `packages/db-finance/prisma/schema.prisma` แก้ได้เฉพาะ model/enum ที่ขึ้นต้นด้วย `Acc*`, migration ใหม่แตะได้เฉพาะตาราง `acc_*` |
+
+ถ้างานจำเป็นต้องแตะส่วนที่ห้าม ให้หยุดแล้วบอกผู้สั่งงานก่อนว่าทำไม — CI (`accounting-scope`) จะปฏิเสธ PR นั้น
+และต้องให้เจ้าของ repo ตรวจแล้ว merge เอง (รายการใน CI ต้องตรงกับตารางนี้เสมอ: `.github/workflows/accounting-pr-check.yml`)
+
+ไฟล์ที่ใช้ร่วมกันแต่**แก้ได้** เช่น `src/components/Nav.tsx` (เมนูซ้าย), `src/lib/permissions.ts`, `src/app/(app)/layout.tsx`
+— แก้ได้แต่ต้องระวังไม่ให้หน้าการเงินที่ห้ามแตะเสียหาย และรัน `tsc` ให้ผ่านทุกครั้ง
 
 ## หลักการที่ระบบยึด (ห้ามทำผิด)
 
