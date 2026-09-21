@@ -8,15 +8,15 @@
 1. ติดตั้ง **Git** (git-scm.com), **Node.js 20 LTS** (nodejs.org), **VS Code** (code.visualstudio.com)
 2. ล็อกอิน GitHub ด้วยบัญชีของคุณ (เจ้าของระบบต้องเชิญคุณเข้า repo ก่อน) แล้วใน Terminal:
    ```bash
-   git clone https://github.com/ratchanonwrt-dot/CRM-LAMUNN.git
-   cd CRM-LAMUNN
+   git clone https://github.com/ratchanonwrt-dot/Lamunn-Website.git
+   cd Lamunn-Website
    npm install
    ```
 3. สร้างไฟล์ `Lamunn-Finance/.env` โดยคัดลอกจาก `Lamunn-Finance/.env.example` แล้วเติมค่าที่เจ้าของระบบส่งให้
    (**เป็นฐานข้อมูล dev เท่านั้น — ไม่ใช่ข้อมูลจริง**)
 4. ติดตั้ง Codex: ใน VS Code → Extensions → ค้น "Codex" (OpenAI) → Install → Sign in ด้วยบัญชี ChatGPT
    (หรือแบบ CLI: `npm install -g @openai/codex` แล้ว `codex login`)
-5. เปิดโฟลเดอร์ `CRM-LAMUNN` ใน VS Code — Codex จะอ่านกติกาจาก `AGENTS.md` ที่ root ของ repo เอง
+5. เปิดโฟลเดอร์ `Lamunn-Website` ใน VS Code — Codex จะอ่านกติกาจาก `AGENTS.md` ที่ root ของ repo เอง
 6. ทดสอบว่ารันได้:
    ```bash
    cd Lamunn-Finance
