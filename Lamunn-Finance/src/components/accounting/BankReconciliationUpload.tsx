@@ -212,6 +212,9 @@ export default function BankReconciliationUpload() {
             <span className="flex items-center gap-1.5 text-rose-700">
               <span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> ไม่ตรงกัน
             </span>
+            <span className="flex items-center gap-1.5 text-amber-700">
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> วันที่คลาดเคลื่อน
+            </span>
           </div>
         </div>
 
@@ -231,7 +234,11 @@ export default function BankReconciliationUpload() {
               {(results ?? []).map((row) => (
                 <tr
                   key={row.id}
-                  className={row.matched ? "border-t border-gray-100 text-gray-700" : "border-t border-rose-200 bg-rose-50 text-rose-800"}
+                  className={row.matchKind === "near-date"
+                    ? "border-t border-amber-200 bg-amber-50 text-amber-900"
+                    : row.matched
+                      ? "border-t border-gray-100 text-gray-700"
+                      : "border-t border-rose-200 bg-rose-50 text-rose-800"}
                 >
                   <td className="whitespace-nowrap px-4 py-3">{row.dateLabel}</td>
                   <td className="px-4 py-3 font-medium">{row.bank?.detail || "—"}</td>
@@ -239,8 +246,8 @@ export default function BankReconciliationUpload() {
                   <td className="px-4 py-3 font-medium">{row.ledger?.detail || "—"}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{reconciliationAmountLabel(row.ledger)}</td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${row.matched ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
-                      {row.matched ? "ตรงกัน" : "ไม่ตรงกัน"}
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${row.matchKind === "near-date" ? "bg-amber-100 text-amber-800" : row.matched ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                      {row.matchKind === "near-date" ? `วันที่ต่าง ${row.daysApart} วัน` : row.matched ? "ตรงกัน" : "ไม่ตรงกัน"}
                     </span>
                   </td>
                 </tr>

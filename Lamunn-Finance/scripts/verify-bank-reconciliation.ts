@@ -33,6 +33,20 @@ function main() {
     sparseHeader,
     [null, "05/01/2094", null, "[test] เว้นคอลัมน์", null, "500.00"],
   ], "bank");
+  const duplicateBank = parseReconciliationTable([
+    ["วันที่", "รายการ", "เงินออก", "รายละเอียด"],
+    ["10/01/2094", "โอนเงิน", 500, "โอนไป KTB น.ส. ดารณี เพชรพัน++"],
+    ["10/01/2094", "โอนเงิน", 500, "โอนไป KTB น.ส. ดารณี เพชรพัน++"],
+    ["10/01/2094", "โอนเงิน", 10700, "โอนไป BBL บจ.สรรพสินค้าเซ็นท++"],
+  ], "bank");
+  const duplicateLedger = parseReconciliationTable([
+    ["วันที่", "รายการ", "สาขา/คู่ค้า", "เดบิต", "เครดิต"],
+    ["10/01/2094", "[test] ค่าจ้างไลฟ์", "นางสาว ดารณี เพชรพันธ์", 0, 500],
+    ["10/01/2094", "[test] ค่าจ้างไลฟ์", "นางสาว ดารณี เพชรพันธ์", 0, 500],
+    ["10/01/2094", "[test] ค่าจ้างไลฟ์", "นางสาว ปาณิศา อัตถากร", 0, 500],
+    ["11/01/2094", "[test] เงินประกันเซ็นทรัล", "บริษัท สรรพสินค้าเซ็นทรัล จำกัด", 0, 10700],
+  ], "ledger");
+  const duplicateResult = reconcileBankRows(duplicateBank, duplicateLedger);
 
   console.log("\n=== อ่านไฟล์เป็นสตางค์ ===");
   check("เงินเข้าธนาคารเป็นบวก", bank[0].amount, 125_050);
@@ -47,13 +61,18 @@ function main() {
     ["[test] รายการค้าง", null],
     [null, "[test] รายการเฉพาะบัญชี"],
   ]);
+  check("ยอดซ้ำจับด้วยชื่อคู่ค้าและเหลือคนที่ไม่มีรายการธนาคาร", duplicateResult.filter((row) => !row.matched && row.ledger).map((row) => row.ledger?.detail), ["[test] ค่าจ้างไลฟ์ — นางสาว ปาณิศา อัตถากร"]);
+  check("วันที่คลาดหนึ่งวันจับได้เมื่อรายละเอียดสอดคล้อง", duplicateResult.filter((row) => row.matchKind === "near-date").map((row) => row.ledger?.amount), [-1_070_000]);
 
   console.log("\n=== ล้างข้อมูลทดสอบ ===");
   bank.length = 0;
   ledger.length = 0;
   result.length = 0;
   sparse.length = 0;
-  check("ข้อมูลในหน่วยความจำถูกล้าง", [bank.length, ledger.length, result.length, sparse.length], [0, 0, 0, 0]);
+  duplicateBank.length = 0;
+  duplicateLedger.length = 0;
+  duplicateResult.length = 0;
+  check("ข้อมูลในหน่วยความจำถูกล้าง", [bank.length, ledger.length, result.length, sparse.length, duplicateBank.length, duplicateLedger.length, duplicateResult.length], [0, 0, 0, 0, 0, 0, 0]);
 
   console.log(failures === 0 ? "\n✅ ผ่านทั้งหมด\n" : `\n❌ ไม่ผ่าน ${failures} ข้อ\n`);
   process.exit(failures === 0 ? 0 : 1);
