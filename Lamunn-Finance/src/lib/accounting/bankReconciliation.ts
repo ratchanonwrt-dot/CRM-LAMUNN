@@ -1,6 +1,7 @@
 import { fmtSatang } from "./money";
 
 export type ReconciliationSource = "bank" | "ledger";
+export type ReconciliationDirection = "in" | "out" | "both";
 
 export type ReconciliationItem = {
   rowNumber: number;
@@ -229,7 +230,19 @@ function daysBetween(left: string, right: string): number {
   return Math.round(Math.abs(Date.parse(left) - Date.parse(right)) / 86_400_000);
 }
 
-export function reconcileBankRows(bankRows: ReconciliationItem[], ledgerRows: ReconciliationItem[]): ReconciliationResultRow[] {
+export function reconcileBankRows(
+  bankRows: ReconciliationItem[],
+  ledgerRows: ReconciliationItem[],
+  direction: ReconciliationDirection = "both",
+): ReconciliationResultRow[] {
+  // กรองก่อนสร้างคู่เพื่อให้รายการค้างสะท้อนเฉพาะทิศทางที่ผู้ใช้ต้องการตรวจจริง
+  if (direction !== "both") {
+    const accepts = direction === "in"
+      ? (row: ReconciliationItem) => row.amount > 0
+      : (row: ReconciliationItem) => row.amount < 0;
+    bankRows = bankRows.filter(accepts);
+    ledgerRows = ledgerRows.filter(accepts);
+  }
   const candidates: Array<{ bankIndex: number; ledgerIndex: number; daysApart: number; score: number }> = [];
   for (let bankIndex = 0; bankIndex < bankRows.length; bankIndex++) {
     for (let ledgerIndex = 0; ledgerIndex < ledgerRows.length; ledgerIndex++) {

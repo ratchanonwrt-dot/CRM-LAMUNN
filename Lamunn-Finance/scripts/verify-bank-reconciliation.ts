@@ -28,7 +28,9 @@ function main() {
     ["2094-01-02", "[test] ค่าธรรมเนียมธนาคาร", 0, 15],
     ["2094-01-04", "[test] รายการเฉพาะบัญชี", 99, ""],
   ], "ledger");
-  const result = reconcileBankRows(bank, ledger);
+  const incomingResult = reconcileBankRows(bank, ledger, "in");
+  const outgoingResult = reconcileBankRows(bank, ledger, "out");
+  const allResult = reconcileBankRows(bank, ledger, "both");
   const sparse = parseReconciliationTable([
     sparseHeader,
     [null, "05/01/2094", null, "[test] เว้นคอลัมน์", null, "500.00"],
@@ -55,24 +57,26 @@ function main() {
   check("อ่านหัวตารางที่มีคอลัมน์ว่างคั่นได้", sparse[0].amount, 50_000);
 
   console.log("\n=== จับคู่ด้วยวันที่และจำนวนเงิน ===");
-  check("จับคู่ได้ 2 รายการ", result.filter((row) => row.matched).length, 2);
-  check("รายการไม่ตรงกันเป็น 2 รายการ", result.filter((row) => !row.matched).length, 2);
-  check("เก็บรายการค้างจากทั้งสองฝั่ง", result.filter((row) => !row.matched).map((row) => [row.bank?.detail ?? null, row.ledger?.detail ?? null]), [
-    ["[test] รายการค้าง", null],
-    [null, "[test] รายการเฉพาะบัญชี"],
-  ]);
+  check("เลือกเงินเข้าจับคู่ได้ 1 รายการ", incomingResult.filter((row) => row.matched).length, 1);
+  check("เลือกเงินเข้าไม่แสดงเงินออก", incomingResult.some((row) => (row.bank?.amount ?? row.ledger?.amount ?? 0) < 0), false);
+  check("เลือกเงินออกจับคู่ได้ 1 รายการ", outgoingResult.filter((row) => row.matched).length, 1);
+  check("เลือกเงินออกไม่แสดงเงินเข้า", outgoingResult.some((row) => (row.bank?.amount ?? row.ledger?.amount ?? 0) > 0), false);
+  check("เลือกทั้งคู่แสดงรายการครบทั้งสองทิศทาง", allResult.length, 4);
+  check("เลือกทั้งคู่จับคู่ได้ 2 รายการ", allResult.filter((row) => row.matched).length, 2);
   check("ยอดซ้ำจับด้วยชื่อคู่ค้าและเหลือคนที่ไม่มีรายการธนาคาร", duplicateResult.filter((row) => !row.matched && row.ledger).map((row) => row.ledger?.detail), ["[test] ค่าจ้างไลฟ์ — นางสาว ปาณิศา อัตถากร"]);
   check("วันที่คลาดหนึ่งวันจับได้เมื่อรายละเอียดสอดคล้อง", duplicateResult.filter((row) => row.matchKind === "near-date").map((row) => row.ledger?.amount), [-1_070_000]);
 
   console.log("\n=== ล้างข้อมูลทดสอบ ===");
   bank.length = 0;
   ledger.length = 0;
-  result.length = 0;
+  incomingResult.length = 0;
+  outgoingResult.length = 0;
+  allResult.length = 0;
   sparse.length = 0;
   duplicateBank.length = 0;
   duplicateLedger.length = 0;
   duplicateResult.length = 0;
-  check("ข้อมูลในหน่วยความจำถูกล้าง", [bank.length, ledger.length, result.length, sparse.length, duplicateBank.length, duplicateLedger.length, duplicateResult.length], [0, 0, 0, 0, 0, 0, 0]);
+  check("ข้อมูลในหน่วยความจำถูกล้าง", [bank.length, ledger.length, incomingResult.length, outgoingResult.length, allResult.length, sparse.length, duplicateBank.length, duplicateLedger.length, duplicateResult.length], [0, 0, 0, 0, 0, 0, 0, 0, 0]);
 
   console.log(failures === 0 ? "\n✅ ผ่านทั้งหมด\n" : `\n❌ ไม่ผ่าน ${failures} ข้อ\n`);
   process.exit(failures === 0 ? 0 : 1);
