@@ -17,11 +17,13 @@ export type ReconciliationResultRow = {
   bank: ReconciliationItem | null;
   ledger: ReconciliationItem | null;
   matched: boolean;
+  matchKind: "same-date" | "near-date" | null;
+  daysApart: number | null;
 };
 
 type ColumnMap = {
   date: number;
-  detail?: number;
+  details: number[];
   amount?: number;
   debit?: number;
   credit?: number;
@@ -30,7 +32,10 @@ type ColumnMap = {
 };
 
 const DATE_HEADERS = ["date", "transactiondate", "postingdate", "วันที่", "วันเดือนปี"];
-const DETAIL_HEADERS = ["description", "detail", "details", "particular", "particulars", "memo", "รายการ", "รายละเอียด", "คำอธิบาย"];
+const DETAIL_HEADERS = [
+  "description", "detail", "details", "particular", "particulars", "memo", "partner", "vendor", "customer",
+  "รายการ", "รายละเอียด", "คำอธิบาย", "คู่ค้า", "สาขาคู่ค้า",
+];
 const AMOUNT_HEADERS = ["amount", "transactionamount", "ยอดรายการ", "จำนวนเงิน", "ยอดเงิน"];
 const DEBIT_HEADERS = ["debit", "dr", "เดบิต"];
 const CREDIT_HEADERS = ["credit", "cr", "เครดิต"];
@@ -44,12 +49,20 @@ function normalizeHeader(value: unknown): string {
     .replace(/[\s_./()\-]+/g, "");
 }
 
+function headerMatches(header: string, aliases: string[]): boolean {
+  return aliases.includes(header) || aliases.some((alias) => alias.length >= 4 && header.includes(alias));
+}
+
 function findColumn(headers: string[], aliases: string[]): number | undefined {
   const exactIndex = headers.findIndex((header) => aliases.includes(header));
   if (exactIndex >= 0) return exactIndex;
   // คำย่ออย่าง CR/DR ห้ามค้นแบบบางส่วน เพราะจะไปชนกับ Description หรือหัวคอลัมน์อื่น
   const index = headers.findIndex((header) => aliases.some((alias) => alias.length >= 4 && header.includes(alias)));
   return index >= 0 ? index : undefined;
+}
+
+function findColumns(headers: string[], aliases: string[]): number[] {
+  return headers.flatMap((header, index) => headerMatches(header, aliases) ? [index] : []);
 }
 
 function detectColumns(row: unknown[]): ColumnMap | null {
@@ -60,7 +73,7 @@ function detectColumns(row: unknown[]): ColumnMap | null {
 
   const map: ColumnMap = {
     date,
-    detail: findColumn(headers, DETAIL_HEADERS),
+    details: findColumns(headers, DETAIL_HEADERS),
     amount: findColumn(headers, AMOUNT_HEADERS),
     debit: findColumn(headers, DEBIT_HEADERS),
     credit: findColumn(headers, CREDIT_HEADERS),
@@ -179,47 +192,95 @@ export function parseReconciliationTable(table: unknown[][], source: Reconciliat
     items.push({
       rowNumber: index + 1,
       ...date,
-      detail: columns.detail === undefined ? "" : String(row[columns.detail] ?? "").trim(),
+      detail: [...new Set(columns.details.map((column) => String(row[column] ?? "").trim()).filter(Boolean))].join(" — "),
       amount,
     });
   }
   return items;
 }
 
-export function reconcileBankRows(bankRows: ReconciliationItem[], ledgerRows: ReconciliationItem[]): ReconciliationResultRow[] {
-  const ledgerBuckets = new Map<string, ReconciliationItem[]>();
-  for (const row of ledgerRows) {
-    const key = `${row.dateKey}|${row.amount}`;
-    const bucket = ledgerBuckets.get(key) ?? [];
-    bucket.push(row);
-    ledgerBuckets.set(key, bucket);
-  }
+const GENERIC_DETAIL_WORDS = new Set([
+  "โอนเงิน", "รับโอนเงิน", "จ่าย", "รับ", "โอนไป", "โอนจาก", "วันที่", "บริษัท", "บจ", "จำกัด",
+  "นางสาว", "นส", "นาย", "ค่าจ้าง", "ไลฟ์", "ขายสินค้า", "หัก", "ณ", "ที่จ่าย",
+]);
 
+function detailTokens(value: string): string[] {
+  return value
+    .toLowerCase()
+    .replace(/\+{2,}/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2 && !GENERIC_DETAIL_WORDS.has(token) && !/^x\d+$/i.test(token));
+}
+
+function detailSimilarity(left: string, right: string): number {
+  const leftTokens = detailTokens(left);
+  const rightTokens = detailTokens(right);
+  if (!leftTokens.length || !rightTokens.length) return 0;
+  const matched = leftTokens.filter((leftToken) => rightTokens.some((rightToken) => (
+    leftToken === rightToken
+    || (Math.min(leftToken.length, rightToken.length) >= 4 && (leftToken.startsWith(rightToken) || rightToken.startsWith(leftToken)))
+  ))).length;
+  return Math.round((matched / Math.min(leftTokens.length, rightTokens.length)) * 100);
+}
+
+function daysBetween(left: string, right: string): number {
+  return Math.round(Math.abs(Date.parse(left) - Date.parse(right)) / 86_400_000);
+}
+
+export function reconcileBankRows(bankRows: ReconciliationItem[], ledgerRows: ReconciliationItem[]): ReconciliationResultRow[] {
+  const candidates: Array<{ bankIndex: number; ledgerIndex: number; daysApart: number; score: number }> = [];
+  for (let bankIndex = 0; bankIndex < bankRows.length; bankIndex++) {
+    for (let ledgerIndex = 0; ledgerIndex < ledgerRows.length; ledgerIndex++) {
+      const bank = bankRows[bankIndex];
+      const ledger = ledgerRows[ledgerIndex];
+      if (bank.amount !== ledger.amount) continue;
+      const daysApart = daysBetween(bank.dateKey, ledger.dateKey);
+      if (daysApart > 1) continue;
+      const similarity = detailSimilarity(bank.detail, ledger.detail);
+      // วันที่คลาดเคลื่อนยอมรับเฉพาะเมื่อรายละเอียดช่วยยืนยัน เพื่อไม่จับยอดซ้ำแบบเดาสุ่ม
+      if (daysApart === 1 && similarity < 25) continue;
+      candidates.push({
+        bankIndex,
+        ledgerIndex,
+        daysApart,
+        score: (daysApart === 0 ? 1_000 : 500) + similarity,
+      });
+    }
+  }
+  candidates.sort((left, right) => right.score - left.score || left.bankIndex - right.bankIndex || left.ledgerIndex - right.ledgerIndex);
+
+  const usedBank = new Set<number>();
+  const usedLedger = new Set<number>();
   const results: ReconciliationResultRow[] = [];
-  for (const bank of bankRows) {
-    const key = `${bank.dateKey}|${bank.amount}`;
-    const ledger = ledgerBuckets.get(key)?.shift() ?? null;
+  for (const candidate of candidates) {
+    if (usedBank.has(candidate.bankIndex) || usedLedger.has(candidate.ledgerIndex)) continue;
+    usedBank.add(candidate.bankIndex);
+    usedLedger.add(candidate.ledgerIndex);
+    const bank = bankRows[candidate.bankIndex];
+    const ledger = ledgerRows[candidate.ledgerIndex];
     results.push({
       id: `bank-${bank.rowNumber}`,
       dateKey: bank.dateKey,
       dateLabel: bank.dateLabel,
       bank,
       ledger,
-      matched: Boolean(ledger),
+      matched: true,
+      matchKind: candidate.daysApart === 0 ? "same-date" : "near-date",
+      daysApart: candidate.daysApart,
     });
   }
 
-  for (const bucket of ledgerBuckets.values()) {
-    for (const ledger of bucket) {
-      results.push({
-        id: `ledger-${ledger.rowNumber}`,
-        dateKey: ledger.dateKey,
-        dateLabel: ledger.dateLabel,
-        bank: null,
-        ledger,
-        matched: false,
-      });
-    }
+  for (let bankIndex = 0; bankIndex < bankRows.length; bankIndex++) {
+    if (usedBank.has(bankIndex)) continue;
+    const bank = bankRows[bankIndex];
+    results.push({ id: `bank-${bank.rowNumber}`, dateKey: bank.dateKey, dateLabel: bank.dateLabel, bank, ledger: null, matched: false, matchKind: null, daysApart: null });
+  }
+  for (let ledgerIndex = 0; ledgerIndex < ledgerRows.length; ledgerIndex++) {
+    if (usedLedger.has(ledgerIndex)) continue;
+    const ledger = ledgerRows[ledgerIndex];
+    results.push({ id: `ledger-${ledger.rowNumber}`, dateKey: ledger.dateKey, dateLabel: ledger.dateLabel, bank: null, ledger, matched: false, matchKind: null, daysApart: null });
   }
 
   return results.sort((left, right) => left.dateKey.localeCompare(right.dateKey) || left.id.localeCompare(right.id));
