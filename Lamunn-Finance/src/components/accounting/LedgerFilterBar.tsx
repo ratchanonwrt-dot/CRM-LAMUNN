@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import AccountCombobox from "./AccountCombobox";
 import { thaiMonthLabel } from "@/lib/format";
 
@@ -41,6 +41,11 @@ export default function LedgerFilterBar({
 
   const prev = () => (month === 1 ? go(year - 1, 12, accountId) : go(year, month - 1, accountId));
   const next = () => (month === 12 ? go(year + 1, 1, accountId) : go(year, month + 1, accountId));
+  const exportUrl = (selectedAccountId?: string) => {
+    const qs = new URLSearchParams({ year: String(year), month: String(month) });
+    if (selectedAccountId) qs.set("accountId", selectedAccountId);
+    return `/api/accounting/ledger/export?${qs}`;
+  };
 
   return (
     <div aria-busy={pending} className={`mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4 transition-opacity ${pending ? "opacity-70" : ""}`}>
@@ -65,14 +70,29 @@ export default function LedgerFilterBar({
       </div>
 
       {accountId && (
-        <button
-          type="button"
-          onClick={() => go(year, month, "")}
-          className="rounded-lg px-2.5 py-2 text-sm text-gray-500 underline hover:text-gray-700"
-        >
-          ดูทุกบัญชี
-        </button>
+        <>
+          <a
+            href={exportUrl(accountId)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            <Download size={15} aria-hidden="true" /> Excel บัญชีนี้
+          </a>
+          <button
+            type="button"
+            onClick={() => go(year, month, "")}
+            className="rounded-lg px-2.5 py-2 text-sm text-gray-500 underline hover:text-gray-700"
+          >
+            ดูทุกบัญชี
+          </button>
+        </>
       )}
+
+      <a
+        href={exportUrl()}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
+      >
+        <Download size={15} aria-hidden="true" /> Excel ทุกบัญชี
+      </a>
 
       {pending && (
         <span className="flex items-center gap-1.5 py-2 text-sm text-brand-700">
