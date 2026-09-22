@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, CheckCircle2, FileSpreadsheet, UploadCloud } from "lucide-react";
+import { Building2, CheckCircle2, FileSpreadsheet, Loader2, UploadCloud } from "lucide-react";
+import {
+  parseReconciliationTable,
+  reconcileBankRows,
+  reconciliationAmountLabel,
+  type ReconciliationResultRow,
+} from "@/lib/accounting/bankReconciliation";
+import { useServerRefresh } from "./useServerRefresh";
 
 type UploadKind = "bank" | "ledger";
 
@@ -24,25 +31,103 @@ const UPLOADS = [
   },
 ];
 
-const PREVIEW_ROWS = [
-  { date: "01/09/2569", detail: "รับโอนยอดขายสาขาอารีย์", bank: "25,400.00", ledger: "25,400.00", matched: true },
-  { date: "02/09/2569", detail: "ค่าธรรมเนียมธนาคาร", bank: "350.00", ledger: "—", matched: false },
-  { date: "03/09/2569", detail: "รับโอนยอดขายสาขาสีลม", bank: "18,950.00", ledger: "19,850.00", matched: false },
-];
-
 function fileSizeLabel(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function parseCsv(text: string): unknown[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let value = "";
+  let quoted = false;
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
+    if (char === '"') {
+      if (quoted && text[index + 1] === '"') {
+        value += '"';
+        index++;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (char === "," && !quoted) {
+      row.push(value);
+      value = "";
+    } else if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && text[index + 1] === "\n") index++;
+      row.push(value);
+      if (row.some((cell) => cell.trim())) rows.push(row);
+      row = [];
+      value = "";
+    } else {
+      value += char;
+    }
+  }
+  row.push(value);
+  if (row.some((cell) => cell.trim())) rows.push(row);
+  if (rows[0]?.[0]) rows[0][0] = rows[0][0].replace(/^\uFEFF/, "");
+  return rows;
+}
+
+function excelValue(value: unknown): unknown {
+  if (value && typeof value === "object") {
+    if ("result" in value) return (value as { result?: unknown }).result;
+    if ("text" in value) return (value as { text?: unknown }).text;
+  }
+  return value;
+}
+
+async function readFileTable(file: File): Promise<unknown[][]> {
+  if (file.name.toLowerCase().endsWith(".csv")) return parseCsv(await file.text());
+  const ExcelJS = (await import("exceljs")).default;
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(await file.arrayBuffer());
+  const sheet = workbook.worksheets[0];
+  if (!sheet) throw new Error(`ไม่พบแผ่นงานในไฟล์ ${file.name}`);
+  const rows: unknown[][] = [];
+  sheet.eachRow({ includeEmpty: false }, (sheetRow) => {
+    const values = Array.isArray(sheetRow.values) ? sheetRow.values.slice(1) : [];
+    rows.push(values.map(excelValue));
+  });
+  return rows;
+}
+
 export default function BankReconciliationUpload() {
   const [files, setFiles] = useState<SelectedFiles>({ bank: null, ledger: null });
+  const [results, setResults] = useState<ReconciliationResultRow[] | null>(null);
+  const [error, setError] = useState("");
+  const [processing, setProcessing] = useState(false);
+  const { refreshing, refresh } = useServerRefresh();
   const ready = Boolean(files.bank && files.ledger);
 
   const selectFile = (kind: UploadKind, file: File | null) => {
     setFiles((current) => ({ ...current, [kind]: file }));
+    setResults(null);
+    setError("");
   };
+
+  const reconcile = async () => {
+    if (!files.bank || !files.ledger) return;
+    setProcessing(true);
+    setError("");
+    try {
+      const [bankTable, ledgerTable] = await Promise.all([readFileTable(files.bank), readFileTable(files.ledger)]);
+      const bankRows = parseReconciliationTable(bankTable, "bank");
+      const ledgerRows = parseReconciliationTable(ledgerTable, "ledger");
+      if (!bankRows.length || !ledgerRows.length) throw new Error("ไม่พบรายการที่มีวันที่และจำนวนเงินในไฟล์ใดไฟล์หนึ่ง");
+      setResults(reconcileBankRows(bankRows, ledgerRows));
+      refresh();
+    } catch (caught) {
+      setResults(null);
+      setError(caught instanceof Error ? caught.message : "ไม่สามารถอ่านไฟล์ได้");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const matchedCount = results?.filter((row) => row.matched).length ?? 0;
+  const unmatchedCount = results ? results.length - matchedCount : 0;
 
   return (
     <div className="space-y-5">
@@ -64,10 +149,10 @@ export default function BankReconciliationUpload() {
               <label className={`flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-7 text-center transition-colors ${tone}`}>
                 {file ? <CheckCircle2 size={32} aria-hidden="true" /> : <UploadCloud size={32} aria-hidden="true" />}
                 <span className="mt-3 text-sm font-semibold">{file ? "เลือกไฟล์แล้ว" : "คลิกเพื่อเลือกไฟล์"}</span>
-                <span className="mt-1 text-xs opacity-75">รองรับ Excel และ CSV</span>
+                <span className="mt-1 text-xs opacity-75">รองรับ Excel (.xlsx) และ CSV</span>
                 <input
                   type="file"
-                  accept=".xlsx,.xls,.csv"
+                  accept=".xlsx,.csv"
                   className="sr-only"
                   onChange={(event) => selectFile(kind, event.target.files?.[0] ?? null)}
                 />
@@ -98,23 +183,27 @@ export default function BankReconciliationUpload() {
           </div>
           <button
             type="button"
-            disabled
-            className="rounded-lg bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-500"
-            title="ตัวอย่างหน้าจอ — ยังไม่ประมวลผลไฟล์"
+            disabled={!ready || processing || refreshing}
+            onClick={reconcile}
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
           >
-            ตรวจสอบและจับคู่
+            {(processing || refreshing) && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
+            {processing ? "กำลังอ่านไฟล์..." : refreshing ? "กำลังแสดงผล..." : "ตรวจสอบและจับคู่"}
           </button>
         </div>
+        {error && <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
         <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          ตัวอย่างหน้าจอ: ไฟล์ยังไม่ถูกอัปโหลดหรือบันทึกเข้าสู่ระบบ และผลตรวจจะไม่ถูกนำไปลงบัญชี
+          ระบบจับคู่รายการที่วันที่และจำนวนเงินตรงกันพอดี ไฟล์จะประมวลผลในเบราว์เซอร์เท่านั้น ไม่อัปโหลด ไม่บันทึก และไม่นำไปลงบัญชี
         </p>
       </section>
 
       <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-5 py-4">
           <div>
-            <h2 className="font-semibold text-gray-900">ตัวอย่างผลการกระทบยอด</h2>
-            <p className="mt-0.5 text-sm text-gray-500">รายการที่ข้อมูลไม่ตรงกันจะแสดงเป็นสีแดงทั้งแถว</p>
+            <h2 className="font-semibold text-gray-900">ผลการกระทบยอด</h2>
+            <p className="mt-0.5 text-sm text-gray-500">
+              {results ? `ตรงกัน ${matchedCount.toLocaleString("th-TH")} รายการ · ไม่ตรงกัน ${unmatchedCount.toLocaleString("th-TH")} รายการ` : "เลือกไฟล์ทั้งสองฝั่งแล้วกดตรวจสอบและจับคู่"}
+            </p>
           </div>
           <div className="flex items-center gap-3 text-xs">
             <span className="flex items-center gap-1.5 text-emerald-700">
@@ -131,22 +220,24 @@ export default function BankReconciliationUpload() {
             <thead className="bg-gray-50 text-xs text-gray-500">
               <tr>
                 <th className="px-4 py-3 text-left font-medium">วันที่</th>
-                <th className="px-4 py-3 text-left font-medium">รายละเอียด</th>
+                <th className="px-4 py-3 text-left font-medium">รายการธนาคาร</th>
                 <th className="px-4 py-3 text-right font-medium">ยอดธนาคาร</th>
+                <th className="px-4 py-3 text-left font-medium">รายการบัญชี</th>
                 <th className="px-4 py-3 text-right font-medium">ยอดบัญชี</th>
                 <th className="px-4 py-3 text-center font-medium">สถานะ</th>
               </tr>
             </thead>
             <tbody>
-              {PREVIEW_ROWS.map((row) => (
+              {(results ?? []).map((row) => (
                 <tr
-                  key={`${row.date}-${row.detail}`}
+                  key={row.id}
                   className={row.matched ? "border-t border-gray-100 text-gray-700" : "border-t border-rose-200 bg-rose-50 text-rose-800"}
                 >
-                  <td className="whitespace-nowrap px-4 py-3">{row.date}</td>
-                  <td className="px-4 py-3 font-medium">{row.detail}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{row.bank}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{row.ledger}</td>
+                  <td className="whitespace-nowrap px-4 py-3">{row.dateLabel}</td>
+                  <td className="px-4 py-3 font-medium">{row.bank?.detail || "—"}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{reconciliationAmountLabel(row.bank)}</td>
+                  <td className="px-4 py-3 font-medium">{row.ledger?.detail || "—"}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{reconciliationAmountLabel(row.ledger)}</td>
                   <td className="px-4 py-3 text-center">
                     <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${row.matched ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
                       {row.matched ? "ตรงกัน" : "ไม่ตรงกัน"}
@@ -154,6 +245,12 @@ export default function BankReconciliationUpload() {
                   </td>
                 </tr>
               ))}
+              {results?.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400">ไม่พบรายการสำหรับกระทบยอด</td></tr>
+              )}
+              {!results && (
+                <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400">ยังไม่ได้เริ่มตรวจสอบ</td></tr>
+              )}
             </tbody>
           </table>
         </div>
