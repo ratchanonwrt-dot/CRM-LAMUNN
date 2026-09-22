@@ -6,6 +6,7 @@ import {
   parseReconciliationTable,
   reconcileBankRows,
   reconciliationAmountLabel,
+  type ReconciliationDirection,
   type ReconciliationResultRow,
 } from "@/lib/accounting/bankReconciliation";
 import { useServerRefresh } from "./useServerRefresh";
@@ -13,6 +14,12 @@ import { useServerRefresh } from "./useServerRefresh";
 type UploadKind = "bank" | "ledger";
 
 type SelectedFiles = Record<UploadKind, File | null>;
+
+const DIRECTION_LABELS: Record<ReconciliationDirection, string> = {
+  in: "เงินเข้า",
+  out: "เงินออก",
+  both: "ทั้งเงินเข้าและเงินออก",
+};
 
 const UPLOADS = [
   {
@@ -96,6 +103,7 @@ async function readFileTable(file: File): Promise<unknown[][]> {
 export default function BankReconciliationUpload() {
   const [files, setFiles] = useState<SelectedFiles>({ bank: null, ledger: null });
   const [results, setResults] = useState<ReconciliationResultRow[] | null>(null);
+  const [direction, setDirection] = useState<ReconciliationDirection>("both");
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(false);
   const { refreshing, refresh } = useServerRefresh();
@@ -116,7 +124,7 @@ export default function BankReconciliationUpload() {
       const bankRows = parseReconciliationTable(bankTable, "bank");
       const ledgerRows = parseReconciliationTable(ledgerTable, "ledger");
       if (!bankRows.length || !ledgerRows.length) throw new Error("ไม่พบรายการที่มีวันที่และจำนวนเงินในไฟล์ใดไฟล์หนึ่ง");
-      setResults(reconcileBankRows(bankRows, ledgerRows));
+      setResults(reconcileBankRows(bankRows, ledgerRows, direction));
       refresh();
     } catch (caught) {
       setResults(null);
@@ -174,26 +182,44 @@ export default function BankReconciliationUpload() {
       </div>
 
       <section className="rounded-xl border border-gray-200 bg-white p-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="font-semibold text-gray-900">พร้อมตรวจสอบและจับคู่รายการ</h2>
             <p className="mt-1 text-sm text-gray-500">
               {ready ? "เลือกไฟล์ครบทั้ง 2 ฝั่งแล้ว" : "เลือกไฟล์ธนาคารและไฟล์บัญชีให้ครบก่อนเริ่มกระทบยอด"}
             </p>
           </div>
-          <button
-            type="button"
-            disabled={!ready || processing || refreshing}
-            onClick={reconcile}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
-          >
-            {(processing || refreshing) && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
-            {processing ? "กำลังอ่านไฟล์..." : refreshing ? "กำลังแสดงผล..." : "ตรวจสอบและจับคู่"}
-          </button>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="block text-sm font-medium text-gray-700">
+              เลือกรายการที่จะจับคู่
+              <select
+                value={direction}
+                onChange={(event) => {
+                  setDirection(event.target.value as ReconciliationDirection);
+                  setResults(null);
+                  setError("");
+                }}
+                className="mt-1 block min-w-52 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="in">เงินเข้า</option>
+                <option value="out">เงินออก</option>
+                <option value="both">ทั้งเงินเข้าและเงินออก</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              disabled={!ready || processing || refreshing}
+              onClick={reconcile}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
+            >
+              {(processing || refreshing) && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
+              {processing ? "กำลังอ่านไฟล์..." : refreshing ? "กำลังแสดงผล..." : "ตรวจสอบและจับคู่"}
+            </button>
+          </div>
         </div>
         {error && <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
         <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          ระบบจับคู่รายการที่วันที่และจำนวนเงินตรงกันพอดี ไฟล์จะประมวลผลในเบราว์เซอร์เท่านั้น ไม่อัปโหลด ไม่บันทึก และไม่นำไปลงบัญชี
+          รอบนี้ตรวจ{DIRECTION_LABELS[direction]} ไฟล์ประมวลผลในเบราว์เซอร์ ไม่อัปโหลด ไม่บันทึก และไม่นำไปลงบัญชี
         </p>
       </section>
 
