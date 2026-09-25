@@ -60,6 +60,33 @@ interface Option {
 }
 
 const HOUR_PX = 34;
+/** จัดช่วงที่ทับกันให้วางเคียงกัน: คืน lane ของแต่ละช่วง และจำนวน lane ของกลุ่มที่มันอยู่ */
+function laneLayout<T extends { s: number; e: number }>(items: T[]): { item: T; lane: number; lanes: number }[] {
+  const sorted = [...items].sort((a, b) => a.s - b.s || b.e - a.e);
+  const out: { item: T; lane: number; lanes: number }[] = [];
+  let group: { item: T; lane: number; lanes: number }[] = [];
+  let laneEnds: number[] = [];
+  let groupEnd = -Infinity;
+  const flush = () => {
+    for (const g of group) g.lanes = laneEnds.length;
+    out.push(...group);
+    group = [];
+    laneEnds = [];
+  };
+  for (const it of sorted) {
+    if (it.s >= groupEnd && group.length) flush();
+    let lane = laneEnds.findIndex((end) => end <= it.s);
+    if (lane === -1) {
+      lane = laneEnds.length;
+      laneEnds.push(it.e);
+    } else laneEnds[lane] = it.e;
+    group.push({ item: it, lane, lanes: 1 });
+    groupEnd = Math.max(groupEnd, it.e);
+  }
+  if (group.length) flush();
+  return out;
+}
+
 const HOURS = Array.from({ length: (GRID_END_MIN - DAY_START_MIN) / 60 + 1 }, (_, i) => DAY_START_MIN + i * 60);
 const COL_HEIGHT = ((GRID_END_MIN - DAY_START_MIN) / 60) * HOUR_PX;
 const inputCls = "w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-ink/10";
@@ -251,19 +278,20 @@ export default function ScheduleGrid({
                     </button>
                   );
                 })}
-                {d.requests.map((q) => {
+                {laneLayout(d.requests).map(({ item: q, lane, lanes }) => {
                   const top = ((Math.max(q.s, DAY_START_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
                   const bottom = ((Math.min(q.e, GRID_END_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
+                  // คำขอที่ทับกันวางเคียงกันเป็นคอลัมน์ย่อย ให้แอดมินเห็นครบทุกคนแล้วเลือกเอง
                   return (
                     <a
                       key={q.id}
                       data-shift
                       href="/requests"
-                      className="absolute inset-x-1 overflow-hidden rounded-lg border-2 border-dashed border-orange-400 bg-orange-50 px-1.5 py-1 text-[11px] leading-tight text-orange-800"
-                      style={{ top: top + 1, height: Math.max(bottom - top - 2, 18) }}
-                      title={`คำขอจากเว็บจอง: ${q.requesterName} ${q.startTime}–${q.endTime} — รออนุมัติ`}
+                      className={clsx("absolute overflow-hidden rounded-lg border-2 border-dashed px-1.5 py-1 text-[11px] leading-tight", lanes > 1 ? "border-orange-500 bg-orange-100 text-orange-900" : "border-orange-400 bg-orange-50 text-orange-800")}
+                      style={{ top: top + 1, height: Math.max(bottom - top - 2, 18), left: `calc(4px + (100% - 8px) * ${lane} / ${lanes})`, width: `calc((100% - 8px) / ${lanes} - 2px)` }}
+                      title={`คำขอจากเว็บจอง: ${q.requesterName} ${q.startTime}–${q.endTime} — รออนุมัติ${lanes > 1 ? " (มีคนขอช่วงเดียวกัน — เลือกได้คนเดียว)" : ""}`}
                     >
-                      <p className="truncate font-semibold">คำขอ: {q.requesterName}</p>
+                      <p className="truncate font-semibold">{lanes > 1 ? "" : "คำขอ: "}{q.requesterName}</p>
                       <p className="truncate opacity-80">
                         {q.startTime}–{q.endTime} · รออนุมัติ
                       </p>

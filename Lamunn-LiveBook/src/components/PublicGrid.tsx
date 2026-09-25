@@ -31,6 +31,20 @@ function blockCls(b: PublicBlock): string {
   return b.status === "booked" ? "border-stone-300 bg-stone-200 text-muted" : b.status === "blocked" ? "border-ink bg-ink text-white" : "border-amber-300 bg-amber-100 text-amber-800";
 }
 
+/** รวมคำขอที่รออนุมัติของคนอื่นที่ทับกันเป็นก้อนเดียว พร้อมจำนวนคน (ไม่บอกชื่อ) */
+function pendingClusters(blocks: PublicBlock[]): { s: number; e: number; count: number }[] {
+  const others = blocks.filter((b) => b.status === "requested" && !b.mine).sort((a, b) => a.s - b.s);
+  const out: { s: number; e: number; count: number }[] = [];
+  for (const b of others) {
+    const last = out[out.length - 1];
+    if (last && b.s < last.e) {
+      last.e = Math.max(last.e, b.e);
+      last.count += 1;
+    } else out.push({ s: b.s, e: b.e, count: 1 });
+  }
+  return out;
+}
+
 function endFromStart(startTime: string, hours: number): { endTime: string; crossesMidnight: boolean } {
   const s = timeToMinutes(startTime);
   if (s === null || !(hours > 0)) return { endTime: "", crossesMidnight: false };
@@ -102,7 +116,7 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked, 
     const day = days.find((d) => d.date === form.date);
     const range = toRange(form.startTime, endTime);
     if (day?.gapRule && range) {
-      const v = findGapViolation(range, day.blocks.filter((b) => b.status !== "blocked").map((b) => ({ s: b.s, e: b.e })));
+      const v = findGapViolation(range, day.blocks.filter((b) => b.status === "booked").map((b) => ({ s: b.s, e: b.e })));
       if (v) return setError(v.message);
     }
     setSaving(true);
@@ -181,31 +195,65 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked, 
                         data-block
                         type="button"
                         onClick={() => openRequest(d, f.s)}
-                        className="absolute inset-x-1 rounded-lg border border-dashed border-brand-400 bg-brand-50/70 text-[11px] font-medium text-brand-700 transition hover:bg-brand-100"
+                        className="absolute inset-x-1 flex items-start justify-center rounded-lg border border-dashed border-brand-400 bg-brand-50/70 pt-1.5 text-[11px] font-medium text-brand-700 transition hover:bg-brand-100"
                         style={{ top: top + 1, height: Math.max(h - 2, 18) }}
                       >
                         ว่าง {minutesToLabel(f.s)}–{minutesToLabel(f.e)}
                       </button>
                     );
                   })}
+                {/* คำขอของคนอื่นที่รออนุมัติ: แถบเหลืองชิดขวา ไม่รับคลิก (กดทะลุไปขอจองซ้อนได้) */}
+                {!d.isPast &&
+                  pendingClusters(d.blocks).map((c) => {
+                    const top = ((Math.max(c.s, DAY_START_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
+                    const bottom = ((Math.min(c.e, GRID_END_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
+                    return (
+                      <div
+                        key={`p${c.s}`}
+                        className="pointer-events-none absolute right-1 w-[46%] overflow-hidden rounded-lg border border-amber-300 bg-amber-100/95 px-1.5 py-1 text-[10.5px] leading-tight text-amber-900"
+                        style={{ top: top + 1, height: Math.max(bottom - top - 2, 18) }}
+                      >
+                        <p className="truncate font-semibold">ขอ {c.count} คน</p>
+                        {/* คอลัมน์ครึ่งเดียวแคบ — แยกเวลาเป็นสองบรรทัดไม่ให้ถูกตัด */}
+                        <p className="truncate tabular-nums opacity-80">{minutesToLabel(c.s)}</p>
+                        <p className="truncate tabular-nums opacity-80">–{minutesToLabel(c.e)}</p>
+                        {bottom - top > 70 && <p className="truncate opacity-70">ซ้อนได้</p>}
+                      </div>
+                    );
+                  })}
                 {[...d.blocks, ...optimistic.filter((o) => o.date === d.date).map((o) => o.block)].map((b, i) => {
+                  // คำขอของคนอื่นวาดรวมเป็นแถบด้านบนแล้ว
+                  if (b.status === "requested" && !b.mine) return null;
                   const top = ((Math.max(b.s, DAY_START_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
                   const bottom = ((Math.min(b.e, GRID_END_MIN) - DAY_START_MIN) / 60) * HOUR_PX;
                   const editable = !!b.mine?.editable;
                   const Tag = editable ? "button" : "div";
+                  // คำขอของฉันที่ยังรออนุมัติอยู่ครึ่งซ้าย ให้เห็นคู่กับแถบคนอื่นที่ขอช่วงเดียวกัน
+                  const half = b.status === "requested";
                   return (
                     <Tag
                       key={i}
                       data-block
                       {...(editable ? { type: "button", onClick: () => openManage(d, b) } : {})}
-                      className={clsx("absolute inset-x-1 overflow-hidden rounded-lg border px-1.5 py-1 text-left text-[11px] leading-tight", blockCls(b), editable && "cursor-pointer hover:shadow-md")}
+                      className={clsx("absolute overflow-hidden rounded-lg border px-1.5 py-1 text-left text-[11px] leading-tight", half ? "left-1 w-[50%]" : "inset-x-1", blockCls(b), editable && "cursor-pointer hover:shadow-md")}
                       style={{ top: top + 1, height: Math.max(bottom - top - 2, 18) }}
                       title={`${b.startTime}–${b.endTime} ${blockLabel(b)}${editable ? " — กดเพื่อแก้ไข/ยกเลิก" : ""}`}
                     >
-                      <p className={clsx("truncate font-semibold", b.status === "blocked" && "uppercase tracking-wide")}>{blockLabel(b)}</p>
-                      <p className="truncate opacity-80">
-                        {b.startTime}–{b.endTime}
-                      </p>
+                      {half ? (
+                        <>
+                          <p className="truncate font-semibold">ของฉัน</p>
+                          <p className="truncate tabular-nums opacity-80">{b.startTime}</p>
+                          <p className="truncate tabular-nums opacity-80">–{b.endTime}</p>
+                          {bottom - top > 70 && <p className="truncate opacity-70">รออนุมัติ</p>}
+                        </>
+                      ) : (
+                        <>
+                          <p className={clsx("truncate font-semibold", b.status === "blocked" && "uppercase tracking-wide")}>{blockLabel(b)}</p>
+                          <p className="truncate opacity-80">
+                            {b.startTime}–{b.endTime}
+                          </p>
+                        </>
+                      )}
                     </Tag>
                   );
                 })}
@@ -298,9 +346,9 @@ export default function PublicGrid({ days, channelId, channelName, phoneMasked, 
             </div>
             {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
             {days.find((d) => d.date === form.date)?.gapRule && (
-              <p className="mt-3 text-[11px] text-amber-700">กติกา: ต้องเว้นอย่างน้อย {PUBLIC_GAP_MINUTES} นาทีจากช่วงที่มีคนไลฟ์/มีคนขอแล้ว ระบบกันระยะให้ในช่อง &quot;ว่าง&quot; แล้ว</p>
+              <p className="mt-3 text-[11px] text-amber-700">กติกา: ต้องเว้นอย่างน้อย {PUBLIC_GAP_MINUTES} นาทีจากช่วงที่มีคนไลฟ์แล้ว (ยืนยันแล้ว) ระบบกันระยะให้ในช่อง &quot;ว่าง&quot; แล้ว</p>
             )}
-            <p className="mt-3 text-[11px] text-stone-400">คำขอจะยังไม่ยืนยันจนกว่าทีมงานจะอนุมัติ ช่วงนี้จะขึ้นเป็น &quot;มีคนขอแล้ว&quot; ให้คนอื่นเห็นทันที · หลังส่ง ระบบจะจำเบอร์ของคุณเพื่อให้แก้ไข/ยกเลิกช่วงของคุณเองได้</p>
+            <p className="mt-3 text-[11px] text-stone-400">คำขอจะยังไม่ยืนยันจนกว่าทีมงานจะอนุมัติ ช่วงเดียวกันอาจมีคนอื่นขอซ้อนได้ ทีมงานจะเป็นผู้เลือกคนไลฟ์และแจ้งผลทางเบอร์/LINE · หลังส่ง ระบบจะจำเบอร์ของคุณเพื่อให้แก้ไข/ยกเลิกช่วงของคุณเองได้</p>
             <div className="mt-4 flex gap-2">
               <button type="submit" disabled={saving} className="flex-1 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50 sm:flex-none sm:py-2.5">
                 {saving ? "กำลังส่ง..." : "ส่งคำขอจอง"}

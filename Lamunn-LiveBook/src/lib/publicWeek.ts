@@ -81,8 +81,9 @@ export async function loadPublicWeek(weekParam: string | undefined, channelParam
     }
     blocks.sort((a, b) => a.s - b.s);
     const gapRule = gapRuleApplies(iso);
-    // "ว่าง" สำหรับคนนอก = ไม่ทับกะ/คำขอ (+ระยะเว้น 30 นาทีถ้ากติกามีผล) และไม่ทับบล็อก unavailable
-    const people = blocks.filter((b) => b.status !== "blocked").map((b) => ({ s: b.s, e: b.e }));
+    // "ว่าง" สำหรับคนนอก = ไม่ทับกะที่ยืนยันแล้ว (+ระยะเว้น 30 นาทีถ้ากติกามีผล) และไม่ทับบล็อก unavailable
+    // ช่วงที่มีคนขอแล้วแต่ยังรออนุมัติยังนับว่า "ว่าง" — ขอซ้อนได้ แอดมินเป็นคนเลือก
+    const people = blocks.filter((b) => b.status === "booked").map((b) => ({ s: b.s, e: b.e }));
     const taken = [...(gapRule ? padRanges(people) : people), ...blocks.filter((b) => b.status === "blocked").map((b) => ({ s: b.s, e: b.e }))];
     return {
       date: iso,

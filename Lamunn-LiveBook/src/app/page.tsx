@@ -44,7 +44,7 @@ export default async function PublicSchedulePage({ searchParams }: { searchParam
               <div>
                 <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-300">Lamunn Live</div>
                 <h1 className="font-display text-3xl font-semibold leading-tight tracking-tight md:text-4xl">จองช่วงไลฟ์กับ Lamunn</h1>
-                <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-stone-400">เลือกช่วงที่ว่างแล้วส่งคำขอ ทีมงานจะติดต่อกลับเพื่อยืนยัน ตารางนี้ไม่แสดงชื่อผู้ไลฟ์</p>
+                <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-stone-400">เลือกช่วงที่ว่างแล้วส่งคำขอ ช่วงที่มีคนขอแล้วยังขอซ้อนได้ ทีมงานจะเลือกผู้ไลฟ์และติดต่อกลับเพื่อยืนยัน ตารางนี้ไม่แสดงชื่อผู้ไลฟ์</p>
               </div>
             </div>
             <div className="flex flex-col items-end gap-3">
@@ -69,7 +69,7 @@ export default async function PublicSchedulePage({ searchParams }: { searchParam
               <span className="h-3 w-5 rounded border border-dashed border-brand-500 bg-brand-50" /> ว่าง
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="h-3 w-5 rounded bg-amber-200" /> มีคนขอแล้ว
+              <span className="h-3 w-5 rounded bg-amber-200" /> มีคนขอแล้ว (ขอซ้อนได้)
             </span>
             <span className="inline-flex items-center gap-1.5">
               <span className="h-3 w-5 rounded bg-stone-300" /> มีคนไลฟ์แล้ว
