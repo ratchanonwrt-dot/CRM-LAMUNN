@@ -31,6 +31,10 @@ const DIVIDEND_ROWS = [
   "(2.5) อื่น ๆ (ระบุ) ........................................................",
 ];
 
+// หนังสือรับรองต้องใช้ข้อมูลผู้หักภาษีตามทะเบียน แม้ค่าตั้งค่าบริษัทส่วนกลางยังไม่ครบ
+const WHT_PAYER_ADDRESS = "457/2 ถนนประชาราษฎร์ 2 แขวงบางซื่อ เขตบางซื่อ กรุงเทพมหานคร 10800";
+const WHT_PAYER_TAX_ID = "0105568147638";
+
 function dateSlash(date: Date) {
   return `${String(date.getUTCDate()).padStart(2, "0")}/${String(date.getUTCMonth() + 1).padStart(2, "0")}/${date.getUTCFullYear()}`;
 }
@@ -93,7 +97,12 @@ export default async function WhtPrintPage({ params }: { params: { id: string } 
             </div>
           </header>
 
-          <PartyBox title="ผู้มีหน้าที่หักภาษี ณ ที่จ่าย" name={settings.companyName || "(ยังไม่ได้ตั้งชื่อบริษัท)"} address={settings.companyAddress || "-"} taxId={settings.companyTaxId || ""} />
+          <PartyBox
+            title="ผู้มีหน้าที่หักภาษี ณ ที่จ่าย"
+            name={settings.companyName || "(ยังไม่ได้ตั้งชื่อบริษัท)"}
+            address={WHT_PAYER_ADDRESS}
+            taxId={WHT_PAYER_TAX_ID}
+          />
           <PartyBox title="ผู้ถูกหักภาษี ณ ที่จ่าย" name={`${certificate.payeeName}${certificate.payeeBranchTag ? ` (${certificate.payeeBranchTag})` : ""}`} address={certificate.payeeAddress || "-"} taxId={certificate.payeeTaxId || ""} />
 
           <section className="flex items-center gap-2 border-b border-black px-1 py-1">
