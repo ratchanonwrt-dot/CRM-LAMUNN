@@ -9,7 +9,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const staff = await requireSectionApi("ACCOUNTING", "view");
   if (!staff) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const invoice = await prisma.accPurchaseTaxInvoice.findUnique({ where: { id: params.id } });
+  const invoice = await prisma.accPurchaseTaxInvoice.findUnique({
+    where: { id: params.id },
+    include: { whtCertificate: true },
+  });
   if (!invoice) return NextResponse.json({ error: "ไม่พบใบกำกับภาษีซื้อนี้" }, { status: 404 });
   const entry = invoice.entryId
     ? await prisma.accJournalEntry.findUnique({ where: { id: invoice.entryId }, select: { id: true, entryNo: true, status: true } })
@@ -49,6 +52,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const { action } = await req.json();
   if (action !== "void") return NextResponse.json({ error: "action ต้องเป็น void" }, { status: 400 });
 
-  const invoice = await prisma.accPurchaseTaxInvoice.update({ where: { id: params.id }, data: { voided: true } });
+  const invoice = await prisma.$transaction(async (tx) => {
+    const updated = await tx.accPurchaseTaxInvoice.update({ where: { id: params.id }, data: { voided: true } });
+    // หนังสือรับรองเป็นผลจากใบกำกับใบเดียวกัน จึงต้องยกเลิกพร้อมกันเพื่อไม่ให้ ภ.ง.ด.53 ค้างยอดที่ไม่มีเอกสารต้นทาง
+    await tx.accWhtCertificate.updateMany({ where: { purchaseInvoiceId: params.id }, data: { voided: true } });
+    return updated;
+  });
   return NextResponse.json({ invoice });
 }

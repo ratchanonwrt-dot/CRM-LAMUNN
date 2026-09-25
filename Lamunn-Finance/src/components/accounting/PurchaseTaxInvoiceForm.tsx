@@ -5,6 +5,9 @@ import { useServerRefresh } from "./useServerRefresh";
 import { Plus } from "lucide-react";
 import PartnerCombobox from "./PartnerCombobox";
 import AccountCombobox from "./AccountCombobox";
+import { WHT_INCOME_TYPES } from "@/lib/accounting/whtTypes";
+import { addVatExclusive, fmtSatang, splitVatInclusive, toSatang } from "@/lib/accounting/money";
+import { withholdingFromPercent } from "@/lib/accounting/withholdingMath";
 
 interface PartnerOption {
   id: string;
@@ -12,6 +15,7 @@ interface PartnerOption {
   type: "DEBTOR" | "CREDITOR";
   phone: string | null;
   taxId: string | null;
+  address: string | null;
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -27,12 +31,14 @@ export default function PurchaseTaxInvoiceForm({
   partners,
   expenseAccounts,
   creditAccounts,
+  vatRate,
 }: {
   partners: PartnerOption[];
   /** บัญชีค่าใช้จ่าย/สินทรัพย์ ที่จะเดบิต */
   expenseAccounts: AccountOption[];
   /** บัญชีเงินสด/ธนาคาร/เจ้าหนี้ ที่จะเครดิต */
   creditAccounts: AccountOption[];
+  vatRate: number;
 }) {
   const { refresh, refreshing } = useServerRefresh();
   const [open, setOpen] = useState(false);
@@ -45,6 +51,7 @@ export default function PurchaseTaxInvoiceForm({
     partnerId: "",
     vendorName: "",
     vendorTaxId: "",
+    vendorAddress: "",
     vendorBranchTag: "สำนักงานใหญ่",
     description: "ค่าสินค้า/บริการ",
     amount: "",
@@ -53,6 +60,9 @@ export default function PurchaseTaxInvoiceForm({
     note: "",
     expenseAccountId: "",
     creditAccountId: "",
+    whtIncomeType: "",
+    whtRatePercent: "",
+    whtBaseAmount: "",
   });
 
   /** เลือกคู่ค้าแล้วเติมชื่อ/เลขผู้เสียภาษีให้อัตโนมัติ แต่ยังแก้ทับได้
@@ -64,6 +74,7 @@ export default function PurchaseTaxInvoiceForm({
       partnerId: id,
       vendorName: p ? p.name : f.vendorName,
       vendorTaxId: p?.taxId ?? f.vendorTaxId,
+      vendorAddress: p?.address ?? f.vendorAddress,
     }));
   }
 
@@ -82,7 +93,15 @@ export default function PurchaseTaxInvoiceForm({
       setError(data.error ?? "บันทึกไม่สำเร็จ");
       return;
     }
-    setForm({ ...form, invoiceNo: "", amount: "", note: "" });
+    setForm({
+      ...form,
+      invoiceNo: "",
+      amount: "",
+      note: "",
+      whtIncomeType: "",
+      whtRatePercent: "",
+      whtBaseAmount: "",
+    });
     setOpen(false);
     refresh();
   }
@@ -101,6 +120,15 @@ export default function PurchaseTaxInvoiceForm({
 
   const field = "mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900";
   const label = "text-xs text-gray-500";
+  const entered = toSatang(form.amount);
+  const { base, vat } = form.amountIncludesVat
+    ? splitVatInclusive(entered, vatRate)
+    : addVatExclusive(entered, vatRate);
+  const whtEnabled = Boolean(form.whtIncomeType);
+  const whtBase = form.whtBaseAmount.trim() ? toSatang(form.whtBaseAmount) : base;
+  const wht = withholdingFromPercent(whtBase, form.whtRatePercent);
+  const total = base + vat;
+  const netPayable = total - wht.amount;
 
   return (
     <form onSubmit={submit} className="w-full rounded-xl border border-gray-200 bg-white p-5">
@@ -175,6 +203,83 @@ export default function PurchaseTaxInvoiceForm({
           </span>
         </span>
       </label>
+
+      <div className="mt-4 rounded-lg border border-violet-200 bg-violet-50/50 p-3">
+        <p className="mb-1 text-sm font-medium text-gray-800">หักภาษี ณ ที่จ่าย (ถ้ามี)</p>
+        <p className="mb-3 text-xs text-gray-500">
+          เมื่อเลือกประเภท ระบบจะสร้างรายการ ภ.ง.ด.53 และหนังสือรับรอง 50 ทวิให้อัตโนมัติ โดยไม่บันทึกรายได้หรือค่าใช้จ่ายซ้ำ
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className={`${label} sm:col-span-2`}>
+            ประเภทเงินได้
+            <select
+              value={form.whtIncomeType}
+              onChange={(e) => {
+                const selected = WHT_INCOME_TYPES.find((item) => item.label === e.target.value);
+                setForm({
+                  ...form,
+                  whtIncomeType: e.target.value,
+                  whtRatePercent: selected ? String(selected.rate * 100) : "",
+                });
+              }}
+              className={field}
+            >
+              <option value="">ไม่หักภาษี ณ ที่จ่าย</option>
+              {WHT_INCOME_TYPES.filter((item) => item.common !== "PND3").map((item) => (
+                <option key={item.label} value={item.label}>
+                  {item.label} — {(item.rate * 100).toLocaleString("th-TH")}%
+                </option>
+              ))}
+            </select>
+          </label>
+          {whtEnabled && (
+            <>
+              <label className={label}>
+                ฐานที่ใช้หัก (บาท)
+                <input
+                  inputMode="decimal"
+                  value={form.whtBaseAmount}
+                  onChange={(e) => setForm({ ...form, whtBaseAmount: e.target.value })}
+                  placeholder={fmtSatang(base, { zeroDash: false })}
+                  className={field}
+                />
+              </label>
+              <label className={label}>
+                อัตราหัก (%)
+                <input
+                  required
+                  inputMode="decimal"
+                  value={form.whtRatePercent}
+                  onChange={(e) => setForm({ ...form, whtRatePercent: e.target.value })}
+                  className={field}
+                />
+              </label>
+              <label className={`${label} sm:col-span-2`}>
+                ที่อยู่ผู้ถูกหักภาษี (แสดงในหนังสือรับรอง)
+                <input
+                  required
+                  value={form.vendorAddress}
+                  onChange={(e) => setForm({ ...form, vendorAddress: e.target.value })}
+                  className={field}
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-2 sm:col-span-2 lg:grid-cols-4">
+                {[
+                  ["ฐานก่อน VAT", base],
+                  ["VAT", vat],
+                  ["ภาษีหัก", wht.amount],
+                  ["จ่ายสุทธิ", netPayable],
+                ].map(([title, amount]) => (
+                  <div key={String(title)} className="rounded-lg border border-violet-100 bg-white px-3 py-2">
+                    <span className="block text-[11px] text-gray-500">{title}</span>
+                    <span className="font-semibold tabular-nums text-gray-800">{fmtSatang(Number(amount), { zeroDash: false })}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
 
       <div className="mt-4 rounded-lg border border-brand-200 bg-brand-50/50 p-3">
