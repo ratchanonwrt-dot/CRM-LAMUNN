@@ -5,20 +5,8 @@ import { parseDateOnly } from "@/lib/dates";
 import { toBaht, toSatang } from "@/lib/accounting/money";
 import { createEntry, AccountingError } from "@/lib/accounting/post";
 import { SYSTEM_ACCOUNTS } from "@/lib/accounting/chartOfAccounts";
-
-/** เลขที่หนังสือรับรองหัก ณ ที่จ่าย รันต่อเนื่องต่อเดือน เช่น WHT-6808-0004 */
-async function nextDocNo(payDate: Date): Promise<string> {
-  const be = (payDate.getUTCFullYear() + 543) % 100;
-  const mm = String(payDate.getUTCMonth() + 1).padStart(2, "0");
-  const head = `WHT-${String(be).padStart(2, "0")}${mm}-`;
-  const last = await prisma.accWhtCertificate.findFirst({
-    where: { docNo: { startsWith: head } },
-    orderBy: { docNo: "desc" },
-    select: { docNo: true },
-  });
-  const seq = last ? Number(last.docNo.slice(head.length)) + 1 : 1;
-  return `${head}${String(seq).padStart(4, "0")}`;
-}
+import { nextWhtDocNo } from "@/lib/accounting/withholding";
+import { withholdingFromPercent } from "@/lib/accounting/withholdingMath";
 
 /** บันทึกการหักภาษี ณ ที่จ่าย 1 ครั้ง (= หนังสือรับรอง 50 ทวิ 1 ใบ)
  * รวมทั้งเดือนแล้วได้เป็นแบบ ภ.ง.ด.3 (บุคคลธรรมดา) หรือ ภ.ง.ด.53 (นิติบุคคล) */
@@ -48,7 +36,7 @@ export async function POST(req: NextRequest) {
   }
 
   const date = parseDateOnly(payDate);
-  const whtAmount = Math.round(base * rate);
+  const { amount: whtAmount } = withholdingFromPercent(base, rate * 100);
 
   // ลงบัญชีให้เลยถ้าเลือกบัญชีมาครบ — Dr ค่าใช้จ่าย / Cr เงินที่จ่ายจริง / Cr ภาษีหัก ณ ที่จ่ายค้างนำส่ง
   // ผูก entryId ไว้ เพื่อไม่ให้รายการเดียวกันโผล่ซ้ำในส่วน "ยังไม่ได้ออกหนังสือรับรอง"
@@ -79,7 +67,7 @@ export async function POST(req: NextRequest) {
 
   const cert = await prisma.accWhtCertificate.create({
     data: {
-      docNo: await nextDocNo(date),
+      docNo: await nextWhtDocNo(date),
       payDate: date,
       formType,
       partnerId: partnerId || null,

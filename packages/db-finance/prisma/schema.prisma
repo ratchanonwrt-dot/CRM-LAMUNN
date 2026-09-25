@@ -993,6 +993,7 @@ model AccPurchaseTaxInvoice {
   isClaimable Boolean @default(true)
 
   entryId String? // ใบสำคัญที่บันทึกรายการซื้อนี้ (ถ้ามี)
+  whtCertificate AccWhtCertificate?
   voided  Boolean @default(false)
   note    String?
 
@@ -1021,6 +1022,9 @@ model AccWhtCertificate {
 
   partnerId      String?
   partner        AccPartner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  // ผูกกับใบกำกับภาษีซื้อเพื่อให้สร้าง ภ.ง.ด.53/50 ทวิจากการคีย์ครั้งเดียวและไม่เกิดเอกสารซ้ำ
+  purchaseInvoiceId String? @unique
+  purchaseInvoice   AccPurchaseTaxInvoice? @relation(fields: [purchaseInvoiceId], references: [id], onDelete: SetNull)
   // snapshot เหมือน AccPurchaseTaxInvoice — หนังสือรับรองที่ออกไปแล้วต้องไม่เปลี่ยนตามการแก้ข้อมูลคู่ค้า
   payeeName      String
   payeeTaxId     String?

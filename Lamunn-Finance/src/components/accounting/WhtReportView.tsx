@@ -124,7 +124,17 @@ export default async function WhtReportView({
                 <tr key={r.id} className="border-b border-gray-50">
                   <td className="py-1.5 pr-2 text-right text-xs text-gray-400">{i + 1}</td>
                   <td className="py-1.5 px-2 font-mono text-xs text-gray-500">{r.payDate.toISOString().slice(0, 10)}</td>
-                  <td className="py-1.5 px-2 font-mono text-xs text-gray-700">{r.docNo}</td>
+                  <td className="py-1.5 px-2 font-mono text-xs">
+                    <Link
+                      href={`/print/wht/${r.id}`}
+                      target="_blank"
+                      className="text-brand-700 hover:underline"
+                      title="เปิดหนังสือรับรอง 50 ทวิ"
+                    >
+                      {r.docNo}
+                      <span className="ml-1 font-sans text-[10px] text-gray-400">พิมพ์ 50 ทวิ</span>
+                    </Link>
+                  </td>
                   <td className="py-1.5 px-2 text-gray-800">
                     {r.payeeName}
                     {r.payeeBranchTag && <span className="ml-1.5 text-xs text-gray-400">({r.payeeBranchTag})</span>}

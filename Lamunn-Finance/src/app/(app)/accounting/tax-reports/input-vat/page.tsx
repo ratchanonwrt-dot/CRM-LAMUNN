@@ -31,7 +31,7 @@ export default async function InputVatPage({ searchParams }: { searchParams: { y
     prisma.accPartner.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, type: true, phone: true, taxId: true },
+      select: { id: true, name: true, type: true, phone: true, taxId: true, address: true },
     }),
     // บัญชีสำหรับสร้างใบสำคัญให้อัตโนมัติ — เดบิตเป็นค่าใช้จ่าย/สินทรัพย์ เครดิตเป็นเงิน/เจ้าหนี้
     prisma.accAccount.findMany({
@@ -65,7 +65,12 @@ export default async function InputVatPage({ searchParams }: { searchParams: { y
             </a>
           )}
           {canEdit && (
-            <PurchaseTaxInvoiceForm partners={partners} expenseAccounts={expenseAccounts} creditAccounts={creditAccounts} />
+            <PurchaseTaxInvoiceForm
+              partners={partners}
+              expenseAccounts={expenseAccounts}
+              creditAccounts={creditAccounts}
+              vatRate={Number(settings.vatRate)}
+            />
           )}
         </div>
       </div>

@@ -6,6 +6,9 @@ import { getAllSettings } from "@/lib/settings";
 import { splitVatInclusive, addVatExclusive, toBaht, toSatang } from "@/lib/accounting/money";
 import { createEntry, AccountingError } from "@/lib/accounting/post";
 import { SYSTEM_ACCOUNTS } from "@/lib/accounting/chartOfAccounts";
+import { WHT_INCOME_TYPES } from "@/lib/accounting/whtTypes";
+import { nextWhtDocNo } from "@/lib/accounting/withholding";
+import { withholdingFromPercent } from "@/lib/accounting/withholdingMath";
 
 /** บันทึกใบกำกับภาษีซื้อ (ใบที่ผู้ขายออกให้เรา) — ตัวป้อนข้อมูลของรายงานภาษีซื้อและ ภ.พ.30
  * เลขที่ใบกำกับมาจากผู้ขาย ไม่ได้รันเอง จึงรับค่าจากผู้กรอกโดยตรง */
@@ -20,6 +23,7 @@ export async function POST(req: NextRequest) {
     partnerId,
     vendorName,
     vendorTaxId,
+    vendorAddress,
     vendorBranchTag,
     description,
     amount,
@@ -28,6 +32,9 @@ export async function POST(req: NextRequest) {
     note,
     expenseAccountId,
     creditAccountId,
+    whtIncomeType,
+    whtRatePercent,
+    whtBaseAmount,
   } = body;
 
   if (!invoiceNo || !invoiceDate || !vendorName || !amount) {
@@ -41,6 +48,32 @@ export async function POST(req: NextRequest) {
   const vatRate = Number(settings.vatRate);
   const { base, vat } =
     amountIncludesVat === false ? addVatExclusive(amountSatang, vatRate) : splitVatInclusive(amountSatang, vatRate);
+  const invoiceDateValue = parseDateOnly(invoiceDate);
+  const whtEnabled = Boolean(String(whtIncomeType ?? "").trim());
+  const allowedIncomeType = WHT_INCOME_TYPES.some(
+    (item) => item.label === String(whtIncomeType ?? "").trim() && item.common !== "PND3"
+  );
+  const whtBase = String(whtBaseAmount ?? "").trim() ? toSatang(whtBaseAmount) : base;
+  const wht = withholdingFromPercent(whtBase, whtRatePercent ?? 0);
+
+  if (Boolean(expenseAccountId) !== Boolean(creditAccountId)) {
+    return NextResponse.json({ error: "ถ้าต้องการลงบัญชีอัตโนมัติ กรุณาเลือกบัญชีเดบิตและเครดิตให้ครบทั้งสองช่อง" }, { status: 400 });
+  }
+  if (whtEnabled) {
+    if (!allowedIncomeType) return NextResponse.json({ error: "ประเภทเงินได้หัก ณ ที่จ่ายไม่ถูกต้อง" }, { status: 400 });
+    if (!String(vendorTaxId ?? "").trim() || !/^\d{13}$/.test(String(vendorTaxId).replace(/\D/g, ""))) {
+      return NextResponse.json({ error: "กรุณากรอกเลขประจำตัวผู้เสียภาษีผู้ขาย 13 หลักเพื่อออกหนังสือรับรอง" }, { status: 400 });
+    }
+    if (!String(vendorAddress ?? "").trim()) {
+      return NextResponse.json({ error: "กรุณากรอกที่อยู่ผู้ถูกหักภาษีเพื่อออกหนังสือรับรอง" }, { status: 400 });
+    }
+    if (whtBase <= 0 || whtBase > base) {
+      return NextResponse.json({ error: "ฐานภาษีหัก ณ ที่จ่ายต้องมากกว่า 0 และไม่เกินมูลค่าก่อน VAT" }, { status: 400 });
+    }
+    if (wht.percent <= 0 || wht.percent >= 100 || wht.amount <= 0 || wht.amount >= base + vat) {
+      return NextResponse.json({ error: "อัตราหรือยอดภาษีหัก ณ ที่จ่ายไม่ถูกต้อง" }, { status: 400 });
+    }
+  }
 
   // กันบันทึกใบเดิมซ้ำ — ผู้ขายรายเดียวกันออกเลขที่ใบกำกับซ้ำไม่ได้
   const duplicate = await prisma.accPurchaseTaxInvoice.findFirst({
@@ -62,20 +95,35 @@ export async function POST(req: NextRequest) {
   // นับซ้ำกับใบสำคัญใบเดียวกันที่ถูกดึงมาจากสมุดรายวัน (ดู journalTaxLines.ts)
   let entryId: string | null = null;
   if (expenseAccountId && creditAccountId) {
-    const inputVatAccount = await prisma.accAccount.findUnique({ where: { code: SYSTEM_ACCOUNTS.INPUT_VAT }, select: { id: true } });
+    const [inputVatAccount, whtPayableAccount] = await Promise.all([
+      prisma.accAccount.findUnique({ where: { code: SYSTEM_ACCOUNTS.INPUT_VAT }, select: { id: true } }),
+      whtEnabled
+        ? prisma.accAccount.findUnique({ where: { code: SYSTEM_ACCOUNTS.WHT_PAYABLE }, select: { id: true } })
+        : Promise.resolve(null),
+    ]);
     if (!inputVatAccount) {
       return NextResponse.json({ error: `ไม่พบบัญชีภาษีซื้อรหัส ${SYSTEM_ACCOUNTS.INPUT_VAT} ในผังบัญชี` }, { status: 400 });
     }
+    if (whtEnabled && !whtPayableAccount) {
+      return NextResponse.json({ error: `ไม่พบบัญชีภาษีหัก ณ ที่จ่ายค้างนำส่งรหัส ${SYSTEM_ACCOUNTS.WHT_PAYABLE} ในผังบัญชี` }, { status: 400 });
+    }
     try {
       const entry = await createEntry({
-        date: parseDateOnly(invoiceDate),
+        date: invoiceDateValue,
         journalType: "PURCHASE",
         description: `ซื้อ ${String(vendorName).trim()} ใบกำกับ ${String(invoiceNo).trim()}`,
         userId: staff.staffId,
         lines: [
           { accountId: expenseAccountId, debit: toBaht(base), partnerId: partnerId || null, memo: description || undefined },
           { accountId: inputVatAccount.id, debit: toBaht(vat), memo: "ภาษีซื้อ" },
-          { accountId: creditAccountId, credit: toBaht(base + vat), partnerId: partnerId || null },
+          {
+            accountId: creditAccountId,
+            credit: toBaht(base + vat - (whtEnabled ? wht.amount : 0)),
+            partnerId: partnerId || null,
+          },
+          ...(whtEnabled && whtPayableAccount
+            ? [{ accountId: whtPayableAccount.id, credit: toBaht(wht.amount), partnerId: partnerId || null, memo: "ภาษีหัก ณ ที่จ่าย" }]
+            : []),
         ],
       });
       entryId = entry.id;
@@ -85,24 +133,49 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const invoice = await prisma.accPurchaseTaxInvoice.create({
-    data: {
-      invoiceNo: String(invoiceNo).trim(),
-      invoiceDate: parseDateOnly(invoiceDate),
-      partnerId: partnerId || null,
-      vendorName: String(vendorName).trim(),
-      vendorTaxId: vendorTaxId || null,
-      vendorBranchTag: vendorBranchTag || null,
-      description: description || "ค่าสินค้า/บริการ",
-      baseAmount: toBaht(base),
-      vatAmount: toBaht(vat),
-      totalAmount: toBaht(base + vat),
-      isClaimable: isClaimable !== false,
-      entryId,
-      note: note || null,
-      createdBy: staff.staffId,
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    const invoice = await tx.accPurchaseTaxInvoice.create({
+      data: {
+        invoiceNo: String(invoiceNo).trim(),
+        invoiceDate: invoiceDateValue,
+        partnerId: partnerId || null,
+        vendorName: String(vendorName).trim(),
+        vendorTaxId: vendorTaxId || null,
+        vendorBranchTag: vendorBranchTag || null,
+        description: description || "ค่าสินค้า/บริการ",
+        baseAmount: toBaht(base),
+        vatAmount: toBaht(vat),
+        totalAmount: toBaht(base + vat),
+        isClaimable: isClaimable !== false,
+        entryId,
+        note: note || null,
+        createdBy: staff.staffId,
+      },
+    });
+    const certificate = whtEnabled
+      ? await tx.accWhtCertificate.create({
+          data: {
+            docNo: await nextWhtDocNo(invoiceDateValue, tx),
+            payDate: invoiceDateValue,
+            formType: "PND53",
+            partnerId: partnerId || null,
+            purchaseInvoiceId: invoice.id,
+            payeeName: String(vendorName).trim(),
+            payeeTaxId: String(vendorTaxId).replace(/\D/g, ""),
+            payeeAddress: String(vendorAddress).trim(),
+            payeeBranchTag: vendorBranchTag || null,
+            incomeType: String(whtIncomeType).trim(),
+            baseAmount: toBaht(whtBase),
+            whtRate: wht.rate,
+            whtAmount: toBaht(wht.amount),
+            entryId,
+            note: note || null,
+            createdBy: staff.staffId,
+          },
+        })
+      : null;
+    return { invoice, certificate };
   });
 
-  return NextResponse.json({ invoice });
+  return NextResponse.json(result);
 }

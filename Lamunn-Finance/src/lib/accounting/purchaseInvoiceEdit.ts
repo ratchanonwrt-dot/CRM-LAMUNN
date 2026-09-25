@@ -3,6 +3,8 @@ import { parseDateOnly } from "@/lib/dates";
 import { getAllSettings } from "@/lib/settings";
 import { splitVatInclusive, addVatExclusive, toBaht, toSatang } from "./money";
 import { AccountingError, updateEntry } from "./post";
+import { SYSTEM_ACCOUNTS } from "./chartOfAccounts";
+import { withholdingFromPercent } from "./withholdingMath";
 
 /** แก้ไขใบกำกับภาษีซื้อที่บันทึกไปแล้ว — ใช้กรณีคีย์เลขที่ใบกำกับ/ชื่อ/ยอดผิด
  *
@@ -34,7 +36,10 @@ const str = (v: unknown) => String(v ?? "").trim();
 
 /** opts.vatRate — ส่งมาได้จากสคริปต์ทดสอบ (getAllSettings ใช้แคชของ Next ซึ่งไม่มีนอกเซิร์ฟเวอร์) */
 export async function updatePurchaseInvoice(id: string, patch: PurchaseInvoicePatch, opts: { vatRate?: number } = {}) {
-  const current = await prisma.accPurchaseTaxInvoice.findUnique({ where: { id } });
+  const current = await prisma.accPurchaseTaxInvoice.findUnique({
+    where: { id },
+    include: { whtCertificate: true },
+  });
   if (!current) throw new AccountingError("ไม่พบใบกำกับภาษีซื้อนี้");
   if (current.voided) throw new AccountingError("ใบกำกับนี้ถูกยกเลิกไปแล้ว แก้ไขไม่ได้ — บันทึกใบใหม่แทน");
 
@@ -61,6 +66,18 @@ export async function updatePurchaseInvoice(id: string, patch: PurchaseInvoicePa
   const amountChanged = base !== toSatang(current.baseAmount) || vat !== toSatang(current.vatAmount);
   const dateChanged = invoiceDate.getTime() !== current.invoiceDate.getTime();
   const identityChanged = invoiceNo !== current.invoiceNo || vendorName !== current.vendorName || vendorTaxId !== current.vendorTaxId;
+  const linkedWht = current.whtCertificate;
+  const oldBase = toSatang(current.baseAmount);
+  // ถ้าผู้ใช้เคยกำหนดฐานหักเอง ให้คงฐานนั้นไว้; ถ้าเดิมใช้ฐานเต็มจึงขยับตามยอดใบกำกับใหม่
+  const linkedWhtBase = linkedWht
+    ? (toSatang(linkedWht.baseAmount) === oldBase ? base : toSatang(linkedWht.baseAmount))
+    : 0;
+  const linkedWhtCalc = linkedWht
+    ? withholdingFromPercent(linkedWhtBase, linkedWht.whtRate * 100)
+    : null;
+  if (linkedWht && (linkedWhtBase <= 0 || linkedWhtBase > base)) {
+    throw new AccountingError("ฐานภาษีหัก ณ ที่จ่ายเดิมมากกว่ายอดก่อน VAT ใหม่ กรุณายกเลิกเอกสารแล้วบันทึกใหม่");
+  }
 
   if (identityChanged) {
     const duplicate = await prisma.accPurchaseTaxInvoice.findFirst({
@@ -83,7 +100,7 @@ export async function updatePurchaseInvoice(id: string, patch: PurchaseInvoicePa
   const entry = current.entryId
     ? await prisma.accJournalEntry.findUnique({
         where: { id: current.entryId },
-        include: { lines: { orderBy: { sortOrder: "asc" }, include: { account: { select: { vatRole: true } } } } },
+        include: { lines: { orderBy: { sortOrder: "asc" }, include: { account: { select: { code: true, vatRole: true } } } } },
       })
     : null;
 
@@ -95,11 +112,15 @@ export async function updatePurchaseInvoice(id: string, patch: PurchaseInvoicePa
         );
       }
       const vatLine = entry.lines.find((l) => l.account.vatRole === "INPUT");
-      const creditLine = entry.lines.find((l) => toSatang(l.credit) > 0);
+      const whtLine = linkedWht
+        ? entry.lines.find((l) => l.account.code === SYSTEM_ACCOUNTS.WHT_PAYABLE && toSatang(l.credit) > 0)
+        : null;
+      const creditLine = entry.lines.find((l) => l !== whtLine && toSatang(l.credit) > 0);
       const expenseLine = entry.lines.find((l) => l !== vatLine && toSatang(l.debit) > 0);
-      if (entry.lines.length !== 3 || !vatLine || !creditLine || !expenseLine) {
+      const expectedLineCount = linkedWht ? 4 : 3;
+      if (entry.lines.length !== expectedLineCount || !vatLine || !creditLine || !expenseLine || (linkedWht && !whtLine)) {
         throw new AccountingError(
-          `ใบสำคัญ ${entry.entryNo} ถูกแก้ไขจนไม่ใช่รูปแบบมาตรฐาน (ค่าใช้จ่าย/ภาษีซื้อ/เครดิต) — แก้ยอดที่ใบสำคัญโดยตรงแทน`
+          `ใบสำคัญ ${entry.entryNo} ถูกแก้ไขจนไม่ใช่รูปแบบมาตรฐาน (ค่าใช้จ่าย/ภาษีซื้อ/ยอดจ่าย/ภาษีหัก) — แก้ยอดที่ใบสำคัญโดยตรงแทน`
         );
       }
       const keepOrNew = entry.description === entryDescriptionFor(current.vendorName, current.invoiceNo)
@@ -112,12 +133,30 @@ export async function updatePurchaseInvoice(id: string, patch: PurchaseInvoicePa
         lines: [
           { accountId: expenseLine.accountId, debit: toBaht(base), partnerId: expenseLine.partnerId, branchId: expenseLine.branchId, memo: expenseLine.memo, docNo: expenseLine.docNo },
           { accountId: vatLine.accountId, debit: toBaht(vat), partnerId: vatLine.partnerId, branchId: vatLine.branchId, memo: vatLine.memo, docNo: vatLine.docNo },
-          { accountId: creditLine.accountId, credit: toBaht(base + vat), partnerId: creditLine.partnerId, branchId: creditLine.branchId, memo: creditLine.memo, docNo: creditLine.docNo },
+          { accountId: creditLine.accountId, credit: toBaht(base + vat - (linkedWhtCalc?.amount ?? 0)), partnerId: creditLine.partnerId, branchId: creditLine.branchId, memo: creditLine.memo, docNo: creditLine.docNo },
+          ...(linkedWht && whtLine && linkedWhtCalc
+            ? [{ accountId: whtLine.accountId, credit: toBaht(linkedWhtCalc.amount), partnerId: whtLine.partnerId, branchId: whtLine.branchId, memo: whtLine.memo, docNo: whtLine.docNo }]
+            : []),
         ],
       });
     } else if (identityChanged && entry.description === entryDescriptionFor(current.vendorName, current.invoiceNo)) {
       await prisma.accJournalEntry.update({ where: { id: entry.id }, data: { description: entryDescriptionFor(vendorName, invoiceNo) } });
     }
+  }
+
+  if (linkedWht && linkedWhtCalc) {
+    await prisma.accWhtCertificate.update({
+      where: { id: linkedWht.id },
+      data: {
+        payDate: invoiceDate,
+        payeeName: vendorName,
+        payeeTaxId: vendorTaxId,
+        payeeBranchTag: vendorBranchTag,
+        baseAmount: toBaht(linkedWhtBase),
+        whtAmount: toBaht(linkedWhtCalc.amount),
+        note,
+      },
+    });
   }
 
   return prisma.accPurchaseTaxInvoice.update({
